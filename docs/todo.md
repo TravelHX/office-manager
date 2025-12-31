@@ -209,3 +209,44 @@ This document contains all tasks organized by phases with clear dependencies and
 - [x] 6.11 Update documentation with API endpoints and usage examples
 - [x] 6.12 Create user documentation and help guides
 - [x] 6.13 Perform final validation against all use cases in `docs/usecases.md`
+
+---
+
+## Phase 7: Enhanced Admin Configuration and Display Improvements
+
+**Objective:** Enhance admin resource configuration with flexible numbering options and improve desk number display throughout the booking interface.
+
+**Dependencies:** Phase 5 (Admin Functionality), Phase 2 (Desk Booking)
+
+**Priority:** Medium
+
+**Estimated Effort:** 2-3 days
+
+### Tasks
+
+- [ ] 7.1 Design database schema changes to support flexible desk/parking number assignment
+- [ ] 7.2 Update Desk model to support both auto-generated and manually assigned numbers
+- [ ] 7.3 Update ParkingSpace model to support both auto-generated and manually assigned numbers
+- [ ] 7.4 Implement auto-generation logic for sequential desk numbers (e.g., 1-10 for 10 desks)
+- [ ] 7.5 Implement auto-generation logic for sequential parking space numbers (e.g., 1-10 for 10 spaces)
+- [ ] 7.6 Create AdminService methods for bulk desk creation with auto-generated numbers
+- [ ] 7.7 Create AdminService methods for bulk parking space creation with auto-generated numbers
+- [ ] 7.8 Create AdminService methods for manual desk number assignment
+- [ ] 7.9 Create AdminService methods for manual parking space number assignment
+- [ ] 7.10 Create Node.js API endpoint for bulk desk creation with auto-generation option
+- [ ] 7.11 Create Node.js API endpoint for bulk parking space creation with auto-generation option
+- [ ] 7.12 Create Node.js API endpoint for manual desk number assignment
+- [ ] 7.13 Create Node.js API endpoint for manual parking space number assignment
+- [ ] 7.14 Update admin configuration UI to include auto-generate vs manual assignment options
+- [ ] 7.15 Create UI component for auto-generation mode (input count, generate numbers 1-N)
+- [ ] 7.16 Create UI component for manual assignment mode (assign specific numbers to specific desks/spaces)
+- [ ] 7.17 Update desk booking display to prominently show desk numbers
+- [ ] 7.18 Update booking confirmation messages to include desk number
+- [ ] 7.19 Update "My Bookings" view to display desk numbers prominently
+- [ ] 7.20 Update parking reservation display to show parking space numbers prominently
+- [ ] 7.21 Write unit tests for auto-generation logic
+- [ ] 7.22 Write unit tests for manual assignment logic
+- [ ] 7.23 Write integration tests for enhanced admin configuration endpoints
+- [ ] 7.24 Write JavaScript tests for admin configuration UI
+- [ ] 7.25 Write JavaScript tests for enhanced desk number display
+- [ ] 7.26 Validate that desk numbers are displayed correctly throughout the booking flow

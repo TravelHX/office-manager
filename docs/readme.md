@@ -161,6 +161,8 @@ Complete administrative features for resource and booking management:
 
 **Related Use Cases:** Use Case 4 (Admin Sets Up Number of Desks and Parking Spaces), Use Case 5 (Admin Cancels User Desk Booking)
 
+**Note:** Enhanced features for flexible desk/parking number assignment are planned (see "Not Yet Implemented" section).
+
 ### Phase 6: Integration and Polish (Completed)
 
 Integration and polish features:
@@ -171,6 +173,28 @@ Integration and polish features:
 - **Unified My Bookings View**: Integrated view showing all desk bookings, parking reservations, and overtime records
 - **Navigation**: Consistent navigation across all pages
 - **Documentation**: API documentation and user guides
+
+## Not Yet Implemented
+
+The following features are planned for implementation:
+
+### 1. Enhanced Admin Resource Configuration
+
+Enhanced administrative features for configuring desks and parking spaces with flexible numbering options:
+- **Auto-Generate Numbers**: Option to automatically generate sequential numbers (e.g., setting 10 desks will create desks numbered 1-10)
+- **Manual Number Assignment**: Option to manually assign specific numbers to specific desks/parking spaces
+- **Mixed Configuration**: Support for both auto-generated and manually assigned numbers in the same configuration
+
+This feature will improve the admin experience when setting up office resources by providing flexibility in how desk and parking space numbers are assigned.
+
+### 2. Enhanced Desk Display
+
+Improved desk booking display to show desk numbers prominently:
+- Display desk number prominently when viewing available desks
+- Show desk number in booking confirmation messages
+- Display desk number in "My Bookings" view for easy identification
+
+This feature will make it easier for users to identify which desk they have booked.
 
 ## API Endpoints
 
@@ -319,3 +343,4 @@ Use cases cover scenarios including:
 - Technology stack selected: Node.js backend, MySQL database, raw SQL data access layer, HTML/CSS/JS frontend
 - Docker support added: All services run in Docker containers, including dedicated test environment
 - Use cases documented: Seven detailed use cases covering all major user workflows (see `docs/usecases.md`)
+- Feature requests added: Enhanced admin resource configuration with flexible numbering options, and improved desk number display in booking interface
