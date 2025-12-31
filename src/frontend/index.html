@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Office Manager</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <h1>Office Manager</h1>
+                <ul class="nav-menu">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/pages/desk-booking.html">Desk Booking</a></li>
+                    <li><a href="/pages/parking.html">Parking</a></li>
+                    <li><a href="/pages/overtime.html">Overtime</a></li>
+                    <li><a href="/pages/bookings.html">My Bookings</a></li>
+                    <li><a href="/pages/admin.html">Admin</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <h2>Welcome to Office Manager</h2>
+            <p>Manage your desk bookings, parking spaces, and overtime tracking.</p>
+            
+            <div id="dashboard-summary" class="dashboard-summary">
+                <div class="summary-card">
+                    <h3>Active Desk Bookings</h3>
+                    <p class="summary-number" id="active-bookings-count">-</p>
+                    <p class="summary-label">Upcoming bookings</p>
+                </div>
+                <div class="summary-card">
+                    <h3>Parking Reservations</h3>
+                    <p class="summary-number" id="active-reservations-count">-</p>
+                    <p class="summary-label">Active reservations</p>
+                </div>
+                <div class="summary-card">
+                    <h3>Overtime Hours</h3>
+                    <p class="summary-number" id="total-overtime-hours">-</p>
+                    <p class="summary-label">This month</p>
+                </div>
+            </div>
+            
+            <div class="feature-cards">
+                <div class="card">
+                    <h3>Desk Booking</h3>
+                    <p>Book desks for your office days</p>
+                    <button onclick="location.href='/pages/desk-booking.html'">Book Desk</button>
+                </div>
+                
+                <div class="card">
+                    <h3>Parking</h3>
+                    <p>Reserve parking spaces</p>
+                    <button onclick="location.href='/pages/parking.html'">Reserve Parking</button>
+                </div>
+                
+                <div class="card">
+                    <h3>Overtime</h3>
+                    <p>Track your overtime hours</p>
+                    <button onclick="location.href='/pages/overtime.html'">Record Overtime</button>
+                </div>
+            </div>
+            
+            <div id="upcoming-items" class="upcoming-items">
+                <h3>Upcoming Items</h3>
+                <div id="upcoming-list">
+                    <p>Loading...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Office Manager. All rights reserved.</p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/notifications.js"></script>
+    <script src="/js/dashboard.js"></script>
+</body>
+</html>
+

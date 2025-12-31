@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parking Reservation - Office Manager</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <h1>Office Manager</h1>
+                <ul class="nav-menu">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/pages/desk-booking.html">Desk Booking</a></li>
+                    <li><a href="/pages/parking.html">Parking</a></li>
+                    <li><a href="/pages/overtime.html">Overtime</a></li>
+                    <li><a href="/pages/bookings.html">My Bookings</a></li>
+                    <li><a href="/pages/admin.html">Admin</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <h2>Parking Reservation</h2>
+            <p>Select a date and time period to reserve a parking space.</p>
+            
+            <div class="booking-form">
+                <div class="form-group">
+                    <label for="reservationDate">Reservation Date:</label>
+                    <input type="date" id="reservationDate" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="timePeriod">Time Period:</label>
+                    <select id="timePeriod" required>
+                        <option value="">Select time period</option>
+                        <option value="morning">Morning</option>
+                        <option value="afternoon">Afternoon</option>
+                        <option value="full_day">Full Day</option>
+                    </select>
+                </div>
+                
+                <button id="checkAvailabilityBtn" class="btn-primary">Check Availability</button>
+            </div>
+
+            <div id="availability-message" class="mt-2"></div>
+            
+            <div id="parking-spaces-container" class="mt-2">
+                <p>Select date and time period, then click "Check Availability" to see available parking spaces.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Office Manager. All rights reserved.</p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/notifications.js"></script>
+    <script src="/js/parking.js"></script>
+</body>
+</html>
+

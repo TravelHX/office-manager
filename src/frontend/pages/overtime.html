@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overtime Tracking - Office Manager</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <h1>Office Manager</h1>
+                <ul class="nav-menu">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/pages/desk-booking.html">Desk Booking</a></li>
+                    <li><a href="/pages/parking.html">Parking</a></li>
+                    <li><a href="/pages/overtime.html">Overtime</a></li>
+                    <li><a href="/pages/bookings.html">My Bookings</a></li>
+                    <li><a href="/pages/admin.html">Admin</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <h2>Overtime Tracking</h2>
+            <p>Record and track your overtime hours.</p>
+            
+            <div class="booking-form">
+                <h3>Record Overtime</h3>
+                <div class="form-group">
+                    <label for="recordDate">Date:</label>
+                    <input type="date" id="recordDate" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="startTime">Start Time:</label>
+                    <input type="time" id="startTime" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="endTime">End Time:</label>
+                    <input type="time" id="endTime" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="totalHours">Total Hours (calculated automatically):</label>
+                    <input type="text" id="totalHours" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Description (optional):</label>
+                    <textarea id="description" rows="3"></textarea>
+                </div>
+                
+                <button id="submitOvertimeBtn" class="btn-primary">Record Overtime</button>
+            </div>
+
+            <div id="overtime-message" class="mt-2"></div>
+            
+            <div id="overtime-history-container" class="mt-2">
+                <h3>Overtime History</h3>
+                <p>Loading overtime records...</p>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Office Manager. All rights reserved.</p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/notifications.js"></script>
+    <script src="/js/overtime.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Office Manager</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <h1>Office Manager</h1>
+                <ul class="nav-menu">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/pages/desk-booking.html">Desk Booking</a></li>
+                    <li><a href="/pages/parking.html">Parking</a></li>
+                    <li><a href="/pages/overtime.html">Overtime</a></li>
+                    <li><a href="/pages/bookings.html">My Bookings</a></li>
+                    <li><a href="/pages/admin.html">Admin</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <h2>Admin Dashboard</h2>
+            <p>Manage office resources and view all bookings.</p>
+            
+            <div id="admin-container">
+                <div id="admin-tabs">
+                    <button class="tab-btn active" data-tab="configuration">Resource Configuration</button>
+                    <button class="tab-btn" data-tab="bookings">All Bookings</button>
+                    <button class="tab-btn" data-tab="parking">All Parking Reservations</button>
+                    <button class="tab-btn" data-tab="overtime">All Overtime Records</button>
+                </div>
+                
+                <div id="configuration-tab" class="tab-content active">
+                    <h3>Office Resource Configuration</h3>
+                    <div class="booking-form">
+                        <div class="form-group">
+                            <label for="deskCount">Desk Count:</label>
+                            <input type="number" id="deskCount" min="0" required>
+                            <p class="help-text">Current active desks will be shown below</p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="parkingCount">Parking Space Count:</label>
+                            <input type="number" id="parkingCount" min="0" required>
+                            <p class="help-text">Current active parking spaces will be shown below</p>
+                        </div>
+                        
+                        <button id="saveConfigurationBtn" class="btn-primary">Save Configuration</button>
+                    </div>
+                    <div id="configuration-message" class="mt-2"></div>
+                </div>
+                
+                <div id="bookings-tab" class="tab-content">
+                    <h3>All Desk Bookings</h3>
+                    <div id="all-bookings-container">
+                        <p>Loading bookings...</p>
+                    </div>
+                </div>
+                
+                <div id="parking-tab" class="tab-content">
+                    <h3>All Parking Reservations</h3>
+                    <div id="all-parking-container">
+                        <p>Loading parking reservations...</p>
+                    </div>
+                </div>
+                
+                <div id="overtime-tab" class="tab-content">
+                    <h3>All Overtime Records</h3>
+                    <div id="all-overtime-container">
+                        <p>Loading overtime records...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Office Manager. All rights reserved.</p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/notifications.js"></script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,51 @@
+services:
+  test-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: test
+    container_name: office-manager-test-backend
+    environment:
+      - NODE_ENV=test
+      - DB_HOST=test-mysql
+      - DB_PORT=3306
+      - DB_NAME=office_manager_test
+      - DB_USER=test_user
+      - DB_PASSWORD=test_password
+      - SERVER_PORT=3000
+    depends_on:
+      test-mysql:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./utils:/app/utils
+      - ./src/frontend:/app/src/frontend
+    networks:
+      - test-network
+    command: sh -c "echo 'Waiting for database to be ready...' && sleep 5 && npm test"
+
+  test-mysql:
+    image: mysql:8.0
+    container_name: office-manager-test-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=test_root_password
+      - MYSQL_DATABASE=office_manager_test
+      - MYSQL_USER=test_user
+      - MYSQL_PASSWORD=test_password
+    volumes:
+      - ./src/sql:/docker-entrypoint-initdb.d
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptest_root_password"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: "no"
+
+networks:
+  test-network:
+    driver: bridge
+

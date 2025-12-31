@@ -1,0 +1,55 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: office-manager-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=office_manager
+      - DB_USER=office_user
+      - DB_PASSWORD=office_password
+      - SERVER_PORT=3000
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+    networks:
+      - office-network
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: office-manager-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=office_manager
+      - MYSQL_USER=office_user
+      - MYSQL_PASSWORD=office_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./src/sql:/docker-entrypoint-initdb.d
+    networks:
+      - office-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+
+networks:
+  office-network:
+    driver: bridge
+
