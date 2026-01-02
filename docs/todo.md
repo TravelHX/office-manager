@@ -250,3 +250,8 @@ This document contains all tasks organized by phases with clear dependencies and
 - [ ] 7.24 Write JavaScript tests for admin configuration UI
 - [ ] 7.25 Write JavaScript tests for enhanced desk number display
 - [ ] 7.26 Validate that desk numbers are displayed correctly throughout the booking flow
+- [ ] 7.27 Update admin dashboard to display allocated desk numbers
+- [ ] 7.28 Update admin booking management view to show desk numbers for each booking
+- [ ] 7.29 Update admin desk configuration view to list all desk numbers
+- [ ] 7.30 Update admin parking configuration view to list all parking space numbers
+- [ ] 7.31 Write JavaScript tests for admin desk number display

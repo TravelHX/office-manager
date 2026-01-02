@@ -5,11 +5,21 @@ const API_BASE_URL = 'http://localhost:3000';
 // Simple authentication - store user token in localStorage
 // For Phase 2, we'll use a simple token system
 function getAuthToken() {
-    let token = localStorage.getItem('auth_token');
+    // Check if we're on an admin page
+    const isAdminPage = window.location.pathname.includes('admin') || 
+                       window.location.pathname === '/admin' ||
+                       window.location.pathname === '/pages/admin.html';
+    
+    const tokenKey = isAdminPage ? 'admin_auth_token' : 'auth_token';
+    const tokenPrefix = isAdminPage ? 'admin_' : 'user_';
+    // Use userId = 1 for development (must exist in database)
+    const userId = 1;
+    
+    let token = localStorage.getItem(tokenKey);
     if (!token) {
-        // For development, create a simple token
-        token = 'user_' + Date.now();
-        localStorage.setItem('auth_token', token);
+        // For development, create a simple token with appropriate prefix and userId
+        token = tokenPrefix + userId;
+        localStorage.setItem(tokenKey, token);
     }
     return token;
 }

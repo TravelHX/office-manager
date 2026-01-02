@@ -196,6 +196,15 @@ Improved desk booking display to show desk numbers prominently:
 
 This feature will make it easier for users to identify which desk they have booked.
 
+### 3. Admin Desk Number Display
+
+Display desk numbers in the admin screen after desks are allocated:
+- Show all allocated desk numbers in the admin dashboard
+- Display desk numbers in admin booking management view
+- List desk numbers when viewing desk configuration
+
+This feature will help administrators quickly see which desk numbers have been assigned and are available in the system.
+
 ## API Endpoints
 
 ### Authentication
@@ -343,4 +352,4 @@ Use cases cover scenarios including:
 - Technology stack selected: Node.js backend, MySQL database, raw SQL data access layer, HTML/CSS/JS frontend
 - Docker support added: All services run in Docker containers, including dedicated test environment
 - Use cases documented: Seven detailed use cases covering all major user workflows (see `docs/usecases.md`)
-- Feature requests added: Enhanced admin resource configuration with flexible numbering options, and improved desk number display in booking interface
+- Feature requests added: Enhanced admin resource configuration with flexible numbering options, improved desk number display in booking interface, and admin screen display of allocated desk numbers

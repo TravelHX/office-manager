@@ -25,6 +25,12 @@ CREATE TABLE IF NOT EXISTS admin_config (
     INDEX idx_config_key (config_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Initialize default user (id = 1) for development
+-- This user is required for the token-based authentication system
+INSERT INTO users (id, username, email, role) VALUES
+    (1, 'default_user', 'user@example.com', 'user')
+ON DUPLICATE KEY UPDATE username = username;
+
 -- Initialize default admin config values
 INSERT INTO admin_config (config_key, config_value, description) VALUES
     ('desk_count', '0', 'Total number of desks available'),
