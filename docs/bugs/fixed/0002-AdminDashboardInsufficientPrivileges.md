@@ -10,7 +10,7 @@ When attempting to create desks and parking spaces in the admin dashboard (e.g.,
 
 ## Current Status
 
-**Status:** Fixed - Root Cause Identified and Resolved
+**Status:** Fixed - Confirmed by User
 
 **What has been tried:**
 - Investigated the `getAuthToken()` function in `src/frontend/js/main.js`
@@ -93,6 +93,6 @@ Modified `getAuthToken()` in `src/frontend/js/main.js` to:
 2. ~~Check what token is being used in the frontend when accessing admin dashboard~~ - Completed (identified issue)
 3. ~~Verify the authentication flow and role assignment~~ - Completed
 4. ~~Fix the root cause once identified~~ - Completed
-5. Verify the fix works end-to-end - Tests need to be run via Docker test environment
-6. User confirmation required before marking as fixed
+5. ~~Verify the fix works end-to-end~~ - Completed (tests pass)
+6. ~~User confirmation required before marking as fixed~~ - Completed (user confirmed fix)
 
