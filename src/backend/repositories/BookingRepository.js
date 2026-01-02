@@ -40,17 +40,16 @@ class BookingRepository extends BaseRepository {
   }
 
   async findConflictingBookings(deskId, startDate, endDate, excludeBookingId = null) {
+    // Standard date range overlap check: two ranges overlap if
+    // existing_start <= new_end AND existing_end >= new_start
     let query = `
       SELECT * FROM bookings 
       WHERE desk_id = ? 
         AND status = 'active'
-        AND (
-          (start_date <= ? AND end_date >= ?)
-          OR (start_date <= ? AND end_date >= ?)
-          OR (start_date >= ? AND end_date <= ?)
-        )
+        AND start_date <= ?
+        AND end_date >= ?
     `;
-    const params = [deskId, startDate, startDate, endDate, endDate, startDate, endDate];
+    const params = [deskId, endDate, startDate];
     
     if (excludeBookingId) {
       query += ' AND id != ?';
@@ -88,10 +87,10 @@ class BookingRepository extends BaseRepository {
 
   async findAll() {
     const query = `
-      SELECT b.*, d.desk_number, d.location, u.username 
+      SELECT b.*, d.desk_number, d.location, COALESCE(u.username, 'Unknown User') as username 
       FROM bookings b
       JOIN desks d ON b.desk_id = d.id
-      JOIN users u ON b.user_id = u.id
+      LEFT JOIN users u ON b.user_id = u.id
       ORDER BY b.start_date DESC, b.created_at DESC
     `;
     const results = await this.executeRawQuery(query);
