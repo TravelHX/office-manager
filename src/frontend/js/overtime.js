@@ -1,11 +1,21 @@
 // Overtime Tracking JavaScript
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Check authentication before allowing overtime submission
+    if (typeof requireAuth !== 'undefined' && !requireAuth()) {
+        return; // Will redirect to login
+    }
+
     const recordDateInput = document.getElementById('recordDate');
     const startTimeInput = document.getElementById('startTime');
     const endTimeInput = document.getElementById('endTime');
     const totalHoursInput = document.getElementById('totalHours');
     const submitBtn = document.getElementById('submitOvertimeBtn');
+    
+    if (!recordDateInput || !startTimeInput || !endTimeInput || !submitBtn) {
+        console.error('Overtime form elements not found');
+        return;
+    }
     
     const today = new Date().toISOString().split('T')[0];
     recordDateInput.setAttribute('max', today);
@@ -57,11 +67,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function submitOvertime() {
+    // Check authentication before submitting
+    if (typeof requireAuth !== 'undefined' && !requireAuth()) {
+        return; // Will redirect to login
+    }
+
     const recordDate = document.getElementById('recordDate').value;
     const startTime = document.getElementById('startTime').value;
     const endTime = document.getElementById('endTime').value;
     const description = document.getElementById('description').value;
     const messageDiv = document.getElementById('overtime-message');
+    const submitBtn = document.getElementById('submitOvertimeBtn');
     
     if (!recordDate || !startTime || !endTime) {
         showError('Please fill in date, start time, and end time');
@@ -79,6 +95,12 @@ async function submitOvertime() {
     if (end <= start) {
         showError('End time must be after start time');
         return;
+    }
+    
+    // Disable submit button during request
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
     }
     
     try {
@@ -104,7 +126,14 @@ async function submitOvertime() {
             loadOvertimeHistory();
         }, 500);
     } catch (error) {
-        showError('Failed to record overtime: ' + error.message);
+        console.error('Overtime submission error:', error);
+        showError('Failed to record overtime: ' + (error.message || 'Unknown error'));
+    } finally {
+        // Re-enable submit button
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Record Overtime';
+        }
     }
 }
 
@@ -124,7 +153,16 @@ function parseTime(timeString) {
 }
 
 async function loadOvertimeHistory() {
+    // Check authentication before loading history
+    if (typeof requireAuth !== 'undefined' && !requireAuth()) {
+        return; // Will redirect to login
+    }
+
     const container = document.getElementById('overtime-history-container');
+    if (!container) {
+        return;
+    }
+    
     container.innerHTML = '<h3>Overtime History</h3><p>Loading overtime records...</p>';
     
     try {
@@ -137,7 +175,8 @@ async function loadOvertimeHistory() {
         
         displayOvertimeHistory(records);
     } catch (error) {
-        showError('Failed to load overtime history: ' + error.message);
+        console.error('Failed to load overtime history:', error);
+        showError('Failed to load overtime history: ' + (error.message || 'Unknown error'));
         container.innerHTML = '<h3>Overtime History</h3><p>Failed to load overtime records.</p>';
     }
 }

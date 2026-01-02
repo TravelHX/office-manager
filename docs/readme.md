@@ -222,6 +222,43 @@ Complete user authentication and management system with role-based access contro
 
 This feature will provide secure user authentication and proper access control throughout the application.
 
+### 5. Booking Matrix Screen
+
+Visual matrix display showing desk and parking bookings organized by people and dates:
+- **Matrix View**: Grid layout with users/people on one axis and dates on the other axis
+- **Desk Bookings**: Display desk bookings in the matrix showing which user has booked which desk on which date
+- **Parking Bookings**: Display parking space bookings in the matrix showing which user has reserved which parking space on which date
+- **Date Range Selection**: Ability to select date ranges for the matrix view
+- **Filtering Options**: Filter by user, desk number, parking space number, or date range
+- **Visual Indicators**: Color coding or visual markers to distinguish between desk and parking bookings
+- **Admin Access**: Matrix view accessible to admin users for comprehensive booking overview
+
+This feature will help administrators and users quickly visualize booking patterns, identify conflicts, and understand resource utilization across time and people.
+
+### 6. Booking Validation Rules
+
+Enhanced validation rules to prevent booking conflicts and ensure fair resource allocation:
+
+- **One Desk Per Person Per Period**: A person cannot book more than one desk for overlapping time periods
+  - Validation checks for any date overlap between bookings
+  - If a user tries to book a second desk for dates that overlap with an existing booking, the reservation fails
+  - Error message clearly states the reason: "Overlapping booking - you already have a desk booked for this period"
+  - Applies to both single-day and multi-day bookings
+  - Partial overlaps are detected (e.g., booking desk 1 for 5/2/2026 and desk 2 for 4/2/2026-6/2/2026 would fail due to overlap on 5/2/2026)
+
+- **One Person Per Desk Per Day**: A single desk cannot be booked by more than one person for the same day
+  - Validation ensures desk exclusivity per day
+  - If a desk is already booked by one person for a date, another person cannot book the same desk for that date
+  - Error message indicates the desk is already booked for the requested date(s)
+
+- **Same Rules for Parking**: Both validation rules apply equally to parking space reservations
+  - A person cannot reserve multiple parking spaces for overlapping periods
+  - A parking space cannot be reserved by multiple people for the same day/time period
+
+- **Clear Error Messages**: All validation failures provide clear, user-friendly error messages explaining why the booking failed
+
+This feature will prevent double-booking conflicts and ensure fair access to office resources.
+
 ## API Endpoints
 
 ### Authentication
@@ -369,4 +406,4 @@ Use cases cover scenarios including:
 - Technology stack selected: Node.js backend, MySQL database, raw SQL data access layer, HTML/CSS/JS frontend
 - Docker support added: All services run in Docker containers, including dedicated test environment
 - Use cases documented: Seven detailed use cases covering all major user workflows (see `docs/usecases.md`)
-- Feature requests added: Enhanced admin resource configuration with flexible numbering options, improved desk number display in booking interface, admin screen display of allocated desk numbers, and comprehensive user authentication and management system
+- Feature requests added: Enhanced admin resource configuration with flexible numbering options, improved desk number display in booking interface, admin screen display of allocated desk numbers, comprehensive user authentication and management system, booking matrix screen for visualizing bookings by people and dates, and booking validation rules to prevent conflicts

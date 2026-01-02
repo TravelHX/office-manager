@@ -71,14 +71,26 @@ document.addEventListener('DOMContentLoaded', () => {
 async function apiRequest(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
     const token = getAuthToken();
+    
+    const defaultHeaders = {
+        'Content-Type': 'application/json',
+    };
+    
+    // Only add Authorization header if token exists
+    if (token) {
+        defaultHeaders['Authorization'] = `Bearer ${token}`;
+    }
+    
     const defaultOptions = {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-        },
+        headers: defaultHeaders,
     };
 
     const config = { ...defaultOptions, ...options };
+    
+    // Merge headers properly
+    if (options.headers) {
+        config.headers = { ...defaultHeaders, ...options.headers };
+    }
     
     if (config.body && typeof config.body === 'object') {
         config.body = JSON.stringify(config.body);
@@ -86,10 +98,36 @@ async function apiRequest(endpoint, options = {}) {
 
     try {
         const response = await fetch(url, config);
-        const data = await response.json();
+        
+        // Handle 204 No Content (empty response body)
+        if (response.status === 204) {
+            return null;
+        }
+        
+        // Check if response has content before parsing JSON
+        const contentType = response.headers.get('content-type');
+        const hasJsonContent = contentType && contentType.includes('application/json');
+        
+        let data = null;
+        if (hasJsonContent) {
+            // Get text first to check if body is empty
+            const text = await response.text();
+            if (text) {
+                data = JSON.parse(text);
+            }
+        }
         
         if (!response.ok) {
-            throw new Error(data.error?.message || 'API request failed');
+            // Handle authentication errors
+            if (response.status === 401) {
+                // Clear invalid token and redirect to login
+                clearAuthToken();
+                const currentPath = window.location.pathname;
+                if (!currentPath.includes('login.html')) {
+                    window.location.href = `/pages/login.html?return=${encodeURIComponent(currentPath)}`;
+                }
+            }
+            throw new Error(data?.error?.message || 'API request failed');
         }
         
         return data;

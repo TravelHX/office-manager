@@ -7,6 +7,7 @@ const parkingReservationsRouter = require('./parking-reservations');
 const overtimeRouter = require('./overtime');
 const adminRouter = require('./admin');
 const authRouter = require('./auth');
+const matrixRouter = require('./matrix');
 
 router.get('/health', (req, res) => {
   res.json({
@@ -29,6 +30,7 @@ router.use('/api/parking-spaces', parkingSpacesRouter);
 router.use('/api/parking-reservations', parkingReservationsRouter);
 router.use('/api/overtime', overtimeRouter);
 router.use('/api/admin', adminRouter);
+router.use('/api/matrix', matrixRouter);
 
 module.exports = router;
 

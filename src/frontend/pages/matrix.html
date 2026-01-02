@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Matrix - Office Manager</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .matrix-container {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+        .matrix-table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 800px;
+        }
+        .matrix-table th,
+        .matrix-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .matrix-table th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .matrix-table th.user-column {
+            position: sticky;
+            left: 0;
+            background-color: #f5f5f5;
+            z-index: 11;
+            text-align: left;
+            min-width: 150px;
+        }
+        .matrix-table td.user-column {
+            position: sticky;
+            left: 0;
+            background-color: white;
+            z-index: 9;
+            text-align: left;
+            font-weight: 500;
+        }
+        .matrix-cell {
+            min-width: 80px;
+            min-height: 40px;
+            position: relative;
+        }
+        .matrix-cell.has-booking {
+            cursor: pointer;
+        }
+        .booking-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin: 2px;
+            white-space: nowrap;
+        }
+        .booking-desk {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .booking-parking {
+            background-color: #2196F3;
+            color: white;
+        }
+        .booking-parking.morning {
+            background-color: #FF9800;
+        }
+        .booking-parking.afternoon {
+            background-color: #9C27B0;
+        }
+        .matrix-tooltip {
+            position: absolute;
+            background-color: #333;
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+            max-width: 250px;
+        }
+        .matrix-tooltip.show {
+            display: block;
+        }
+        .filters-panel {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .filters-panel .form-group {
+            display: inline-block;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .filters-panel label {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        .filters-panel select,
+        .filters-panel input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .view-toggle {
+            margin-bottom: 1rem;
+        }
+        .view-toggle button {
+            padding: 0.5rem 1rem;
+            margin-right: 0.5rem;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .view-toggle button.active {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        .date-header {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            min-width: 30px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <h1>Office Manager</h1>
+                <ul class="nav-menu">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/pages/desk-booking.html">Desk Booking</a></li>
+                    <li><a href="/pages/parking.html">Parking</a></li>
+                    <li><a href="/pages/overtime.html">Overtime</a></li>
+                    <li><a href="/pages/bookings.html">My Bookings</a></li>
+                    <li><a href="/pages/admin.html">Admin</a></li>
+                    <li><a href="/pages/matrix.html">Booking Matrix</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <h2>Booking Matrix</h2>
+            <p>Visual overview of all desk and parking bookings organized by user and date.</p>
+
+            <div class="filters-panel">
+                <div class="form-group">
+                    <label for="startDate">Start Date:</label>
+                    <input type="date" id="startDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="endDate">End Date:</label>
+                    <input type="date" id="endDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="viewType">View Type:</label>
+                    <select id="viewType">
+                        <option value="combined">Combined (Desks + Parking)</option>
+                        <option value="desks">Desks Only</option>
+                        <option value="parking">Parking Only</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="userFilter">Filter by User:</label>
+                    <select id="userFilter" multiple style="min-width: 200px;">
+                        <option value="">All Users</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="deskFilter">Filter by Desk:</label>
+                    <select id="deskFilter" multiple style="min-width: 150px;">
+                        <option value="">All Desks</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="parkingFilter">Filter by Parking Space:</label>
+                    <select id="parkingFilter" multiple style="min-width: 150px;">
+                        <option value="">All Spaces</option>
+                    </select>
+                </div>
+                <div class="form-group" style="display: block; margin-top: 0.5rem;">
+                    <button id="loadMatrixBtn" class="btn-primary">Load Matrix</button>
+                    <button id="exportMatrixBtn" class="btn-secondary" style="margin-left: 0.5rem;">Export CSV</button>
+                </div>
+            </div>
+
+            <div id="matrix-message" class="mt-2"></div>
+
+            <div id="matrix-container" class="matrix-container">
+                <p>Select a date range and click "Load Matrix" to view bookings.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Office Manager. All rights reserved.</p>
+    </footer>
+
+    <div id="matrix-tooltip" class="matrix-tooltip"></div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/notifications.js"></script>
+    <script src="/js/matrix.js"></script>
+</body>
+</html>
+

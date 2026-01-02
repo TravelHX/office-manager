@@ -108,6 +108,16 @@ router.post('/users', authenticate, authorize(['admin']), async (req, res, next)
   }
 });
 
+// Get all users endpoint (admin only)
+router.get('/users', authenticate, authorize(['admin']), async (req, res, next) => {
+  try {
+    const users = await userService.getAllUsers();
+    res.json(users.map(u => u.toJSON()));
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Change password endpoint
 router.put('/users/password', authenticate, async (req, res, next) => {
   try {

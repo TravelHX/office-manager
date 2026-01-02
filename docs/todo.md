@@ -310,3 +310,101 @@ This document contains all tasks organized by phases with clear dependencies and
 - [x] 8.38 Write JavaScript tests for access control and redirects
 - [x] 8.39 Validate that users can only book desks/spaces for themselves
 - [x] 8.40 Validate that users can only update their own data
+
+---
+
+## Phase 9: Booking Matrix Screen
+
+**Objective:** Implement a visual matrix screen displaying desk and parking bookings organized by people/users and dates for easy visualization and management.
+
+**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking), Phase 8 (User Authentication and Management)
+
+**Priority:** Medium
+
+**Estimated Effort:** 3-4 days
+
+### Tasks
+
+- [x] 9.1 Design matrix data structure and API response format for bookings by user and date
+- [x] 9.2 Create MatrixService with business logic for aggregating bookings by user and date
+- [x] 9.3 Implement method to retrieve desk bookings grouped by user and date range
+- [x] 9.4 Implement method to retrieve parking bookings grouped by user and date range
+- [x] 9.5 Implement date range filtering for matrix data
+- [x] 9.6 Implement user filtering for matrix data
+- [x] 9.7 Implement desk/parking space filtering for matrix data
+- [x] 9.8 Create Node.js API endpoint for matrix data (GET /api/matrix/bookings)
+- [x] 9.9 Create API endpoint parameters for date range, user filter, desk filter, parking filter
+- [x] 9.10 Design HTML/CSS layout for matrix grid (users/people vs dates)
+- [x] 9.11 Create matrix UI component with responsive grid layout
+- [x] 9.12 Implement date range selector UI component
+- [x] 9.13 Implement filtering UI components (user, desk, parking space filters)
+- [x] 9.14 Create visual indicators for desk bookings in matrix cells
+- [x] 9.15 Create visual indicators for parking bookings in matrix cells
+- [x] 9.16 Implement color coding or visual markers to distinguish desk vs parking bookings
+- [x] 9.17 Add hover/tooltip functionality to show booking details in matrix cells
+- [x] 9.18 Implement matrix cell click functionality to view/edit booking details
+- [x] 9.19 Create separate matrix views for desks and parking (with toggle option)
+- [x] 9.20 Create combined matrix view showing both desks and parking
+- [x] 9.21 Add export functionality for matrix data (CSV or similar)
+- [x] 9.22 Implement pagination or scrolling for large date ranges
+- [x] 9.23 Add admin access control for matrix screen
+- [x] 9.24 Create matrix screen navigation link in admin dashboard
+- [x] 9.25 Write unit tests for MatrixService
+- [x] 9.26 Write unit tests for booking aggregation logic
+- [x] 9.27 Write integration tests for matrix API endpoints
+- [x] 9.28 Write integration tests for filtering functionality
+- [x] 9.29 Write JavaScript tests for matrix UI components
+- [x] 9.30 Write JavaScript tests for date range selection
+- [x] 9.31 Write JavaScript tests for filtering UI
+- [x] 9.32 Write JavaScript tests for visual indicators and tooltips
+- [x] 9.33 Validate matrix displays correct bookings for selected date range
+- [x] 9.34 Validate filtering works correctly for users, desks, and parking spaces
+
+---
+
+## Phase 10: Booking Validation Rules
+
+**Objective:** Implement comprehensive validation rules to prevent booking conflicts, ensuring one person cannot book multiple desks/parking spaces for overlapping periods, and one desk/parking space cannot be booked by multiple people for the same day.
+
+**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking), Phase 8 (User Authentication and Management)
+
+**Priority:** High
+
+**Estimated Effort:** 2-3 days
+
+### Tasks
+
+- [ ] 10.1 Design validation logic for detecting overlapping bookings for the same user
+- [ ] 10.2 Implement date range overlap detection utility function
+- [ ] 10.3 Create validation method in BookingService to check for existing user bookings in date range
+- [ ] 10.4 Implement validation: prevent user from booking multiple desks for overlapping periods
+- [ ] 10.5 Implement validation: prevent user from booking multiple parking spaces for overlapping periods
+- [ ] 10.6 Create validation method to check if desk is already booked by another user for date range
+- [ ] 10.7 Implement validation: prevent multiple users from booking same desk for same day
+- [ ] 10.8 Create validation method to check if parking space is already booked by another user for date/time period
+- [ ] 10.9 Implement validation: prevent multiple users from booking same parking space for same day/time period
+- [ ] 10.10 Update desk booking creation endpoint to validate user's existing bookings
+- [ ] 10.11 Update desk booking creation endpoint to validate desk availability for other users
+- [ ] 10.12 Update parking reservation creation endpoint to validate user's existing reservations
+- [ ] 10.13 Update parking reservation creation endpoint to validate parking space availability for other users
+- [ ] 10.14 Create clear error messages for overlapping booking conflicts
+- [ ] 10.15 Create clear error messages for desk/parking space already booked conflicts
+- [ ] 10.16 Update frontend to display validation error messages clearly
+- [ ] 10.17 Handle partial date range overlaps correctly (any date overlap triggers failure)
+- [ ] 10.18 Ensure validation works for both single-day and multi-day bookings
+- [ ] 10.19 Ensure validation works for parking time periods (morning, afternoon, full_day)
+- [ ] 10.20 Write unit tests for date range overlap detection utility
+- [ ] 10.21 Write unit tests for user booking overlap validation
+- [ ] 10.22 Write unit tests for desk availability validation
+- [ ] 10.23 Write unit tests for parking space availability validation
+- [ ] 10.24 Write integration tests: user cannot book multiple desks for overlapping dates
+- [ ] 10.25 Write integration tests: user cannot book multiple parking spaces for overlapping periods
+- [ ] 10.26 Write integration tests: multiple users cannot book same desk for same day
+- [ ] 10.27 Write integration tests: multiple users cannot book same parking space for same day/time period
+- [ ] 10.28 Write integration tests: partial date overlaps are detected correctly
+- [ ] 10.29 Write integration tests: error messages are clear and informative
+- [ ] 10.30 Write JavaScript tests for frontend error message display
+- [ ] 10.31 Validate that booking fails with appropriate error when user has overlapping desk booking
+- [ ] 10.32 Validate that booking fails with appropriate error when desk is already booked by another user
+- [ ] 10.33 Validate that parking reservation fails with appropriate error when user has overlapping reservation
+- [ ] 10.34 Validate that parking reservation fails with appropriate error when space is already reserved by another user
