@@ -9,7 +9,26 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAllParkingReservations();
     loadAllOvertimeRecords();
     
+    // Check if user is admin and show user management tab
+    if (typeof isAdmin !== 'undefined' && isAdmin()) {
+        const usersTabBtn = document.getElementById('users-tab-btn');
+        if (usersTabBtn) {
+            usersTabBtn.style.display = 'block';
+        }
+    }
+    
     document.getElementById('saveConfigurationBtn').addEventListener('click', saveConfiguration);
+    
+    // User management event listeners
+    const createUserBtn = document.getElementById('createUserBtn');
+    if (createUserBtn) {
+        createUserBtn.addEventListener('click', createUser);
+    }
+    
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+    if (changePasswordBtn) {
+        changePasswordBtn.addEventListener('click', changePassword);
+    }
 });
 
 function setupTabs() {
@@ -529,4 +548,67 @@ function showError(message, containerId = 'admin-container') {
 
 function showSuccess(message, containerId = 'admin-container') {
     showNotification(message, 'success');
+}
+
+async function createUser() {
+    const username = document.getElementById('newUsername').value;
+    const email = document.getElementById('newEmail').value;
+    const password = document.getElementById('newPassword').value;
+    const role = document.getElementById('newRole').value;
+    const messageDiv = document.getElementById('create-user-message');
+    
+    if (!username || !email || !password) {
+        messageDiv.innerHTML = '<div class="error">Please fill in all required fields</div>';
+        return;
+    }
+    
+    try {
+        const response = await apiRequest('/api/auth/users', {
+            method: 'POST',
+            body: { username, email, password, role },
+        });
+        
+        messageDiv.innerHTML = '<div class="success">User created successfully!</div>';
+        
+        // Clear form
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newEmail').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('newRole').value = 'user';
+    } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Failed to create user: ${error.message}</div>`;
+    }
+}
+
+async function changePassword() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPasswordChange').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const messageDiv = document.getElementById('change-password-message');
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        messageDiv.innerHTML = '<div class="error">Please fill in all fields</div>';
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        messageDiv.innerHTML = '<div class="error">New passwords do not match</div>';
+        return;
+    }
+    
+    try {
+        await apiRequest('/api/auth/users/password', {
+            method: 'PUT',
+            body: { currentPassword, newPassword },
+        });
+        
+        messageDiv.innerHTML = '<div class="success">Password changed successfully!</div>';
+        
+        // Clear form
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPasswordChange').value = '';
+        document.getElementById('confirmPassword').value = '';
+    } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Failed to change password: ${error.message}</div>`;
+    }
 }

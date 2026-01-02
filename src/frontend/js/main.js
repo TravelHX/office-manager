@@ -2,27 +2,71 @@
 
 const API_BASE_URL = 'http://localhost:3000';
 
-// Simple authentication - store user token in localStorage
-// For Phase 2, we'll use a simple token system
+// Authentication functions
 function getAuthToken() {
-    // Check if we're on an admin page
-    const isAdminPage = window.location.pathname.includes('admin') || 
-                       window.location.pathname === '/admin' ||
-                       window.location.pathname === '/pages/admin.html';
-    
-    const tokenKey = isAdminPage ? 'admin_auth_token' : 'auth_token';
-    const tokenPrefix = isAdminPage ? 'admin_' : 'user_';
-    // Use userId = 1 for development (must exist in database)
-    const userId = 1;
-    
-    let token = localStorage.getItem(tokenKey);
-    if (!token) {
-        // For development, create a simple token with appropriate prefix and userId
-        token = tokenPrefix + userId;
-        localStorage.setItem(tokenKey, token);
-    }
-    return token;
+    return localStorage.getItem('authToken');
 }
+
+function setAuthToken(token) {
+    localStorage.setItem('authToken', token);
+}
+
+function clearAuthToken() {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+}
+
+function getCurrentUser() {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+}
+
+function setCurrentUser(user) {
+    localStorage.setItem('user', JSON.stringify(user));
+}
+
+function isAuthenticated() {
+    return !!getAuthToken();
+}
+
+function isAdmin() {
+    const user = getCurrentUser();
+    return user && user.role === 'admin';
+}
+
+function requireAuth() {
+    if (!isAuthenticated()) {
+        const currentPath = window.location.pathname;
+        window.location.href = `/pages/login.html?return=${encodeURIComponent(currentPath)}`;
+        return false;
+    }
+    return true;
+}
+
+// Check authentication on page load for protected pages
+document.addEventListener('DOMContentLoaded', () => {
+    // Pages that require authentication
+    const protectedPages = [
+        '/pages/desk-booking.html',
+        '/pages/parking.html',
+        '/pages/overtime.html',
+        '/pages/bookings.html',
+        '/pages/admin.html',
+    ];
+
+    const currentPath = window.location.pathname;
+    const isProtectedPage = protectedPages.some(page => currentPath.includes(page));
+
+    if (isProtectedPage && !isAuthenticated()) {
+        // Don't redirect from login page
+        if (!currentPath.includes('login.html')) {
+            window.location.href = `/pages/login.html?return=${encodeURIComponent(currentPath)}`;
+        }
+    }
+
+    // Update user indicator if authenticated
+    updateUserIndicator();
+});
 
 async function apiRequest(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
@@ -91,7 +135,59 @@ function showSuccess(message) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('Office Manager application loaded');
-});
+// Update user indicator in navigation
+function updateUserIndicator() {
+    const user = getCurrentUser();
+    const navMenu = document.querySelector('.nav-menu');
+    
+    if (!navMenu) return;
+
+    // Remove existing user indicator
+    const existingIndicator = document.querySelector('.user-indicator');
+    if (existingIndicator) {
+        existingIndicator.remove();
+    }
+
+    if (user) {
+        // Add user indicator
+        const userIndicator = document.createElement('li');
+        userIndicator.className = 'user-indicator';
+        userIndicator.innerHTML = `
+            <span style="color: #4CAF50; font-weight: 500;">
+                ${user.username} ${user.role === 'admin' ? '(Admin)' : ''}
+            </span>
+            <a href="#" onclick="logout(); return false;" style="margin-left: 10px; color: #d32f2f;">Logout</a>
+        `;
+        navMenu.appendChild(userIndicator);
+    } else {
+        // Add login link
+        const loginLink = document.createElement('li');
+        loginLink.innerHTML = '<a href="/pages/login.html">Login</a>';
+        navMenu.appendChild(loginLink);
+    }
+}
+
+// Logout function
+async function logout() {
+    try {
+        const token = getAuthToken();
+        if (token) {
+            // Call logout endpoint
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+    } finally {
+        clearAuthToken();
+        window.location.href = '/';
+    }
+}
+
+// Make logout available globally
+window.logout = logout;
 

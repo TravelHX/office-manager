@@ -18,10 +18,12 @@ Write-Host "[1/6] Tearing down existing Docker setup..." -ForegroundColor Yellow
 Write-Host "Stopping and removing containers, volumes, and networks..." -ForegroundColor Yellow
 $ErrorActionPreference = "Continue"
 try {
-    $output = docker-compose down -v --remove-orphans 2>&1
-    $output | Out-Null
+    # Force stop and remove everything
+    docker-compose down -v --remove-orphans --rmi local 2>&1 | Out-Null
+    Write-Host "Docker Compose services removed." -ForegroundColor Green
 } catch {
     # Ignore errors - containers may not exist
+    Write-Host "Note: Some containers may not have existed (this is OK)." -ForegroundColor Gray
 }
 $ErrorActionPreference = "Stop"
 
@@ -134,10 +136,10 @@ try {
 Write-Host "Ports are available. Ready for fresh setup." -ForegroundColor Green
 Write-Host ""
 
-# Step 2: Build Docker Compose
-Write-Host "[2/6] Building Docker Compose services..." -ForegroundColor Yellow
+# Step 2: Build Docker Compose (force rebuild without cache)
+Write-Host "[2/6] Building Docker Compose services (no cache)..." -ForegroundColor Yellow
 
-docker-compose build
+docker-compose build --no-cache
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Docker build failed!" -ForegroundColor Red
@@ -147,10 +149,10 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Docker build completed successfully." -ForegroundColor Green
 Write-Host ""
 
-# Step 3: Set up the database and start services
+# Step 3: Set up the database and start services (force recreate)
 Write-Host "[3/6] Starting services and setting up database..." -ForegroundColor Yellow
 
-docker-compose up -d
+docker-compose up -d --force-recreate --build
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Failed to start Docker services!" -ForegroundColor Red

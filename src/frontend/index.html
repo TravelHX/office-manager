@@ -15,7 +15,7 @@
                     <li><a href="/">Home</a></li>
                     <li><a href="/pages/desk-booking.html">Desk Booking</a></li>
                     <li><a href="/pages/parking.html">Parking</a></li>
-                    <li><a href="/pages/overtime.html">Overtime</a></li>
+                    <li><a href="/pages/overtime.html" id="overtime-nav-link" style="display: none;">Overtime</a></li>
                     <li><a href="/pages/bookings.html">My Bookings</a></li>
                     <li><a href="/pages/admin.html">Admin</a></li>
                 </ul>
@@ -59,7 +59,7 @@
                     <button onclick="location.href='/pages/parking.html'">Reserve Parking</button>
                 </div>
                 
-                <div class="card">
+                <div class="card" id="overtime-card" style="display: none;">
                     <h3>Overtime</h3>
                     <p>Track your overtime hours</p>
                     <button onclick="location.href='/pages/overtime.html'">Record Overtime</button>
@@ -82,6 +82,17 @@
     <script src="/js/main.js"></script>
     <script src="/js/notifications.js"></script>
     <script src="/js/dashboard.js"></script>
+    <script>
+        // Hide overtime features for non-logged-in users
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof isAuthenticated !== 'undefined' && isAuthenticated()) {
+                const overtimeCard = document.getElementById('overtime-card');
+                const overtimeNavLink = document.getElementById('overtime-nav-link');
+                if (overtimeCard) overtimeCard.style.display = 'block';
+                if (overtimeNavLink) overtimeNavLink.style.display = 'block';
+            }
+        });
+    </script>
 </body>
 </html>
 

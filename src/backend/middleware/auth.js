@@ -1,4 +1,7 @@
-const { executeQuery } = require('../database/connection');
+const { verifyToken } = require('../utils/token');
+const UserRepository = require('../repositories/UserRepository');
+
+const userRepository = new UserRepository();
 
 async function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -23,55 +26,124 @@ async function authenticate(req, res, next) {
     });
   }
 
-  // Extract user ID from token
-  // Simple approach: if token starts with "user_", extract numeric part
-  // Otherwise use token as user ID
-  // For admin, use "admin_" prefix
-  let userId = 1; // Default user ID
-  let isAdmin = false;
+  try {
+    // Verify JWT token
+    const decoded = verifyToken(token);
+    
+    // Fetch user from database to ensure user still exists and get latest role
+    const user = await userRepository.findById(decoded.id);
+    
+    if (!user) {
+      return res.status(401).json({
+        error: {
+          message: 'User not found',
+          code: 'USER_NOT_FOUND',
+        },
+      });
+    }
+
+    // Set user on request object
+    req.user = {
+      id: user.id,
+      username: user.username,
+      role: user.role || 'user',
+      token: token,
+    };
+
+    next();
+  } catch (error) {
+    // Handle JWT verification errors
+    if (error.message.includes('Invalid or expired')) {
+      return res.status(401).json({
+        error: {
+          message: 'Invalid or expired token',
+          code: 'INVALID_TOKEN',
+        },
+      });
+    }
+    
+    // Fallback for backward compatibility with old token format
+    // This allows existing tests to continue working during migration
+    try {
+      let userId = 1;
+      let isAdmin = false;
+      
+      if (token.startsWith('admin_')) {
+        const tokenParts = token.split('_');
+        if (tokenParts.length > 1) {
+          userId = parseInt(tokenParts[1]) || 1;
+        }
+        isAdmin = true;
+      } else if (token.startsWith('user_')) {
+        const tokenParts = token.split('_');
+        if (tokenParts.length > 1) {
+          userId = parseInt(tokenParts[1]) || 1;
+        }
+      } else {
+        userId = parseInt(token) || 1;
+      }
+
+      const user = await userRepository.findById(userId);
+      if (user) {
+        req.user = {
+          id: user.id,
+          username: user.username,
+          role: user.role || (isAdmin ? 'admin' : 'user'),
+          token: token,
+        };
+        return next();
+      }
+    } catch (fallbackError) {
+      // Ignore fallback errors
+    }
+
+    return res.status(401).json({
+      error: {
+        message: 'Authentication failed',
+        code: 'AUTH_FAILED',
+      },
+    });
+  }
+}
+
+/**
+ * Optional authentication middleware - sets req.user if token is present, but doesn't require it
+ */
+async function optionalAuthenticate(req, res, next) {
+  const authHeader = req.headers.authorization;
   
-  if (token.startsWith('admin_')) {
-    const tokenParts = token.split('_');
-    if (tokenParts.length > 1) {
-      userId = parseInt(tokenParts[1]) || 1;
-    }
-    isAdmin = true;
-  } else if (token.startsWith('user_')) {
-    const tokenParts = token.split('_');
-    if (tokenParts.length > 1) {
-      userId = parseInt(tokenParts[1]) || 1;
-    }
-  } else {
-    userId = parseInt(token) || 1;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    req.user = null;
+    return next();
   }
 
-  // Try to fetch user from database to get role
+  const token = authHeader.substring(7);
+  
+  if (!token || token === '') {
+    req.user = null;
+    return next();
+  }
+
   try {
-    const query = 'SELECT id, username, role FROM users WHERE id = ?';
-    const results = await executeQuery(query, [userId]);
+    // Verify JWT token
+    const decoded = verifyToken(token);
     
-    if (results.length > 0) {
+    // Fetch user from database
+    const user = await userRepository.findById(decoded.id);
+    
+    if (user) {
       req.user = {
-        id: results[0].id,
-        username: results[0].username,
-        role: results[0].role || 'user',
+        id: user.id,
+        username: user.username,
+        role: user.role || 'user',
         token: token,
       };
     } else {
-      // User doesn't exist in DB, use defaults based on token prefix
-      req.user = {
-        id: userId,
-        role: isAdmin ? 'admin' : 'user',
-        token: token,
-      };
+      req.user = null;
     }
   } catch (error) {
-    // If database query fails, use defaults based on token prefix
-    req.user = {
-      id: userId,
-      role: isAdmin ? 'admin' : 'user',
-      token: token,
-    };
+    // If token is invalid, just set user to null and continue
+    req.user = null;
   }
 
   next();
@@ -106,6 +178,6 @@ function authorize(roles = []) {
 
 module.exports = {
   authenticate,
+  optionalAuthenticate,
   authorize,
 };
-

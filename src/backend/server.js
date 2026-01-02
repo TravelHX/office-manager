@@ -24,6 +24,33 @@ async function startServer() {
     createPool();
     logger.info('Database connection pool created');
 
+    // Initialize users
+    try {
+      const UserService = require('./services/UserService');
+      const userService = new UserService();
+      
+      // Initialize admin user from config.json
+      // In development mode, this will use Password123 as the password
+      try {
+        const adminUser = await userService.initializeAdminFromConfig();
+        logger.info(`Admin user initialized: ${adminUser.username} (ID: ${adminUser.id})`);
+      } catch (error) {
+        logger.warn('Could not initialize admin user from config.json:', error.message);
+      }
+
+      // Initialize development test user
+      try {
+        const testUser = await userService.initializeDevTestUser();
+        if (testUser) {
+          logger.info(`Development test user initialized: ${testUser.username} (ID: ${testUser.id})`);
+        }
+      } catch (error) {
+        logger.warn('Could not initialize development test user:', error.message);
+      }
+    } catch (error) {
+      logger.warn('User initialization failed:', error.message);
+    }
+
     app.listen(config.server.port, () => {
       logger.info(`Server running on port ${config.server.port}`);
       logger.info(`Environment: ${config.env}`);

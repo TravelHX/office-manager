@@ -6,6 +6,7 @@ const parkingSpacesRouter = require('./parking-spaces');
 const parkingReservationsRouter = require('./parking-reservations');
 const overtimeRouter = require('./overtime');
 const adminRouter = require('./admin');
+const authRouter = require('./auth');
 
 router.get('/health', (req, res) => {
   res.json({
@@ -21,6 +22,7 @@ router.get('/api', (req, res) => {
   });
 });
 
+router.use('/api/auth', authRouter);
 router.use('/api/desks', desksRouter);
 router.use('/api/bookings', bookingsRouter);
 router.use('/api/parking-spaces', parkingSpacesRouter);

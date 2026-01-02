@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ParkingSpaceService = require('../services/ParkingSpaceService');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 
 const parkingSpaceService = new ParkingSpaceService();
 
@@ -14,7 +14,7 @@ router.get('/', authenticate, async (req, res, next) => {
   }
 });
 
-router.get('/available', authenticate, async (req, res, next) => {
+router.get('/available', optionalAuthenticate, async (req, res, next) => {
   try {
     const { reservationDate, timePeriod } = req.query;
     

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const BookingService = require('../services/BookingService');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 
 const bookingService = new BookingService();
 
@@ -15,7 +15,7 @@ router.get('/my-bookings', authenticate, async (req, res, next) => {
   }
 });
 
-router.get('/available', authenticate, async (req, res, next) => {
+router.get('/available', optionalAuthenticate, async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query;
     
