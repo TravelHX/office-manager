@@ -51,8 +51,8 @@ describe('Use Case 6: User Cancels Their Own Desk Booking', () => {
     const booking = await bookingService.createBooking(
       3001, // user1 ID
       testDeskId,
-      '2025-12-25',
-      '2025-12-26'
+      '2026-12-25',
+      '2026-12-26'
     );
     bookingId = booking.id;
   });
@@ -125,8 +125,8 @@ describe('Use Case 6: User Cancels Their Own Desk Booking', () => {
   });
 
   test('Step 5: Desk becomes available after cancellation', async () => {
-    const startDate = '2025-12-25';
-    const endDate = '2025-12-26';
+    const startDate = '2026-12-25';
+    const endDate = '2026-12-26';
 
     // Verify desk is not available before cancellation
     const beforeResponse = await request(app)
@@ -153,8 +153,8 @@ describe('Use Case 6: User Cancels Their Own Desk Booking', () => {
   });
 
   test('Step 5: Another user can book the desk after cancellation', async () => {
-    const startDate = '2025-12-25';
-    const endDate = '2025-12-26';
+    const startDate = '2026-12-25';
+    const endDate = '2026-12-26';
 
     // Cancel user1's booking
     await request(app)
@@ -225,8 +225,8 @@ describe('Use Case 6: User Cancels Their Own Desk Booking', () => {
   });
 
   test('Cancellation frees up desk for overlapping date ranges', async () => {
-    const startDate = '2025-12-24';
-    const endDate = '2025-12-27'; // Overlaps with booking
+    const startDate = '2026-12-24';
+    const endDate = '2026-12-27'; // Overlaps with booking
 
     // Cancel the booking
     await request(app)
@@ -257,8 +257,8 @@ describe('Use Case 6: User Cancels Their Own Desk Booking', () => {
     expect(bookingResponse.status).toBe(200);
     expect(bookingResponse.body.id).toBe(bookingId);
     expect(bookingResponse.body.deskId).toBe(testDeskId);
-    expect(bookingResponse.body.startDate).toBe('2025-12-25');
-    expect(bookingResponse.body.endDate).toBe('2025-12-26');
+    expect(bookingResponse.body.startDate).toBe('2026-12-25');
+    expect(bookingResponse.body.endDate).toBe('2026-12-26');
     expect(bookingResponse.body.status).toBe('cancelled');
     expect(bookingResponse.body.cancelledAt).toBeTruthy();
   });

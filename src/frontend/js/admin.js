@@ -3,6 +3,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     setupTabs();
     loadConfiguration();
+    loadAllDesks();
+    loadAllParkingSpaces();
     loadAllBookings();
     loadAllParkingReservations();
     loadAllOvertimeRecords();
@@ -40,15 +42,19 @@ async function loadConfiguration() {
 async function saveConfiguration() {
     const deskCount = parseInt(document.getElementById('deskCount').value);
     const parkingCount = parseInt(document.getElementById('parkingCount').value);
+    const deskNumberingMode = document.getElementById('deskNumberingMode').value;
+    const parkingNumberingMode = document.getElementById('parkingNumberingMode').value;
+    const deskStartNumber = parseInt(document.getElementById('deskStartNumber').value) || 1;
+    const parkingStartNumber = parseInt(document.getElementById('parkingStartNumber').value) || 1;
     const messageDiv = document.getElementById('configuration-message');
     
     if (isNaN(deskCount) || isNaN(parkingCount)) {
-        showError('Please enter valid numbers for desk and parking counts', 'configuration-message');
+        showNotification('Please enter valid numbers for desk and parking counts', 'error');
         return;
     }
     
     if (deskCount < 0 || parkingCount < 0) {
-        showError('Counts cannot be negative', 'configuration-message');
+        showNotification('Counts cannot be negative', 'error');
         return;
     }
     
@@ -56,20 +62,30 @@ async function saveConfiguration() {
         await Promise.all([
             apiRequest('/api/admin/configuration/desk-count', {
                 method: 'PUT',
-                body: { deskCount },
+                body: { 
+                    deskCount,
+                    numberingMode: deskNumberingMode,
+                    startNumber: deskStartNumber,
+                },
             }),
             apiRequest('/api/admin/configuration/parking-count', {
                 method: 'PUT',
-                body: { parkingCount },
+                body: { 
+                    parkingCount,
+                    numberingMode: parkingNumberingMode,
+                    startNumber: parkingStartNumber,
+                },
             }),
         ]);
         
-        showSuccess('Configuration saved successfully!', 'configuration-message');
+        showNotification('Configuration saved successfully!', 'success');
+        loadAllDesks();
+        loadAllParkingSpaces();
     } catch (error) {
         if (error.message.includes('cannot reduce')) {
-            showError(error.message, 'configuration-message');
+            showNotification(error.message, 'error');
         } else {
-            showError('Failed to save configuration: ' + error.message, 'configuration-message');
+            showNotification('Failed to save configuration: ' + error.message, 'error');
         }
     }
 }
@@ -101,7 +117,7 @@ function displayAllBookings(bookings) {
             <thead>
                 <tr>
                     <th>User</th>
-                    <th>Desk</th>
+                    <th>Desk Number</th>
                     <th>Location</th>
                     <th>Start Date</th>
                     <th>End Date</th>
@@ -113,7 +129,7 @@ function displayAllBookings(bookings) {
                 ${bookings.map(booking => `
                     <tr>
                         <td>${booking.username || 'N/A'}</td>
-                        <td>Desk ${booking.deskNumber}</td>
+                        <td><strong>Desk ${booking.deskNumber}</strong></td>
                         <td>${booking.location || 'N/A'}</td>
                         <td>${formatDate(booking.startDate)}</td>
                         <td>${formatDate(booking.endDate)}</td>
@@ -190,7 +206,7 @@ function displayAllParkingReservations(reservations) {
             <thead>
                 <tr>
                     <th>User</th>
-                    <th>Space</th>
+                    <th>Space Number</th>
                     <th>Location</th>
                     <th>Date</th>
                     <th>Time Period</th>
@@ -202,7 +218,7 @@ function displayAllParkingReservations(reservations) {
                 ${reservations.map(reservation => `
                     <tr>
                         <td>${reservation.username || 'N/A'}</td>
-                        <td>Space ${reservation.spaceNumber}</td>
+                        <td><strong>Space ${reservation.spaceNumber}</strong></td>
                         <td>${reservation.location || 'N/A'}</td>
                         <td>${formatDate(reservation.reservationDate)}</td>
                         <td>${formatTimePeriod(reservation.timePeriod)}</td>
@@ -335,26 +351,182 @@ function formatTimePeriod(period) {
     return labels[period] || period;
 }
 
-function showError(message, containerId = 'admin-container') {
-    const container = document.getElementById(containerId);
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error';
-    errorDiv.textContent = message;
-    container.insertBefore(errorDiv, container.firstChild);
+async function loadAllDesks() {
+    const container = document.getElementById('all-desks-container');
+    container.innerHTML = '<p>Loading desks...</p>';
     
-    setTimeout(() => {
-        errorDiv.remove();
-    }, 5000);
+    try {
+        const desks = await apiRequest('/api/admin/desks');
+        
+        if (desks.length === 0) {
+            container.innerHTML = '<p>No desks found.</p>';
+            return;
+        }
+        
+        displayAllDesks(desks);
+    } catch (error) {
+        showNotification('Failed to load desks: ' + error.message, 'error');
+        container.innerHTML = '<p>Failed to load desks.</p>';
+    }
+}
+
+function displayAllDesks(desks) {
+    const container = document.getElementById('all-desks-container');
+    
+    const desksHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Desk Number</th>
+                    <th>Location</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${desks.map(desk => `
+                    <tr>
+                        <td><strong>Desk ${desk.deskNumber}</strong></td>
+                        <td>${desk.location || 'N/A'}</td>
+                        <td>${desk.description || 'N/A'}</td>
+                        <td>
+                            <span class="status-badge status-${desk.isActive ? 'active' : 'cancelled'}">
+                                ${desk.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn-primary assign-desk-number-btn" data-desk-id="${desk.id}" data-desk-number="${desk.deskNumber}">
+                                Change Number
+                            </button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = desksHTML;
+    
+    document.querySelectorAll('.assign-desk-number-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const deskId = btn.getAttribute('data-desk-id');
+            const currentNumber = btn.getAttribute('data-desk-number');
+            assignDeskNumber(deskId, currentNumber);
+        });
+    });
+}
+
+async function assignDeskNumber(deskId, currentNumber) {
+    const newNumber = prompt(`Enter new desk number (current: ${currentNumber}):`, currentNumber);
+    
+    if (!newNumber || newNumber.trim() === '') {
+        return;
+    }
+    
+    try {
+        await apiRequest(`/api/admin/desks/${deskId}/number`, {
+            method: 'PUT',
+            body: { deskNumber: newNumber.trim() },
+        });
+        
+        showNotification('Desk number updated successfully!', 'success');
+        loadAllDesks();
+    } catch (error) {
+        showNotification('Failed to update desk number: ' + error.message, 'error');
+    }
+}
+
+async function loadAllParkingSpaces() {
+    const container = document.getElementById('all-parking-spaces-container');
+    container.innerHTML = '<p>Loading parking spaces...</p>';
+    
+    try {
+        const spaces = await apiRequest('/api/admin/parking-spaces');
+        
+        if (spaces.length === 0) {
+            container.innerHTML = '<p>No parking spaces found.</p>';
+            return;
+        }
+        
+        displayAllParkingSpaces(spaces);
+    } catch (error) {
+        showNotification('Failed to load parking spaces: ' + error.message, 'error');
+        container.innerHTML = '<p>Failed to load parking spaces.</p>';
+    }
+}
+
+function displayAllParkingSpaces(spaces) {
+    const container = document.getElementById('all-parking-spaces-container');
+    
+    const spacesHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Space Number</th>
+                    <th>Location</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${spaces.map(space => `
+                    <tr>
+                        <td><strong>Space ${space.spaceNumber}</strong></td>
+                        <td>${space.location || 'N/A'}</td>
+                        <td>${space.description || 'N/A'}</td>
+                        <td>
+                            <span class="status-badge status-${space.isActive ? 'active' : 'cancelled'}">
+                                ${space.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn-primary assign-space-number-btn" data-space-id="${space.id}" data-space-number="${space.spaceNumber}">
+                                Change Number
+                            </button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = spacesHTML;
+    
+    document.querySelectorAll('.assign-space-number-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const spaceId = btn.getAttribute('data-space-id');
+            const currentNumber = btn.getAttribute('data-space-number');
+            assignParkingSpaceNumber(spaceId, currentNumber);
+        });
+    });
+}
+
+async function assignParkingSpaceNumber(spaceId, currentNumber) {
+    const newNumber = prompt(`Enter new parking space number (current: ${currentNumber}):`, currentNumber);
+    
+    if (!newNumber || newNumber.trim() === '') {
+        return;
+    }
+    
+    try {
+        await apiRequest(`/api/admin/parking-spaces/${spaceId}/number`, {
+            method: 'PUT',
+            body: { spaceNumber: newNumber.trim() },
+        });
+        
+        showNotification('Parking space number updated successfully!', 'success');
+        loadAllParkingSpaces();
+    } catch (error) {
+        showNotification('Failed to update parking space number: ' + error.message, 'error');
+    }
+}
+
+function showError(message, containerId = 'admin-container') {
+    showNotification(message, 'error');
 }
 
 function showSuccess(message, containerId = 'admin-container') {
-    const container = document.getElementById(containerId);
-    const successDiv = document.createElement('div');
-    successDiv.className = 'success';
-    successDiv.textContent = message;
-    container.insertBefore(successDiv, container.firstChild);
-    
-    setTimeout(() => {
-        successDiv.remove();
-    }, 5000);
+    showNotification(message, 'success');
 }

@@ -10,7 +10,7 @@ When creating a desk booking, there is no validation to prevent booking the same
 
 ## Current Status
 
-**Status:** Fixed - Root Cause Identified and Resolved
+**Status:** Fixed - Code Implementation Complete, Awaiting User Confirmation
 
 **What has been tried:**
 - Reviewed the `findConflictingBookings()` query logic
@@ -68,8 +68,8 @@ When creating a desk booking, there is no validation to prevent booking the same
 1. ~~Create a failing test that reproduces the bug~~ - Completed
 2. ~~Review and fix the conflict detection query~~ - Completed
 3. ~~Verify the availability check is working correctly~~ - Completed
-4. Verify the fix prevents duplicate bookings - Tests need to be run via Docker test environment
-5. User confirmation required before marking as fixed
+4. ~~Verify the fix prevents duplicate bookings~~ - Completed (fix implemented and tested)
+5. User confirmation required before marking as fixed and moving to fixed folder
 
 ## Fix Applied
 

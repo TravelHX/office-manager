@@ -205,6 +205,23 @@ Display desk numbers in the admin screen after desks are allocated:
 
 This feature will help administrators quickly see which desk numbers have been assigned and are available in the system.
 
+### 4. User Authentication and Management
+
+Complete user authentication and management system with role-based access control:
+
+- **User Creation**: Admin users can create new users with alphanumeric user IDs and passwords
+- **Password Management**: Users can change their passwords
+- **Admin Configuration**: Initial admin user configured via `config.json` in the `data/` folder with configurable user ID and optional password
+- **User Restrictions**: Users can only book desks/spaces for themselves and update their own data
+- **Development Test User**: Test user (ID: 0001, Password: Password123) created automatically in development mode only
+- **User Indicator**: Icon at top left of screen displays logged-in user information
+- **Access Control**: 
+  - Logged-in users: Full access to all features except user creation (admin only)
+  - Not logged-in users: Can only view available desks/spaces, cannot access overtime screen or make bookings
+- **Login Redirect**: Unauthenticated users attempting to book desks/spaces are redirected to login screen
+
+This feature will provide secure user authentication and proper access control throughout the application.
+
 ## API Endpoints
 
 ### Authentication
@@ -352,4 +369,4 @@ Use cases cover scenarios including:
 - Technology stack selected: Node.js backend, MySQL database, raw SQL data access layer, HTML/CSS/JS frontend
 - Docker support added: All services run in Docker containers, including dedicated test environment
 - Use cases documented: Seven detailed use cases covering all major user workflows (see `docs/usecases.md`)
-- Feature requests added: Enhanced admin resource configuration with flexible numbering options, improved desk number display in booking interface, and admin screen display of allocated desk numbers
+- Feature requests added: Enhanced admin resource configuration with flexible numbering options, improved desk number display in booking interface, admin screen display of allocated desk numbers, and comprehensive user authentication and management system

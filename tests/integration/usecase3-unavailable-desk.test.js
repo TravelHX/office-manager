@@ -21,7 +21,7 @@ describe('Use Case 3: Employee Attempts to Book Unavailable Desk', () => {
   let bookingRepository;
   let testDesks = [];
   let userTokens = [];
-  const testDate = '2025-12-20';
+  const testDate = '2026-12-20';
 
   beforeAll(async () => {
     deskService = new DeskService();
@@ -119,7 +119,7 @@ describe('Use Case 3: Employee Attempts to Book Unavailable Desk', () => {
   });
 
   test('Step 9: Desks are available for different dates', async () => {
-    const differentDate = '2025-12-25';
+    const differentDate = '2026-12-25';
     const newUserToken = userTokens[3];
 
     const response = await request(app)
@@ -156,8 +156,8 @@ describe('Use Case 3: Employee Attempts to Book Unavailable Desk', () => {
     const newUserToken = userTokens[3];
     
     // Check overlapping date range (includes the booked date)
-    const overlappingStart = '2025-12-19';
-    const overlappingEnd = '2025-12-21';
+    const overlappingStart = '2026-12-19';
+    const overlappingEnd = '2026-12-21';
 
     const response = await request(app)
       .get(`/api/bookings/available?startDate=${overlappingStart}&endDate=${overlappingEnd}`)

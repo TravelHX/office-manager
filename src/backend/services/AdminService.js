@@ -25,7 +25,7 @@ class AdminService {
     };
   }
 
-  async updateDeskCount(newCount) {
+  async updateDeskCount(newCount, numberingMode = 'auto', startNumber = 1) {
     if (newCount < 0) {
       throw new Error('Desk count cannot be negative');
     }
@@ -54,19 +54,7 @@ class AdminService {
 
     const currentCount = currentDesks.length;
     if (newCount > currentCount) {
-      for (let i = currentCount + 1; i <= newCount; i++) {
-        const deskNumber = `D${String(i).padStart(3, '0')}`;
-        const existingDesk = await this.deskRepository.findByDeskNumber(deskNumber);
-        if (!existingDesk) {
-          const desk = new Desk({
-            desk_number: deskNumber,
-            location: 'Office',
-            description: `Desk ${deskNumber}`,
-            is_active: true,
-          });
-          await this.deskRepository.create(desk);
-        }
-      }
+      await this.createDesksBulk(newCount - currentCount, numberingMode, startNumber + currentCount);
     } else if (newCount < currentCount) {
       const desksToDeactivate = currentDesks.slice(newCount);
       for (const desk of desksToDeactivate) {
@@ -80,7 +68,65 @@ class AdminService {
     return await this.getConfiguration();
   }
 
-  async updateParkingCount(newCount) {
+  async createDesksBulk(count, numberingMode = 'auto', startNumber = 1) {
+    if (count <= 0) {
+      throw new Error('Count must be greater than 0');
+    }
+
+    const createdDesks = [];
+    for (let i = 0; i < count; i++) {
+      let deskNumber;
+      if (numberingMode === 'auto') {
+        // Sequential numbering: 1, 2, 3, ...
+        deskNumber = String(startNumber + i);
+      } else {
+        // Legacy format: D001, D002, ...
+        deskNumber = `D${String(startNumber + i).padStart(3, '0')}`;
+      }
+
+      const existingDesk = await this.deskRepository.findByDeskNumber(deskNumber);
+      if (!existingDesk) {
+        const desk = new Desk({
+          desk_number: deskNumber,
+          location: 'Office',
+          description: `Desk ${deskNumber}`,
+          is_active: true,
+        });
+        const created = await this.deskRepository.create(desk);
+        createdDesks.push(created);
+      }
+    }
+    return createdDesks;
+  }
+
+  async assignDeskNumber(deskId, deskNumber) {
+    if (!deskNumber || deskNumber.trim() === '') {
+      throw new Error('Desk number cannot be empty');
+    }
+
+    const existingDesk = await this.deskRepository.findByDeskNumber(deskNumber.trim());
+    if (existingDesk && existingDesk.id !== deskId) {
+      throw new Error(`Desk number ${deskNumber} is already assigned`);
+    }
+
+    const desk = await this.deskRepository.findById(deskId);
+    if (!desk) {
+      throw new Error('Desk not found');
+    }
+
+    const updatedDesk = new Desk({
+      id: desk.id,
+      desk_number: deskNumber.trim(),
+      location: desk.location,
+      description: desk.description,
+      is_active: desk.isActive ? 1 : 0,
+      created_at: desk.createdAt,
+      updated_at: desk.updatedAt,
+    });
+    return await this.deskRepository.update(deskId, updatedDesk);
+  }
+
+  async updateParkingCount(newCount, numberingMode = 'auto', startNumber = 1) {
     if (newCount < 0) {
       throw new Error('Parking count cannot be negative');
     }
@@ -109,19 +155,7 @@ class AdminService {
 
     const currentCount = currentSpaces.length;
     if (newCount > currentCount) {
-      for (let i = currentCount + 1; i <= newCount; i++) {
-        const spaceNumber = `P${String(i).padStart(3, '0')}`;
-        const existingSpace = await this.parkingSpaceRepository.findBySpaceNumber(spaceNumber);
-        if (!existingSpace) {
-          const parkingSpace = new ParkingSpace({
-            space_number: spaceNumber,
-            location: 'Parking Lot',
-            description: `Parking Space ${spaceNumber}`,
-            is_active: true,
-          });
-          await this.parkingSpaceRepository.create(parkingSpace);
-        }
-      }
+      await this.createParkingSpacesBulk(newCount - currentCount, numberingMode, startNumber + currentCount);
     } else if (newCount < currentCount) {
       const spacesToDeactivate = currentSpaces.slice(newCount);
       for (const space of spacesToDeactivate) {
@@ -133,6 +167,64 @@ class AdminService {
     }
 
     return await this.getConfiguration();
+  }
+
+  async createParkingSpacesBulk(count, numberingMode = 'auto', startNumber = 1) {
+    if (count <= 0) {
+      throw new Error('Count must be greater than 0');
+    }
+
+    const createdSpaces = [];
+    for (let i = 0; i < count; i++) {
+      let spaceNumber;
+      if (numberingMode === 'auto') {
+        // Sequential numbering: 1, 2, 3, ...
+        spaceNumber = String(startNumber + i);
+      } else {
+        // Legacy format: P001, P002, ...
+        spaceNumber = `P${String(startNumber + i).padStart(3, '0')}`;
+      }
+
+      const existingSpace = await this.parkingSpaceRepository.findBySpaceNumber(spaceNumber);
+      if (!existingSpace) {
+        const parkingSpace = new ParkingSpace({
+          space_number: spaceNumber,
+          location: 'Parking Lot',
+          description: `Parking Space ${spaceNumber}`,
+          is_active: true,
+        });
+        const created = await this.parkingSpaceRepository.create(parkingSpace);
+        createdSpaces.push(created);
+      }
+    }
+    return createdSpaces;
+  }
+
+  async assignParkingSpaceNumber(spaceId, spaceNumber) {
+    if (!spaceNumber || spaceNumber.trim() === '') {
+      throw new Error('Parking space number cannot be empty');
+    }
+
+    const existingSpace = await this.parkingSpaceRepository.findBySpaceNumber(spaceNumber.trim());
+    if (existingSpace && existingSpace.id !== spaceId) {
+      throw new Error(`Parking space number ${spaceNumber} is already assigned`);
+    }
+
+    const space = await this.parkingSpaceRepository.findById(spaceId);
+    if (!space) {
+      throw new Error('Parking space not found');
+    }
+
+    const updatedSpace = new ParkingSpace({
+      id: space.id,
+      space_number: spaceNumber.trim(),
+      location: space.location,
+      description: space.description,
+      is_active: space.isActive ? 1 : 0,
+      created_at: space.createdAt,
+      updated_at: space.updatedAt,
+    });
+    return await this.parkingSpaceRepository.update(spaceId, updatedSpace);
   }
 
   async getAllBookings() {
@@ -147,6 +239,14 @@ class AdminService {
     const OvertimeRecordRepository = require('../repositories/OvertimeRecordRepository');
     const overtimeRepository = new OvertimeRecordRepository();
     return await overtimeRepository.findAll();
+  }
+
+  async getAllDesks() {
+    return await this.deskRepository.findAll();
+  }
+
+  async getAllParkingSpaces() {
+    return await this.parkingSpaceRepository.findAll();
   }
 }
 

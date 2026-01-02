@@ -59,10 +59,10 @@ function displayParkingSpaces(spaces, reservationDate, timePeriod) {
         <div class="desks-grid">
             ${spaces.map(space => `
                 <div class="desk-card" data-space-id="${space.id}">
-                    <h4>Space ${space.spaceNumber}</h4>
+                    <h4><strong>Space ${space.spaceNumber}</strong></h4>
                     ${space.location ? `<p><strong>Location:</strong> ${space.location}</p>` : ''}
                     ${space.description ? `<p>${space.description}</p>` : ''}
-                    <button class="btn-primary book-space-btn" data-space-id="${space.id}">Reserve This Space</button>
+                    <button class="btn-primary book-space-btn" data-space-id="${space.id}" data-space-number="${space.spaceNumber}">Reserve This Space</button>
                 </div>
             `).join('')}
         </div>
@@ -73,15 +73,16 @@ function displayParkingSpaces(spaces, reservationDate, timePeriod) {
     document.querySelectorAll('.book-space-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const spaceId = btn.getAttribute('data-space-id');
-            reserveParkingSpace(spaceId, reservationDate, timePeriod);
+            const spaceNumber = btn.getAttribute('data-space-number');
+            reserveParkingSpace(spaceId, spaceNumber, reservationDate, timePeriod);
         });
     });
 }
 
-async function reserveParkingSpace(spaceId, reservationDate, timePeriod) {
+async function reserveParkingSpace(spaceId, spaceNumber, reservationDate, timePeriod) {
     const timePeriodLabel = timePeriod === 'morning' ? 'Morning' : timePeriod === 'afternoon' ? 'Afternoon' : 'Full Day';
     
-    if (!confirm(`Confirm reservation for Parking Space ${spaceId} on ${reservationDate} (${timePeriodLabel})?`)) {
+    if (!confirm(`Confirm reservation for Parking Space ${spaceNumber} on ${reservationDate} (${timePeriodLabel})?`)) {
         return;
     }
     

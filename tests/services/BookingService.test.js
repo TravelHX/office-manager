@@ -29,8 +29,8 @@ describe('BookingService', () => {
     test('should create booking successfully', async () => {
       const userId = 1;
       const deskId = 1;
-      const startDate = '2025-01-01';
-      const endDate = '2025-01-02';
+      const startDate = '2026-12-15';
+      const endDate = '2026-12-16';
       const mockDesk = new Desk({ id: 1, desk_number: 'D001', is_active: 1 });
       const mockBooking = new Booking({
         id: 1,
@@ -56,7 +56,7 @@ describe('BookingService', () => {
       mockDeskRepository.findById = jest.fn().mockResolvedValue(null);
 
       await expect(
-        bookingService.createBooking(1, 999, '2025-01-01', '2025-01-02')
+        bookingService.createBooking(1, 999, '2026-12-15', '2026-12-16')
       ).rejects.toThrow('Desk not found');
     });
 
@@ -66,13 +66,13 @@ describe('BookingService', () => {
       mockDeskService.checkDeskAvailability = jest.fn().mockResolvedValue({ available: false });
 
       await expect(
-        bookingService.createBooking(1, 1, '2025-01-01', '2025-01-02')
+        bookingService.createBooking(1, 1, '2026-12-15', '2026-12-16')
       ).rejects.toThrow('not available');
     });
 
     test('should throw error when start date is after end date', async () => {
       await expect(
-        bookingService.createBooking(1, 1, '2025-01-02', '2025-01-01')
+        bookingService.createBooking(1, 1, '2026-12-16', '2026-12-15')
       ).rejects.toThrow('Start date must be before');
     });
   });

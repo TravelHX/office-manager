@@ -30,16 +30,26 @@ class Booking {
   }
 
   toDatabaseFormat() {
-    return {
+    const data = {
       user_id: this.userId,
       desk_id: this.deskId,
       start_date: this.startDate,
       end_date: this.endDate,
       status: this.status,
-      cancelled_at: this.cancelledAt,
-      cancelled_by: this.cancelledBy,
-      cancellation_reason: this.cancellationReason,
     };
+    
+    // Only include optional fields if they have values
+    if (this.cancelledAt) {
+      data.cancelled_at = this.cancelledAt;
+    }
+    if (this.cancelledBy) {
+      data.cancelled_by = this.cancelledBy;
+    }
+    if (this.cancellationReason) {
+      data.cancellation_reason = this.cancellationReason;
+    }
+    
+    return data;
   }
 }
 

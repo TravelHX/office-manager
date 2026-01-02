@@ -58,7 +58,7 @@ describe('Use Case 5: Admin Cancels User Desk Booking', () => {
   });
 
   test('Step 1: User creates a desk booking', async () => {
-    const bookingDate = '2025-12-20';
+    const bookingDate = '2026-12-20';
 
     const response = await request(app)
       .post('/api/bookings')
@@ -116,7 +116,7 @@ describe('Use Case 5: Admin Cancels User Desk Booking', () => {
     expect(cancelledBooking).toBeDefined();
     expect(cancelledBooking.status).toBe('cancelled');
 
-    const bookingDate = '2025-12-20';
+    const bookingDate = '2026-12-20';
     const availabilityResponse = await request(app)
       .get(`/api/bookings/available?startDate=${bookingDate}&endDate=${bookingDate}`)
       .set('Authorization', userToken);

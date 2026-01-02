@@ -113,7 +113,7 @@ function displayBookings(bookings, reservations, overtimeRecords) {
             <table>
                 <thead>
                     <tr>
-                        <th>Desk</th>
+                        <th>Desk Number</th>
                         <th>Location</th>
                         <th>Start Date</th>
                         <th>End Date</th>
@@ -124,7 +124,7 @@ function displayBookings(bookings, reservations, overtimeRecords) {
                 <tbody>
                     ${bookings.map(booking => `
                         <tr>
-                            <td>Desk ${booking.deskNumber}</td>
+                            <td><strong>Desk ${booking.deskNumber}</strong></td>
                             <td>${booking.location || 'N/A'}</td>
                             <td>${formatDate(booking.startDate)}</td>
                             <td>${formatDate(booking.endDate)}</td>
@@ -151,7 +151,7 @@ function displayBookings(bookings, reservations, overtimeRecords) {
             <table>
                 <thead>
                     <tr>
-                        <th>Space</th>
+                        <th>Space Number</th>
                         <th>Location</th>
                         <th>Date</th>
                         <th>Time Period</th>
@@ -162,7 +162,7 @@ function displayBookings(bookings, reservations, overtimeRecords) {
                 <tbody>
                     ${reservations.map(reservation => `
                         <tr>
-                            <td>Space ${reservation.spaceNumber}</td>
+                            <td><strong>Space ${reservation.spaceNumber}</strong></td>
                             <td>${reservation.location || 'N/A'}</td>
                             <td>${formatDate(reservation.reservationDate)}</td>
                             <td>${formatTimePeriod(reservation.timePeriod)}</td>

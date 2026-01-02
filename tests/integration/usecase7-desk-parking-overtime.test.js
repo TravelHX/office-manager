@@ -101,7 +101,7 @@ describe('Use Case 7: Employee Books Desk, Parking Space, and Records Overtime',
   });
 
   test('Step 1-3: User can book a desk for a specific date', async () => {
-    const reservationDate = '2025-12-15';
+    const reservationDate = '2026-12-15';
     const startDate = reservationDate;
     const endDate = reservationDate;
 
@@ -120,7 +120,7 @@ describe('Use Case 7: Employee Books Desk, Parking Space, and Records Overtime',
   });
 
   test('Step 4-5: User can reserve a parking space for the same date', async () => {
-    const reservationDate = '2025-12-15';
+    const reservationDate = '2026-12-15';
     const timePeriod = 'full_day';
 
     const response = await request(app)
@@ -138,7 +138,7 @@ describe('Use Case 7: Employee Books Desk, Parking Space, and Records Overtime',
   });
 
   test('Step 6-14: User can record overtime hours', async () => {
-    const recordDate = '2025-12-15';
+    const recordDate = '2026-12-15';
     const startTime = '17:00:00';
     const endTime = '18:00:00';
     const description = 'Extended work on project';
@@ -184,7 +184,7 @@ describe('Use Case 7: Employee Books Desk, Parking Space, and Records Overtime',
 
     expect(overtimeResponse.status).toBe(200);
     expect(Array.isArray(overtimeResponse.body)).toBe(true);
-    const userOvertime = overtimeResponse.body.find(r => r.recordDate === '2025-12-15');
+    const userOvertime = overtimeResponse.body.find(r => r.recordDate === '2026-12-15');
     expect(userOvertime).toBeDefined();
     expect(userOvertime.totalHours).toBe(1);
   });

@@ -101,8 +101,8 @@ describe('Use Case 4: Admin Sets Up Number of Desks and Parking Spaces', () => {
       .set('Authorization', userToken)
       .send({
         deskId: desk.id,
-        startDate: '2025-12-20',
-        endDate: '2025-12-20',
+        startDate: '2026-12-20',
+        endDate: '2026-12-20',
       });
 
     expect(bookingResponse.status).toBe(201);

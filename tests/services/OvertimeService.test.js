@@ -40,7 +40,7 @@ describe('OvertimeService', () => {
   describe('createOvertimeRecord', () => {
     test('should create overtime record successfully', async () => {
       const userId = 1;
-      const recordDate = '2025-12-15';
+      const recordDate = '2025-12-15'; // Past date is valid for overtime
       const startTime = '17:00:00';
       const endTime = '18:00:00';
       const description = 'Extended work';
@@ -82,7 +82,7 @@ describe('OvertimeService', () => {
 
     test('should throw error when hours exceed 24', async () => {
       await expect(
-        overtimeService.createOvertimeRecord(1, '2025-12-15', '00:00:00', '23:59:59')
+        overtimeService.createOvertimeRecord(1, '2025-12-15', '00:00:00', '23:59:59') // Past date is valid
       ).rejects.toThrow('Overtime hours cannot exceed 24 hours per day');
     });
   });

@@ -63,7 +63,11 @@ class BookingRepository extends BaseRepository {
   async create(booking) {
     const data = booking instanceof Booking ? booking.toDatabaseFormat() : booking;
     const id = await super.create(data);
-    return this.findById(id);
+    const createdBooking = await this.findById(id);
+    if (!createdBooking) {
+      throw new Error('Failed to retrieve created booking');
+    }
+    return createdBooking;
   }
 
   async update(id, booking) {

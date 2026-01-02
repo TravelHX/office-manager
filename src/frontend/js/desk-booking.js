@@ -69,10 +69,10 @@ function displayDesks(desks, startDate, endDate) {
         <div class="desks-grid">
             ${desks.map(desk => `
                 <div class="desk-card" data-desk-id="${desk.id}">
-                    <h4>Desk ${desk.deskNumber}</h4>
+                    <h4><strong>Desk ${desk.deskNumber}</strong></h4>
                     ${desk.location ? `<p><strong>Location:</strong> ${desk.location}</p>` : ''}
                     ${desk.description ? `<p>${desk.description}</p>` : ''}
-                    <button class="btn-primary book-desk-btn" data-desk-id="${desk.id}">Book This Desk</button>
+                    <button class="btn-primary book-desk-btn" data-desk-id="${desk.id}" data-desk-number="${desk.deskNumber}">Book This Desk</button>
                 </div>
             `).join('')}
         </div>
@@ -83,13 +83,14 @@ function displayDesks(desks, startDate, endDate) {
     document.querySelectorAll('.book-desk-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const deskId = btn.getAttribute('data-desk-id');
-            bookDesk(deskId, startDate, endDate);
+            const deskNumber = btn.getAttribute('data-desk-number');
+            bookDesk(deskId, deskNumber, startDate, endDate);
         });
     });
 }
 
-async function bookDesk(deskId, startDate, endDate) {
-    if (!confirm(`Confirm booking for Desk ${deskId} from ${startDate} to ${endDate}?`)) {
+async function bookDesk(deskId, deskNumber, startDate, endDate) {
+    if (!confirm(`Confirm booking for Desk ${deskNumber} from ${startDate} to ${endDate}?`)) {
         return;
     }
     

@@ -31,6 +31,8 @@
             <div id="admin-container">
                 <div id="admin-tabs">
                     <button class="tab-btn active" data-tab="configuration">Resource Configuration</button>
+                    <button class="tab-btn" data-tab="desks">Desks</button>
+                    <button class="tab-btn" data-tab="parking-spaces">Parking Spaces</button>
                     <button class="tab-btn" data-tab="bookings">All Bookings</button>
                     <button class="tab-btn" data-tab="parking">All Parking Reservations</button>
                     <button class="tab-btn" data-tab="overtime">All Overtime Records</button>
@@ -38,22 +40,62 @@
                 
                 <div id="configuration-tab" class="tab-content active">
                     <h3>Office Resource Configuration</h3>
-                    <div class="booking-form">
+                    <div class="card">
+                        <h4>Desk Configuration</h4>
                         <div class="form-group">
                             <label for="deskCount">Desk Count:</label>
                             <input type="number" id="deskCount" min="0" required>
-                            <p class="help-text">Current active desks will be shown below</p>
                         </div>
-                        
+                        <div class="form-group">
+                            <label for="deskNumberingMode">Numbering Mode:</label>
+                            <select id="deskNumberingMode">
+                                <option value="auto">Auto (Sequential: 1, 2, 3...)</option>
+                                <option value="legacy">Legacy (D001, D002, D003...)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="deskStartNumber">Start Number:</label>
+                            <input type="number" id="deskStartNumber" min="1" value="1">
+                            <p class="help-text">Starting number for new desks (only applies to new desks)</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card mt-2">
+                        <h4>Parking Space Configuration</h4>
                         <div class="form-group">
                             <label for="parkingCount">Parking Space Count:</label>
                             <input type="number" id="parkingCount" min="0" required>
-                            <p class="help-text">Current active parking spaces will be shown below</p>
                         </div>
-                        
-                        <button id="saveConfigurationBtn" class="btn-primary">Save Configuration</button>
+                        <div class="form-group">
+                            <label for="parkingNumberingMode">Numbering Mode:</label>
+                            <select id="parkingNumberingMode">
+                                <option value="auto">Auto (Sequential: 1, 2, 3...)</option>
+                                <option value="legacy">Legacy (P001, P002, P003...)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="parkingStartNumber">Start Number:</label>
+                            <input type="number" id="parkingStartNumber" min="1" value="1">
+                            <p class="help-text">Starting number for new parking spaces (only applies to new spaces)</p>
+                        </div>
                     </div>
+                    
+                    <button id="saveConfigurationBtn" class="btn-primary mt-2">Save Configuration</button>
                     <div id="configuration-message" class="mt-2"></div>
+                </div>
+                
+                <div id="desks-tab" class="tab-content">
+                    <h3>All Desks</h3>
+                    <div id="all-desks-container">
+                        <p>Loading desks...</p>
+                    </div>
+                </div>
+                
+                <div id="parking-spaces-tab" class="tab-content">
+                    <h3>All Parking Spaces</h3>
+                    <div id="all-parking-spaces-container">
+                        <p>Loading parking spaces...</p>
+                    </div>
                 </div>
                 
                 <div id="bookings-tab" class="tab-content">

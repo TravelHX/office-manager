@@ -224,34 +224,89 @@ This document contains all tasks organized by phases with clear dependencies and
 
 ### Tasks
 
-- [ ] 7.1 Design database schema changes to support flexible desk/parking number assignment
-- [ ] 7.2 Update Desk model to support both auto-generated and manually assigned numbers
-- [ ] 7.3 Update ParkingSpace model to support both auto-generated and manually assigned numbers
-- [ ] 7.4 Implement auto-generation logic for sequential desk numbers (e.g., 1-10 for 10 desks)
-- [ ] 7.5 Implement auto-generation logic for sequential parking space numbers (e.g., 1-10 for 10 spaces)
-- [ ] 7.6 Create AdminService methods for bulk desk creation with auto-generated numbers
-- [ ] 7.7 Create AdminService methods for bulk parking space creation with auto-generated numbers
-- [ ] 7.8 Create AdminService methods for manual desk number assignment
-- [ ] 7.9 Create AdminService methods for manual parking space number assignment
-- [ ] 7.10 Create Node.js API endpoint for bulk desk creation with auto-generation option
-- [ ] 7.11 Create Node.js API endpoint for bulk parking space creation with auto-generation option
-- [ ] 7.12 Create Node.js API endpoint for manual desk number assignment
-- [ ] 7.13 Create Node.js API endpoint for manual parking space number assignment
-- [ ] 7.14 Update admin configuration UI to include auto-generate vs manual assignment options
-- [ ] 7.15 Create UI component for auto-generation mode (input count, generate numbers 1-N)
-- [ ] 7.16 Create UI component for manual assignment mode (assign specific numbers to specific desks/spaces)
-- [ ] 7.17 Update desk booking display to prominently show desk numbers
-- [ ] 7.18 Update booking confirmation messages to include desk number
-- [ ] 7.19 Update "My Bookings" view to display desk numbers prominently
-- [ ] 7.20 Update parking reservation display to show parking space numbers prominently
-- [ ] 7.21 Write unit tests for auto-generation logic
-- [ ] 7.22 Write unit tests for manual assignment logic
-- [ ] 7.23 Write integration tests for enhanced admin configuration endpoints
-- [ ] 7.24 Write JavaScript tests for admin configuration UI
-- [ ] 7.25 Write JavaScript tests for enhanced desk number display
-- [ ] 7.26 Validate that desk numbers are displayed correctly throughout the booking flow
-- [ ] 7.27 Update admin dashboard to display allocated desk numbers
-- [ ] 7.28 Update admin booking management view to show desk numbers for each booking
-- [ ] 7.29 Update admin desk configuration view to list all desk numbers
-- [ ] 7.30 Update admin parking configuration view to list all parking space numbers
-- [ ] 7.31 Write JavaScript tests for admin desk number display
+- [x] 7.1 Design database schema changes to support flexible desk/parking number assignment
+- [x] 7.2 Update Desk model to support both auto-generated and manually assigned numbers
+- [x] 7.3 Update ParkingSpace model to support both auto-generated and manually assigned numbers
+- [x] 7.4 Implement auto-generation logic for sequential desk numbers (e.g., 1-10 for 10 desks)
+- [x] 7.5 Implement auto-generation logic for sequential parking space numbers (e.g., 1-10 for 10 spaces)
+- [x] 7.6 Create AdminService methods for bulk desk creation with auto-generated numbers
+- [x] 7.7 Create AdminService methods for bulk parking space creation with auto-generated numbers
+- [x] 7.8 Create AdminService methods for manual desk number assignment
+- [x] 7.9 Create AdminService methods for manual parking space number assignment
+- [x] 7.10 Create Node.js API endpoint for bulk desk creation with auto-generation option
+- [x] 7.11 Create Node.js API endpoint for bulk parking space creation with auto-generation option
+- [x] 7.12 Create Node.js API endpoint for manual desk number assignment
+- [x] 7.13 Create Node.js API endpoint for manual parking space number assignment
+- [x] 7.14 Update admin configuration UI to include auto-generate vs manual assignment options
+- [x] 7.15 Create UI component for auto-generation mode (input count, generate numbers 1-N)
+- [x] 7.16 Create UI component for manual assignment mode (assign specific numbers to specific desks/spaces)
+- [x] 7.17 Update desk booking display to prominently show desk numbers
+- [x] 7.18 Update booking confirmation messages to include desk number
+- [x] 7.19 Update "My Bookings" view to display desk numbers prominently
+- [x] 7.20 Update parking reservation display to show parking space numbers prominently
+- [x] 7.21 Write unit tests for auto-generation logic
+- [x] 7.22 Write unit tests for manual assignment logic
+- [x] 7.23 Write integration tests for enhanced admin configuration endpoints
+- [x] 7.24 Write JavaScript tests for admin configuration UI
+- [x] 7.25 Write JavaScript tests for enhanced desk number display
+- [x] 7.26 Validate that desk numbers are displayed correctly throughout the booking flow
+- [x] 7.27 Update admin dashboard to display allocated desk numbers
+- [x] 7.28 Update admin booking management view to show desk numbers for each booking
+- [x] 7.29 Update admin desk configuration view to list all desk numbers
+- [x] 7.30 Update admin parking configuration view to list all parking space numbers
+- [x] 7.31 Write JavaScript tests for admin desk number display
+
+---
+
+## Phase 8: User Authentication and Management
+
+**Objective:** Implement comprehensive user authentication and management system with role-based access control, user creation, password management, and proper access restrictions.
+
+**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking), Phase 4 (Overtime Tracking), Phase 5 (Admin Functionality)
+
+**Priority:** High
+
+**Estimated Effort:** 4-5 days
+
+### Tasks
+
+- [ ] 8.1 Design and create database schema for users table (user_id, password_hash, is_admin, created_at, updated_at)
+- [ ] 8.2 Create User model and related DTOs
+- [ ] 8.3 Implement User repository with CRUD operations using raw SQL queries
+- [ ] 8.4 Implement password hashing and verification utilities (bcrypt or similar)
+- [ ] 8.5 Create UserService with business logic for user management
+- [ ] 8.6 Implement user creation functionality (admin only)
+- [ ] 8.7 Implement password change functionality for users
+- [ ] 8.8 Create config.json structure in data/ folder for admin user configuration
+- [ ] 8.9 Implement admin user initialization from config.json (user ID configurable, password optional)
+- [ ] 8.10 Create development mode test user (0001 / Password123) - only in development
+- [ ] 8.11 Update authentication middleware to validate user existence and password
+- [ ] 8.12 Implement session/token management for logged-in users
+- [ ] 8.13 Create login API endpoint (POST /api/auth/login)
+- [ ] 8.14 Create logout API endpoint (POST /api/auth/logout)
+- [ ] 8.15 Create user creation API endpoint (POST /api/users) - admin only
+- [ ] 8.16 Create password change API endpoint (PUT /api/users/password)
+- [ ] 8.17 Create get current user API endpoint (GET /api/users/me)
+- [ ] 8.18 Update booking endpoints to use authenticated user ID instead of token-based user ID
+- [ ] 8.19 Update all API endpoints to require authentication (except public viewing endpoints)
+- [ ] 8.20 Implement access control: logged-in users can access all features except user creation
+- [ ] 8.21 Implement access control: non-logged-in users can only view available desks/spaces
+- [ ] 8.22 Create login page HTML/CSS/JS
+- [ ] 8.23 Create user creation UI component (admin only)
+- [ ] 8.24 Create password change UI component
+- [ ] 8.25 Implement user indicator icon/display in top left of screen showing logged-in user
+- [ ] 8.26 Implement redirect to login page when unauthenticated user tries to book desk/space
+- [ ] 8.27 Update frontend to check authentication status and show/hide features accordingly
+- [ ] 8.28 Hide overtime screen for non-logged-in users
+- [ ] 8.29 Update booking forms to use authenticated user context
+- [ ] 8.30 Write unit tests for UserService
+- [ ] 8.31 Write unit tests for password hashing and verification
+- [ ] 8.32 Write integration tests for authentication endpoints
+- [ ] 8.33 Write integration tests for user creation (admin only)
+- [ ] 8.34 Write integration tests for password change
+- [ ] 8.35 Write integration tests for access control (logged-in vs not logged-in)
+- [ ] 8.36 Write JavaScript tests for login functionality
+- [ ] 8.37 Write JavaScript tests for user indicator display
+- [ ] 8.38 Write JavaScript tests for access control and redirects
+- [ ] 8.39 Validate that users can only book desks/spaces for themselves
+- [ ] 8.40 Validate that users can only update their own data

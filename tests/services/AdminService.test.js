@@ -173,5 +173,200 @@ describe('AdminService', () => {
       expect(mockReservationRepository.findAll).toHaveBeenCalled();
     });
   });
+
+  describe('createDesksBulk', () => {
+    test('should create desks with auto numbering mode (sequential)', async () => {
+      const mockDesk1 = new Desk({ id: 1, desk_number: '1', is_active: 1 });
+      const mockDesk2 = new Desk({ id: 2, desk_number: '2', is_active: 1 });
+
+      mockDeskRepository.findByDeskNumber = jest.fn().mockResolvedValue(null);
+      mockDeskRepository.create = jest.fn()
+        .mockResolvedValueOnce(mockDesk1)
+        .mockResolvedValueOnce(mockDesk2);
+
+      const result = await adminService.createDesksBulk(2, 'auto', 1);
+
+      expect(result).toHaveLength(2);
+      expect(mockDeskRepository.findByDeskNumber).toHaveBeenCalledWith('1');
+      expect(mockDeskRepository.findByDeskNumber).toHaveBeenCalledWith('2');
+      expect(mockDeskRepository.create).toHaveBeenCalledTimes(2);
+    });
+
+    test('should create desks with legacy numbering mode (D001, D002)', async () => {
+      const mockDesk1 = new Desk({ id: 1, desk_number: 'D001', is_active: 1 });
+      const mockDesk2 = new Desk({ id: 2, desk_number: 'D002', is_active: 1 });
+
+      mockDeskRepository.findByDeskNumber = jest.fn().mockResolvedValue(null);
+      mockDeskRepository.create = jest.fn()
+        .mockResolvedValueOnce(mockDesk1)
+        .mockResolvedValueOnce(mockDesk2);
+
+      const result = await adminService.createDesksBulk(2, 'legacy', 1);
+
+      expect(result).toHaveLength(2);
+      expect(mockDeskRepository.findByDeskNumber).toHaveBeenCalledWith('D001');
+      expect(mockDeskRepository.findByDeskNumber).toHaveBeenCalledWith('D002');
+    });
+
+    test('should skip existing desks', async () => {
+      const mockDesk1 = new Desk({ id: 1, desk_number: '1', is_active: 1 });
+      const existingDesk = new Desk({ id: 2, desk_number: '2', is_active: 1 });
+
+      mockDeskRepository.findByDeskNumber = jest.fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(existingDesk);
+      mockDeskRepository.create = jest.fn().mockResolvedValue(mockDesk1);
+
+      const result = await adminService.createDesksBulk(2, 'auto', 1);
+
+      expect(result).toHaveLength(1);
+      expect(mockDeskRepository.create).toHaveBeenCalledTimes(1);
+    });
+
+    test('should throw error for invalid count', async () => {
+      await expect(adminService.createDesksBulk(0, 'auto', 1)).rejects.toThrow('Count must be greater than 0');
+      await expect(adminService.createDesksBulk(-1, 'auto', 1)).rejects.toThrow('Count must be greater than 0');
+    });
+  });
+
+  describe('createParkingSpacesBulk', () => {
+    test('should create parking spaces with auto numbering mode (sequential)', async () => {
+      const mockSpace1 = new ParkingSpace({ id: 1, space_number: '1', is_active: 1 });
+      const mockSpace2 = new ParkingSpace({ id: 2, space_number: '2', is_active: 1 });
+
+      mockParkingSpaceRepository.findBySpaceNumber = jest.fn().mockResolvedValue(null);
+      mockParkingSpaceRepository.create = jest.fn()
+        .mockResolvedValueOnce(mockSpace1)
+        .mockResolvedValueOnce(mockSpace2);
+
+      const result = await adminService.createParkingSpacesBulk(2, 'auto', 1);
+
+      expect(result).toHaveLength(2);
+      expect(mockParkingSpaceRepository.findBySpaceNumber).toHaveBeenCalledWith('1');
+      expect(mockParkingSpaceRepository.findBySpaceNumber).toHaveBeenCalledWith('2');
+    });
+
+    test('should create parking spaces with legacy numbering mode (P001, P002)', async () => {
+      const mockSpace1 = new ParkingSpace({ id: 1, space_number: 'P001', is_active: 1 });
+      const mockSpace2 = new ParkingSpace({ id: 2, space_number: 'P002', is_active: 1 });
+
+      mockParkingSpaceRepository.findBySpaceNumber = jest.fn().mockResolvedValue(null);
+      mockParkingSpaceRepository.create = jest.fn()
+        .mockResolvedValueOnce(mockSpace1)
+        .mockResolvedValueOnce(mockSpace2);
+
+      const result = await adminService.createParkingSpacesBulk(2, 'legacy', 1);
+
+      expect(result).toHaveLength(2);
+      expect(mockParkingSpaceRepository.findBySpaceNumber).toHaveBeenCalledWith('P001');
+      expect(mockParkingSpaceRepository.findBySpaceNumber).toHaveBeenCalledWith('P002');
+    });
+  });
+
+  describe('assignDeskNumber', () => {
+    test('should assign desk number successfully', async () => {
+      const existingDesk = new Desk({ 
+        id: 1, 
+        desk_number: 'D001', 
+        location: 'Office',
+        description: 'Desk 1',
+        is_active: 1,
+        created_at: '2025-01-01',
+        updated_at: '2025-01-01',
+      });
+      const updatedDesk = new Desk({ 
+        id: 1, 
+        desk_number: '101', 
+        location: 'Office',
+        description: 'Desk 1',
+        is_active: 1,
+        created_at: '2025-01-01',
+        updated_at: '2025-01-01',
+      });
+
+      mockDeskRepository.findByDeskNumber = jest.fn().mockResolvedValue(null);
+      mockDeskRepository.findById = jest.fn().mockResolvedValue(existingDesk);
+      mockDeskRepository.update = jest.fn().mockResolvedValue(updatedDesk);
+
+      const result = await adminService.assignDeskNumber(1, '101');
+
+      expect(result.deskNumber).toBe('101');
+      expect(mockDeskRepository.findByDeskNumber).toHaveBeenCalledWith('101');
+      expect(mockDeskRepository.findById).toHaveBeenCalledWith(1);
+      expect(mockDeskRepository.update).toHaveBeenCalled();
+    });
+
+    test('should throw error if desk number already assigned to different desk', async () => {
+      const existingDesk = new Desk({ id: 1, desk_number: 'D001', is_active: 1 });
+      const conflictingDesk = new Desk({ id: 2, desk_number: '101', is_active: 1 });
+
+      mockDeskRepository.findByDeskNumber = jest.fn().mockResolvedValue(conflictingDesk);
+      mockDeskRepository.findById = jest.fn().mockResolvedValue(existingDesk);
+
+      await expect(adminService.assignDeskNumber(1, '101')).rejects.toThrow('Desk number 101 is already assigned');
+    });
+
+    test('should throw error if desk not found', async () => {
+      mockDeskRepository.findByDeskNumber = jest.fn().mockResolvedValue(null);
+      mockDeskRepository.findById = jest.fn().mockResolvedValue(null);
+
+      await expect(adminService.assignDeskNumber(999, '101')).rejects.toThrow('Desk not found');
+    });
+
+    test('should throw error for empty desk number', async () => {
+      await expect(adminService.assignDeskNumber(1, '')).rejects.toThrow('Desk number cannot be empty');
+      await expect(adminService.assignDeskNumber(1, '   ')).rejects.toThrow('Desk number cannot be empty');
+    });
+  });
+
+  describe('assignParkingSpaceNumber', () => {
+    test('should assign parking space number successfully', async () => {
+      const existingSpace = new ParkingSpace({ 
+        id: 1, 
+        space_number: 'P001', 
+        location: 'Parking Lot',
+        description: 'Space 1',
+        is_active: 1,
+        created_at: '2025-01-01',
+        updated_at: '2025-01-01',
+      });
+      const updatedSpace = new ParkingSpace({ 
+        id: 1, 
+        space_number: '101', 
+        location: 'Parking Lot',
+        description: 'Space 1',
+        is_active: 1,
+        created_at: '2025-01-01',
+        updated_at: '2025-01-01',
+      });
+
+      mockParkingSpaceRepository.findBySpaceNumber = jest.fn().mockResolvedValue(null);
+      mockParkingSpaceRepository.findById = jest.fn().mockResolvedValue(existingSpace);
+      mockParkingSpaceRepository.update = jest.fn().mockResolvedValue(updatedSpace);
+
+      const result = await adminService.assignParkingSpaceNumber(1, '101');
+
+      expect(result.spaceNumber).toBe('101');
+      expect(mockParkingSpaceRepository.findBySpaceNumber).toHaveBeenCalledWith('101');
+      expect(mockParkingSpaceRepository.findById).toHaveBeenCalledWith(1);
+    });
+
+    test('should throw error if space number already assigned to different space', async () => {
+      const existingSpace = new ParkingSpace({ id: 1, space_number: 'P001', is_active: 1 });
+      const conflictingSpace = new ParkingSpace({ id: 2, space_number: '101', is_active: 1 });
+
+      mockParkingSpaceRepository.findBySpaceNumber = jest.fn().mockResolvedValue(conflictingSpace);
+      mockParkingSpaceRepository.findById = jest.fn().mockResolvedValue(existingSpace);
+
+      await expect(adminService.assignParkingSpaceNumber(1, '101')).rejects.toThrow('Parking space number 101 is already assigned');
+    });
+
+    test('should throw error if parking space not found', async () => {
+      mockParkingSpaceRepository.findBySpaceNumber = jest.fn().mockResolvedValue(null);
+      mockParkingSpaceRepository.findById = jest.fn().mockResolvedValue(null);
+
+      await expect(adminService.assignParkingSpaceNumber(999, '101')).rejects.toThrow('Parking space not found');
+    });
+  });
 });
 

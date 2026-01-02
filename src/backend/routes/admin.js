@@ -20,7 +20,7 @@ router.get('/configuration', authenticate, authorize(['admin']), async (req, res
 
 router.put('/configuration/desk-count', authenticate, authorize(['admin']), async (req, res, next) => {
   try {
-    const { deskCount } = req.body;
+    const { deskCount, numberingMode = 'auto', startNumber = 1 } = req.body;
     
     if (deskCount === undefined || deskCount === null) {
       return res.status(400).json({
@@ -31,7 +31,7 @@ router.put('/configuration/desk-count', authenticate, authorize(['admin']), asyn
       });
     }
 
-    const config = await adminService.updateDeskCount(parseInt(deskCount));
+    const config = await adminService.updateDeskCount(parseInt(deskCount), numberingMode, parseInt(startNumber));
     res.json(config);
   } catch (error) {
     if (error.message.includes('cannot reduce') || error.message.includes('negative') || error.message.includes('integer')) {
@@ -48,7 +48,7 @@ router.put('/configuration/desk-count', authenticate, authorize(['admin']), asyn
 
 router.put('/configuration/parking-count', authenticate, authorize(['admin']), async (req, res, next) => {
   try {
-    const { parkingCount } = req.body;
+    const { parkingCount, numberingMode = 'auto', startNumber = 1 } = req.body;
     
     if (parkingCount === undefined || parkingCount === null) {
       return res.status(400).json({
@@ -59,7 +59,7 @@ router.put('/configuration/parking-count', authenticate, authorize(['admin']), a
       });
     }
 
-    const config = await adminService.updateParkingCount(parseInt(parkingCount));
+    const config = await adminService.updateParkingCount(parseInt(parkingCount), numberingMode, parseInt(startNumber));
     res.json(config);
   } catch (error) {
     if (error.message.includes('cannot reduce') || error.message.includes('negative') || error.message.includes('integer')) {
@@ -96,6 +96,24 @@ router.get('/overtime-records', authenticate, authorize(['admin']), async (req, 
   try {
     const records = await adminService.getAllOvertimeRecords();
     res.json(records);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/desks', authenticate, authorize(['admin']), async (req, res, next) => {
+  try {
+    const desks = await adminService.getAllDesks();
+    res.json(desks.map(d => d.toJSON()));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/parking-spaces', authenticate, authorize(['admin']), async (req, res, next) => {
+  try {
+    const spaces = await adminService.getAllParkingSpaces();
+    res.json(spaces.map(s => s.toJSON()));
   } catch (error) {
     next(error);
   }
@@ -150,6 +168,138 @@ router.delete('/parking-reservations/:id', authenticate, authorize(['admin']), a
         error: {
           message: error.message,
           code: 'ALREADY_CANCELLED',
+        },
+      });
+    }
+    next(error);
+  }
+});
+
+// Bulk desk creation endpoint
+router.post('/desks/bulk', authenticate, authorize(['admin']), async (req, res, next) => {
+  try {
+    const { count, numberingMode = 'auto', startNumber = 1 } = req.body;
+    
+    if (!count || count <= 0) {
+      return res.status(400).json({
+        error: {
+          message: 'Count must be greater than 0',
+          code: 'INVALID_COUNT',
+        },
+      });
+    }
+
+    const desks = await adminService.createDesksBulk(parseInt(count), numberingMode, parseInt(startNumber));
+    res.status(201).json(desks.map(d => d.toJSON()));
+  } catch (error) {
+    if (error.message.includes('already assigned') || error.message.includes('greater than 0')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'INVALID_REQUEST',
+        },
+      });
+    }
+    next(error);
+  }
+});
+
+// Bulk parking space creation endpoint
+router.post('/parking-spaces/bulk', authenticate, authorize(['admin']), async (req, res, next) => {
+  try {
+    const { count, numberingMode = 'auto', startNumber = 1 } = req.body;
+    
+    if (!count || count <= 0) {
+      return res.status(400).json({
+        error: {
+          message: 'Count must be greater than 0',
+          code: 'INVALID_COUNT',
+        },
+      });
+    }
+
+    const spaces = await adminService.createParkingSpacesBulk(parseInt(count), numberingMode, parseInt(startNumber));
+    res.status(201).json(spaces.map(s => s.toJSON()));
+  } catch (error) {
+    if (error.message.includes('already assigned') || error.message.includes('greater than 0')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'INVALID_REQUEST',
+        },
+      });
+    }
+    next(error);
+  }
+});
+
+// Manual desk number assignment endpoint
+router.put('/desks/:id/number', authenticate, authorize(['admin']), async (req, res, next) => {
+  try {
+    const { deskNumber } = req.body;
+    
+    if (!deskNumber) {
+      return res.status(400).json({
+        error: {
+          message: 'Desk number is required',
+          code: 'MISSING_DESK_NUMBER',
+        },
+      });
+    }
+
+    const desk = await adminService.assignDeskNumber(parseInt(req.params.id), deskNumber);
+    res.json(desk.toJSON());
+  } catch (error) {
+    if (error.message === 'Desk not found') {
+      return res.status(404).json({
+        error: {
+          message: error.message,
+          code: 'DESK_NOT_FOUND',
+        },
+      });
+    }
+    if (error.message.includes('already assigned') || error.message.includes('cannot be empty')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'INVALID_DESK_NUMBER',
+        },
+      });
+    }
+    next(error);
+  }
+});
+
+// Manual parking space number assignment endpoint
+router.put('/parking-spaces/:id/number', authenticate, authorize(['admin']), async (req, res, next) => {
+  try {
+    const { spaceNumber } = req.body;
+    
+    if (!spaceNumber) {
+      return res.status(400).json({
+        error: {
+          message: 'Parking space number is required',
+          code: 'MISSING_SPACE_NUMBER',
+        },
+      });
+    }
+
+    const space = await adminService.assignParkingSpaceNumber(parseInt(req.params.id), spaceNumber);
+    res.json(space.toJSON());
+  } catch (error) {
+    if (error.message === 'Parking space not found') {
+      return res.status(404).json({
+        error: {
+          message: error.message,
+          code: 'PARKING_SPACE_NOT_FOUND',
+        },
+      });
+    }
+    if (error.message.includes('already assigned') || error.message.includes('cannot be empty')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'INVALID_SPACE_NUMBER',
         },
       });
     }

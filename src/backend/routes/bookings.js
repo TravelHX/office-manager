@@ -108,6 +108,9 @@ router.post('/', authenticate, async (req, res, next) => {
     
     res.status(201).json(booking.toJSON());
   } catch (error) {
+    // Log the error for debugging
+    console.error('Booking creation error:', error);
+    
     if (error.message.includes('not available') || error.message.includes('not found')) {
       return res.status(400).json({
         error: {
@@ -121,6 +124,19 @@ router.post('/', authenticate, async (req, res, next) => {
         error: {
           message: error.message,
           code: 'INVALID_DATE',
+        },
+      });
+    }
+    // Handle foreign key constraint violations
+    if (error.code && (error.code.startsWith('ER_') || error.message.includes('foreign key'))) {
+      return res.status(400).json({
+        error: {
+          message: error.message.includes('user_id') 
+            ? 'Invalid user ID. User does not exist.'
+            : error.message.includes('desk_id')
+            ? 'Invalid desk ID. Desk does not exist.'
+            : 'Database constraint violation: ' + error.message,
+          code: 'FOREIGN_KEY_ERROR',
         },
       });
     }
