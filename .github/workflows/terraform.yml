@@ -79,10 +79,12 @@ jobs:
         run: |
           ACR_USERNAME=$(terraform output -raw acr_admin_username | tr -d '\r\n')
           ACR_PASSWORD=$(terraform output -raw acr_admin_password | tr -d '\r\n')
+          ACR_LOGIN_SERVER=$(terraform output -raw acr_login_server | tr -d '\r\n')
 
           # write to GitHub Actions environment file
           echo "ACR_USERNAME=$ACR_USERNAME" >> $GITHUB_ENV
           echo "ACR_PASSWORD=$ACR_PASSWORD" >> $GITHUB_ENV
+          echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER" >> $GITHUB_ENV
 
   build-and-push:
     name: Build & Push Docker Image
@@ -96,7 +98,7 @@ jobs:
       - name: Login to Azure Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          registry: ${{ env.ACR_LOGIN_SERVER }}
           username: ${{ env.ACR_USERNAME }}
           password: ${{ env.ACR_PASSWORD }}
 
