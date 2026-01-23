@@ -77,8 +77,12 @@ jobs:
         id: acr-creds
         working-directory: infra
         run: |
-          echo "ACR_USERNAME=$(terraform output -raw acr_admin_username)" >> $GITHUB_ENV
-          echo "ACR_PASSWORD=$(terraform output -raw acr_admin_password)" >> $GITHUB_ENV
+          ACR_USERNAME=$(terraform output -raw acr_admin_username | tr -d '\r\n')
+          ACR_PASSWORD=$(terraform output -raw acr_admin_password | tr -d '\r\n')
+
+          # write to GitHub Actions environment file
+          echo "ACR_USERNAME=$ACR_USERNAME" >> $GITHUB_ENV
+          echo "ACR_PASSWORD=$ACR_PASSWORD" >> $GITHUB_ENV
 
   build-and-push:
     name: Build & Push Docker Image
