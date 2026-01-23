@@ -77,8 +77,8 @@ jobs:
         id: acr-creds
         working-directory: infra
         run: |
-          echo "username=$(terraform output -raw acr_admin_username)" >> $GITHUB_ENV
-          echo "password=$(terraform output -raw acr_admin_password)" >> $GITHUB_ENV
+          echo "ACR_USERNAME=$(terraform output -raw acr_admin_username)" >> $GITHUB_ENV
+          echo "ACR_PASSWORD=$(terraform output -raw acr_admin_password)" >> $GITHUB_ENV
 
   build-and-push:
     name: Build & Push Docker Image
@@ -93,8 +93,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ env.username }}
-          password: ${{ env.password }}
+          username: ${{ env.ACR_USERNAME }}
+          password: ${{ env.ACR_PASSWORD }}
 
       - name: Build Docker image
         run: |
