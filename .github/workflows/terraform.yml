@@ -36,10 +36,11 @@ jobs:
             -var "tenant_id=${{ secrets.AZURE_TENANT_ID }}"
 
       - name: Upload plan
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tfplan
           path: infra/tfplan
+          retention-days: 7
 
   apply:
     name: Terraform Apply (Manual Approval)
@@ -62,7 +63,7 @@ jobs:
         run: terraform init
 
       - name: Download plan
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tfplan
           path: infra
