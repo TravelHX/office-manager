@@ -10,12 +10,11 @@ resource "azurerm_mysql_flexible_server" "office-manager-dbserver" {
   name                = "office-manager-mysql"
   resource_group_name = azurerm_resource_group.rg_office_manager.name
   location            = azurerm_resource_group.rg_office_manager.location
-  version             = "8.0"
   administrator_login = "dbadmin"
   administrator_password = random_password.db_password.result
 
   sku_name            = "B_Standard_B1ms"
-  public_network_access_enabled = true
+ 
 }
 
 
