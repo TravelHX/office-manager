@@ -24,6 +24,8 @@ resource "azurerm_mysql_flexible_server" "office-manager-dbserver" {
 
 resource "azurerm_mysql_flexible_database" "office-manager-db" {
   name      = "office_manager"
+  resource_group_name = azurerm_resource_group.rg_office_manager.name
+  location            = azurerm_resource_group.rg_office_manager.location
   server_id = azurerm_mysql_flexible_server.office-manager-dbserver.id
 }
 
@@ -37,11 +39,11 @@ resource "azurerm_mysql_flexible_server_firewall_rule" "app_access" {
 
 
 output "db_host" {
-  value = azurerm_mysql_flexible_server.this.fqdn
+  value = azurerm_mysql_flexible_server.office-manager-dbserver.fqdn
 }
 
 output "db_user" {
-  value = azurerm_mysql_flexible_server.this.administrator_login
+  value = azurerm_mysql_flexible_server.office-manager-dbserver.administrator_login
 }
 
 output "db_password" {
@@ -50,5 +52,5 @@ output "db_password" {
 }
 
 output "db_name" {
-  value = azurerm_mysql_flexible_database.this.name
+  value = azurerm_mysql_flexible_database.office-manager-db.name
 }
