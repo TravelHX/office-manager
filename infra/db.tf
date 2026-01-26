@@ -15,9 +15,6 @@ resource "azurerm_mysql_flexible_server" "office-manager-dbserver" {
   administrator_password = random_password.db_password.result
 
   sku_name            = "B_Standard_B1ms"
-  storage_mb          = 5120
-  backup_retention_days = 7
-  high_availability_mode = "Disabled"
   public_network_access_enabled = true
 }
 
