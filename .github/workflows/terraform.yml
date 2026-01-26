@@ -87,15 +87,21 @@ jobs:
           ACR_PASSWORD=$(terraform output -raw acr_admin_password | tr -d '\r\n')
           ACR_LOGIN_SERVER=$(terraform output -raw acr_login_server | tr -d '\r\n')
 
-          # write to GitHub Actions environment file
-          echo "ACR_USERNAME=$ACR_USERNAME" >> $GITHUB_ENV
-          echo "ACR_PASSWORD=$ACR_PASSWORD" >> $GITHUB_ENV
-          echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER" >> $GITHUB_ENV
+          # expose outputs to next jobs
+          echo "acr_username=$ACR_USERNAME" >> $GITHUB_OUTPUT
+          echo "acr_password=$ACR_PASSWORD" >> $GITHUB_OUTPUT
+          echo "acr_login_server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+
 
   build-and-push:
     name: Build & Push Docker Image
     needs: apply
     runs-on: ubuntu-latest
+    env:
+      ACR_USERNAME: ${{ needs.apply.outputs.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ needs.apply.outputs.ACR_PASSWORD }}
+      ACR_LOGIN_SERVER: ${{ needs.apply.outputs.ACR_LOGIN_SERVER }}
+
 
     steps:
       - name: Checkout repository
