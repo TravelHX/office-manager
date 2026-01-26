@@ -14,7 +14,7 @@ resource "azurerm_mysql_flexible_server" "office-manager-dbserver" {
   administrator_password = random_password.db_password.result
 
   sku_name            = "B_Standard_B1ms"
-  availability_zone   = "2" 
+  
  
 }
 
