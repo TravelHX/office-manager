@@ -97,10 +97,10 @@ jobs:
     name: Build & Push Docker Image
     needs: apply
     runs-on: ubuntu-latest
-    env:
-      ACR_USERNAME: ${{ needs.apply.outputs.ACR_USERNAME }}
-      ACR_PASSWORD: ${{ needs.apply.outputs.ACR_PASSWORD }}
-      ACR_LOGIN_SERVER: ${{ needs.apply.outputs.ACR_LOGIN_SERVER }}
+    #env:
+      #ACR_USERNAME: ${{ needs.apply.outputs.ACR_USERNAME }}
+      #ACR_PASSWORD: ${{ needs.apply.outputs.ACR_PASSWORD }}
+      #ACR_LOGIN_SERVER: ${{ needs.apply.outputs.ACR_LOGIN_SERVER }}
 
 
     steps:
@@ -110,9 +110,9 @@ jobs:
       - name: Login to Azure Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.ACR_LOGIN_SERVER }}
-          username: ${{ env.ACR_USERNAME }}
-          password: ${{ env.ACR_PASSWORD }}
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Build Docker image
         run: |
