@@ -73,13 +73,13 @@ jobs:
         working-directory: infra
         run: terraform apply -auto-approve tfplan
 
-      #- name: Get ACR credentials
-      #  id: acr-creds
-      #  working-directory: infra
-      #  run: |
-      #    ACR_USERNAME=$(terraform output -raw acr_admin_username | tr -d '\r\n')
-      #    ACR_PASSWORD=$(terraform output -raw acr_admin_password | tr -d '\r\n')
-      #    ACR_LOGIN_SERVER=$(terraform output -raw acr_login_server | tr -d '\r\n')
+      - name: Get ACR credentials
+        id: acr-creds
+        working-directory: infra
+        run: |
+          ACR_USERNAME=$(terraform output -raw acr_admin_username | tr -d '\r\n')
+          ACR_PASSWORD=$(terraform output -raw acr_admin_password | tr -d '\r\n')
+          ACR_LOGIN_SERVER=$(terraform output -raw acr_login_server | tr -d '\r\n')
 
           # write to GitHub Actions environment file
           #echo "ACR_USERNAME=$ACR_USERNAME" >> $GITHUB_ENV
