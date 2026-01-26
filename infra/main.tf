@@ -47,7 +47,6 @@ resource "azurerm_linux_web_app" "web_app" {
     DB_USER     = "${azurerm_mysql_flexible_server.office-manager-dbserver.administrator_login}@${azurerm_mysql_flexible_server.office-manager-dbserver.name}"
     DB_PASSWORD = random_password.db_password.result
     DB_NAME     = azurerm_postgresql_flexible_database.office-manager-db.name
-}
   }
 }
 
