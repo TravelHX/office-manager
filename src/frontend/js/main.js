@@ -1,6 +1,6 @@
 // Office Manager Main JavaScript
 
-const API_BASE_URL = 'https://office-manager-app.azurewebsites.net';
+const API_BASE_URL = 'https://hx-hub-d-office-manager-app.azurewebsites.net';
 
 // Authentication functions
 function getAuthToken() {
