@@ -1,6 +1,6 @@
 // Office Manager Main JavaScript
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = window.__API_URL__ || 'http://localhost:3000';
 
 // Authentication functions
 function getAuthToken() {
