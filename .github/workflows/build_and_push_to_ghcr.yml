@@ -15,6 +15,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      - name: Set lowercase owner
+        run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+      
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -31,5 +35,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/office-manager:latest
-            ghcr.io/${{ github.repository_owner }}/office-manager:${{ github.sha }}
+            ghcr.io/${{ env.OWNER_LC }}/office-manager:latest
+            ghcr.io/${{ env.OWNER_LC }}/office-manager:${{ github.sha }}
