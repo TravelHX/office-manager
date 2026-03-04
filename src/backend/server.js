@@ -13,10 +13,26 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
+const fs = require('fs');
+
+app.get('/', (req, res) => {
+  const indexPath = path.join(__dirname, '..', 'frontend', 'index.html');
+  const html = fs.readFileSync(indexPath, 'utf8');
+
+  // Inject API URL script
+  const configScript = `<script>
+    window.__API_URL__ = "${process.env.API_URL || ''}";
+  </script>`;
+
+  res.send(`${configScript}${html}`);
+});
+
 app.use('/', routes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
+
+
 
 async function startServer() {
   try {
