@@ -24,7 +24,7 @@ services:
       - ./src/frontend:/app/src/frontend
     networks:
       - test-network
-    command: sh -c "echo 'Waiting for database to be ready...' && sleep 5 && npm test"
+    command: sh -c "tail -f /dev/null"
 
   test-mysql:
     image: mysql:8.0

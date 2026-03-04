@@ -554,29 +554,57 @@ function showSuccess(message, containerId = 'admin-container') {
 }
 
 async function createUser() {
-    const username = document.getElementById('newUsername').value;
-    const email = document.getElementById('newEmail').value;
+    const username = document.getElementById('newUsername').value.trim();
+    const firstName = document.getElementById('newFirstName').value.trim();
+    const lastName = document.getElementById('newLastName').value.trim();
+    const email = document.getElementById('newEmail').value.trim();
+    const officeLocation = document.getElementById('newOfficeLocation').value;
     const password = document.getElementById('newPassword').value;
+    const isAdmin = document.getElementById('newIsAdmin').checked;
     const role = document.getElementById('newRole').value;
     const messageDiv = document.getElementById('create-user-message');
     
     if (!username || !email || !password) {
-        messageDiv.innerHTML = '<div class="error">Please fill in all required fields</div>';
+        messageDiv.innerHTML = '<div class="error">Please fill in all required fields (Username, Email, Password)</div>';
         return;
     }
     
     try {
+        const body = {
+            username,
+            email,
+            password,
+            role: isAdmin ? 'admin' : role,
+        };
+
+        if (firstName) {
+            body.first_name = firstName;
+        }
+        if (lastName) {
+            body.last_name = lastName;
+        }
+        if (officeLocation) {
+            body.office_location = officeLocation;
+        }
+        if (isAdmin) {
+            body.is_admin = true;
+        }
+
         const response = await apiRequest('/api/auth/users', {
             method: 'POST',
-            body: { username, email, password, role },
+            body: body,
         });
         
         messageDiv.innerHTML = '<div class="success">User created successfully!</div>';
         
         // Clear form
         document.getElementById('newUsername').value = '';
+        document.getElementById('newFirstName').value = '';
+        document.getElementById('newLastName').value = '';
         document.getElementById('newEmail').value = '';
+        document.getElementById('newOfficeLocation').value = '';
         document.getElementById('newPassword').value = '';
+        document.getElementById('newIsAdmin').checked = false;
         document.getElementById('newRole').value = 'user';
     } catch (error) {
         messageDiv.innerHTML = `<div class="error">Failed to create user: ${error.message}</div>`;

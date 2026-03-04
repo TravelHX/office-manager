@@ -165,6 +165,46 @@ describe('Main JavaScript Functions', () => {
       
       expect(authHeader).toMatch(/^Bearer admin_/);
     });
+
+    test('should handle 204 No Content response without parsing JSON', async () => {
+      // Mock 204 response (DELETE endpoint typically returns this)
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 204,
+        headers: {
+          get: jest.fn((header) => {
+            if (header === 'content-type') return null;
+            return null;
+          }),
+        },
+        text: async () => '',
+      });
+      
+      const result = await apiRequest('/api/bookings/1', {
+        method: 'DELETE',
+      });
+      
+      expect(result).toBeNull();
+      expect(global.fetch).toHaveBeenCalled();
+    });
+
+    test('should handle non-JSON responses gracefully', async () => {
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: {
+          get: jest.fn((header) => {
+            if (header === 'content-type') return 'text/plain';
+            return null;
+          }),
+        },
+        text: async () => 'Plain text response',
+      });
+      
+      const result = await apiRequest('/test');
+      
+      expect(result).toBeNull();
+    });
   });
 
   describe('showError', () => {

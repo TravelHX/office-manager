@@ -11,6 +11,19 @@ document.addEventListener('DOMContentLoaded', () => {
     reservationDateInput.setAttribute('min', today);
     
     checkAvailabilityBtn.addEventListener('click', checkAvailability);
+    
+    // Auto-check availability when date or time period changes
+    reservationDateInput.addEventListener('change', () => {
+        if (reservationDateInput.value && timePeriodSelect.value) {
+            checkAvailability();
+        }
+    });
+    
+    timePeriodSelect.addEventListener('change', () => {
+        if (reservationDateInput.value && timePeriodSelect.value) {
+            checkAvailability();
+        }
+    });
 });
 
 async function checkAvailability() {
@@ -30,13 +43,24 @@ async function checkAvailability() {
     try {
         const response = await apiRequest(`/api/parking-spaces/available?reservationDate=${reservationDate}&timePeriod=${timePeriod}`);
         
-        if (response.length === 0) {
-            messageDiv.innerHTML = '<div class="error">No parking spaces available for the selected date and time period. Please try different options.</div>';
+        // Handle both old format (array) and new format (object with availability info)
+        const availableSpaces = response.availableSpaces || response;
+        const remainingSpaces = response.remainingSpaces !== undefined ? response.remainingSpaces : availableSpaces.length;
+        const totalSpaces = response.totalSpaces !== undefined ? response.totalSpaces : null;
+        const timePeriodLabel = timePeriod === 'morning' ? 'Morning' : timePeriod === 'afternoon' ? 'Afternoon' : 'Full Day';
+        
+        if (availableSpaces.length === 0) {
+            const remainingMessage = totalSpaces !== null 
+                ? `<div class="error"><strong>No parking spaces available</strong> for ${reservationDate} (${timePeriodLabel}) - ${totalSpaces} total spaces, all booked. Please try different options.</div>`
+                : `<div class="error">No parking spaces available for the selected date and time period. Please try different options.</div>`;
+            messageDiv.innerHTML = remainingMessage;
             spacesContainer.innerHTML = '';
         } else {
-            const timePeriodLabel = timePeriod === 'morning' ? 'Morning' : timePeriod === 'afternoon' ? 'Afternoon' : 'Full Day';
-            messageDiv.innerHTML = `<div class="success">Found ${response.length} available parking space(s) for ${reservationDate} (${timePeriodLabel}).</div>`;
-            displayParkingSpaces(response, reservationDate, timePeriod);
+            const remainingInfo = totalSpaces !== null 
+                ? `<div class="availability-counter"><strong>${remainingSpaces} parking space${remainingSpaces !== 1 ? 's' : ''} remaining</strong> out of ${totalSpaces} total</div>`
+                : `<div class="availability-counter"><strong>${remainingSpaces} parking space${remainingSpaces !== 1 ? 's' : ''} available</strong></div>`;
+            messageDiv.innerHTML = `<div class="success">Found ${availableSpaces.length} available parking space(s) for ${reservationDate} (${timePeriodLabel}).</div>${remainingInfo}`;
+            displayParkingSpaces(availableSpaces, reservationDate, timePeriod);
         }
     } catch (error) {
         showError('Failed to check availability: ' + error.message);
@@ -102,7 +126,12 @@ async function reserveParkingSpace(spaceId, spaceNumber, reservationDate, timePe
             window.location.href = '/pages/bookings.html';
         }, 1500);
     } catch (error) {
-        if (error.message.includes('not available') || error.message.includes('unavailable')) {
+        if (error.message.includes('already have a parking reservation') || error.message.includes('overlapping')) {
+            showError(error.message || 'You already have a parking reservation for overlapping periods. You cannot book multiple parking spaces for overlapping periods on the same date.');
+        } else if (error.message.includes('already reserved by another user')) {
+            showError(error.message || 'This parking space is already reserved by another user for the selected date and time period. Please check availability again.');
+            checkAvailability();
+        } else if (error.message.includes('not available') || error.message.includes('unavailable')) {
             showError('This parking space is no longer available for the selected date and time period. Please check availability again.');
             checkAvailability();
         } else {

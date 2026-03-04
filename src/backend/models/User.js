@@ -2,18 +2,28 @@ class User {
   constructor(data) {
     this.id = data.id;
     this.username = data.username;
+    this.firstName = data.first_name || data.firstName || null;
+    this.lastName = data.last_name || data.lastName || null;
     this.email = data.email;
-    this.passwordHash = data.password_hash;
+    this.officeLocation = data.office_location || data.officeLocation || null;
+    this.passwordHash = data.password_hash || data.passwordHash;
+    this.isAdmin = data.is_admin !== undefined ? Boolean(data.is_admin) : (data.isAdmin !== undefined ? Boolean(data.isAdmin) : false);
     this.role = data.role || 'user';
-    this.createdAt = data.created_at;
-    this.updatedAt = data.updated_at;
+    this.resetToken = data.reset_token || data.resetToken || null;
+    this.resetTokenExpiry = data.reset_token_expiry || data.resetTokenExpiry || null;
+    this.createdAt = data.created_at || data.createdAt;
+    this.updatedAt = data.updated_at || data.updatedAt;
   }
 
   toJSON() {
     return {
       id: this.id,
       username: this.username,
+      firstName: this.firstName,
+      lastName: this.lastName,
       email: this.email,
+      officeLocation: this.officeLocation,
+      isAdmin: this.isAdmin,
       role: this.role,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
@@ -24,7 +34,11 @@ class User {
     return {
       id: this.id,
       username: this.username,
+      firstName: this.firstName,
+      lastName: this.lastName,
       email: this.email,
+      officeLocation: this.officeLocation,
+      isAdmin: this.isAdmin,
       passwordHash: this.passwordHash,
       role: this.role,
       createdAt: this.createdAt,
@@ -33,12 +47,50 @@ class User {
   }
 
   toDatabaseFormat() {
-    return {
+    const data = {
       username: this.username,
       email: this.email,
       password_hash: this.passwordHash,
       role: this.role,
     };
+
+    if (this.firstName !== null && this.firstName !== undefined) {
+      data.first_name = this.firstName;
+    }
+    if (this.lastName !== null && this.lastName !== undefined) {
+      data.last_name = this.lastName;
+    }
+    if (this.officeLocation !== null && this.officeLocation !== undefined) {
+      data.office_location = this.officeLocation;
+    }
+    if (this.isAdmin !== null && this.isAdmin !== undefined) {
+      data.is_admin = this.isAdmin;
+    }
+    if (this.resetToken !== null && this.resetToken !== undefined) {
+      data.reset_token = this.resetToken;
+    }
+    if (this.resetTokenExpiry !== null && this.resetTokenExpiry !== undefined) {
+      data.reset_token_expiry = this.resetTokenExpiry;
+    }
+
+    return data;
+  }
+
+  /**
+   * Get display name (first name + last name, or email if names not available)
+   * @returns {string} Display name
+   */
+  getDisplayName() {
+    if (this.firstName && this.lastName) {
+      return `${this.firstName} ${this.lastName}`;
+    }
+    if (this.firstName) {
+      return this.firstName;
+    }
+    if (this.email) {
+      return this.email;
+    }
+    return this.username;
   }
 }
 

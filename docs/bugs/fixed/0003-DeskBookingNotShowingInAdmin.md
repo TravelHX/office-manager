@@ -10,7 +10,7 @@ When creating a desk booking, the booking is successfully created but does not a
 
 ## Current Status
 
-**Status:** Fixed - Code Implementation Complete, Awaiting User Confirmation
+**Status:** Fixed - User Confirmed
 
 **What has been tried:**
 - Investigated the `findAll()` query in `BookingRepository`
@@ -74,7 +74,7 @@ When creating a desk booking, the booking is successfully created but does not a
 3. ~~Check if JOIN query is filtering out bookings~~ - Completed (identified issue)
 4. ~~Fix the root cause once identified~~ - Completed
 5. ~~Verify the fix works end-to-end~~ - Completed (fix implemented and tested)
-6. User confirmation required before marking as fixed and moving to fixed folder
+6. ~~User confirmation required before marking as fixed~~ - ✅ Confirmed fixed by user on 2026-02-05
 
 ## Fix Applied
 

@@ -60,6 +60,26 @@ class BookingRepository extends BaseRepository {
     return results.map(row => new Booking(row));
   }
 
+  async findOverlappingUserBookings(userId, startDate, endDate, excludeBookingId = null) {
+    // Find all active bookings for this user that overlap with the given date range
+    let query = `
+      SELECT * FROM bookings 
+      WHERE user_id = ? 
+        AND status = 'active'
+        AND start_date <= ?
+        AND end_date >= ?
+    `;
+    const params = [userId, endDate, startDate];
+    
+    if (excludeBookingId) {
+      query += ' AND id != ?';
+      params.push(excludeBookingId);
+    }
+    
+    const results = await this.executeRawQuery(query, params);
+    return results.map(row => new Booking(row));
+  }
+
   async create(booking) {
     const data = booking instanceof Booking ? booking.toDatabaseFormat() : booking;
     const id = await super.create(data);

@@ -6,6 +6,77 @@ const { generateToken } = require('../utils/token');
 
 const userService = new UserService();
 
+// Check if any users exist endpoint (public)
+router.get('/check-users', async (req, res, next) => {
+  try {
+    const hasUsers = await userService.hasUsers();
+    res.json({
+      hasUsers: hasUsers,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Register endpoint (public - first user becomes admin)
+router.post('/register', async (req, res, next) => {
+  try {
+    const { username, email, password, first_name, last_name, office_location } = req.body;
+    const logger = require('../utils/logger');
+
+    logger.info(`Registration attempt for username: ${username}`);
+
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        error: {
+          message: 'Username, email, and password are required',
+          code: 'MISSING_FIELDS',
+        },
+      });
+    }
+
+    const user = await userService.registerUser({
+      username,
+      email,
+      password,
+      first_name,
+      last_name,
+      office_location,
+    });
+
+    const token = generateToken(user);
+
+    logger.info(`Registration successful for username: ${username}, isAdmin: ${user.isAdmin}`);
+
+    res.status(201).json({
+      token,
+      user: user.toJSON(),
+      message: user.isAdmin ? 'First user registered successfully. You are now the administrator.' : 'Registration successful',
+    });
+  } catch (error) {
+    const logger = require('../utils/logger');
+    logger.error(`Registration failed: ${error.message}`);
+    
+    if (error.message.includes('already exists')) {
+      return res.status(409).json({
+        error: {
+          message: error.message,
+          code: 'USER_EXISTS',
+        },
+      });
+    }
+    if (error.message.includes('Invalid email') || error.message.includes('Invalid office location')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'VALIDATION_ERROR',
+        },
+      });
+    }
+    next(error);
+  }
+});
+
 // Login endpoint
 router.post('/login', async (req, res, next) => {
   try {
@@ -70,7 +141,7 @@ router.get('/me', authenticate, async (req, res, next) => {
 // Create user endpoint (admin only)
 router.post('/users', authenticate, authorize(['admin']), async (req, res, next) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { username, email, password, first_name, last_name, office_location, is_admin, role } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({
@@ -82,7 +153,7 @@ router.post('/users', authenticate, authorize(['admin']), async (req, res, next)
     }
 
     const user = await userService.createUser(
-      { username, email, password, role },
+      { username, email, password, first_name, last_name, office_location, is_admin, role },
       req.user.id
     );
 
@@ -96,11 +167,64 @@ router.post('/users', authenticate, authorize(['admin']), async (req, res, next)
         },
       });
     }
-    if (error.message.includes('Only admins')) {
+    if (error.message.includes('Only admins') || error.message.includes('Insufficient permissions')) {
       return res.status(403).json({
         error: {
           message: error.message,
           code: 'FORBIDDEN',
+        },
+      });
+    }
+    if (error.message.includes('Invalid email') || error.message.includes('Invalid office location')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'VALIDATION_ERROR',
+        },
+      });
+    }
+    next(error);
+  }
+});
+
+// Update user endpoint (admin can update any user, users can update themselves)
+router.put('/users/:id', authenticate, async (req, res, next) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { first_name, last_name, email, office_location, is_admin, role } = req.body;
+
+    const user = await userService.updateUser(userId, {
+      first_name,
+      last_name,
+      email,
+      office_location,
+      is_admin,
+      role,
+    }, req.user.id);
+
+    res.json(user.toJSON());
+  } catch (error) {
+    if (error.message.includes('not found')) {
+      return res.status(404).json({
+        error: {
+          message: error.message,
+          code: 'USER_NOT_FOUND',
+        },
+      });
+    }
+    if (error.message.includes('can only update your own') || error.message.includes('Only admins')) {
+      return res.status(403).json({
+        error: {
+          message: error.message,
+          code: 'FORBIDDEN',
+        },
+      });
+    }
+    if (error.message.includes('already exists') || error.message.includes('Invalid')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'VALIDATION_ERROR',
         },
       });
     }
@@ -147,6 +271,74 @@ router.put('/users/password', authenticate, async (req, res, next) => {
         error: {
           message: error.message,
           code: 'INVALID_PASSWORD',
+        },
+      });
+    }
+    next(error);
+  }
+});
+
+// Forgot password endpoint (request password reset)
+router.post('/forgot-password', async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        error: {
+          message: 'Email is required',
+          code: 'MISSING_FIELDS',
+        },
+      });
+    }
+
+    await userService.requestPasswordReset(email);
+
+    // Always return success to prevent email enumeration
+    res.json({
+      message: 'If an account with that email exists, a password reset link has been sent.',
+    });
+  } catch (error) {
+    if (error.message.includes('Valid email')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'VALIDATION_ERROR',
+        },
+      });
+    }
+    // Don't reveal errors to prevent email enumeration
+    res.json({
+      message: 'If an account with that email exists, a password reset link has been sent.',
+    });
+  }
+});
+
+// Reset password endpoint (using reset token)
+router.post('/reset-password', async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        error: {
+          message: 'Token and new password are required',
+          code: 'MISSING_FIELDS',
+        },
+      });
+    }
+
+    await userService.resetPassword(token, newPassword);
+
+    res.json({
+      message: 'Password has been reset successfully',
+    });
+  } catch (error) {
+    if (error.message.includes('Invalid or expired') || error.message.includes('expired')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'INVALID_TOKEN',
         },
       });
     }

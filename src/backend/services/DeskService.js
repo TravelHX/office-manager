@@ -90,6 +90,20 @@ class DeskService {
     return availableDesks;
   }
 
+  async getAvailabilityInfo(startDate, endDate) {
+    const allDesks = await this.deskRepository.findAllActive();
+    const availableDesks = await this.getAvailableDesks(startDate, endDate);
+    const totalDesks = allDesks.length;
+    const remainingDesks = availableDesks.length;
+
+    return {
+      availableDesks,
+      totalDesks,
+      remainingDesks,
+      bookedDesks: totalDesks - remainingDesks,
+    };
+  }
+
   async checkDeskAvailability(deskId, startDate, endDate, excludeBookingId = null) {
     const desk = await this.deskRepository.findById(deskId);
     if (!desk) {

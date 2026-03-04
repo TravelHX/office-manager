@@ -31,7 +31,7 @@ function isAuthenticated() {
 
 function isAdmin() {
     const user = getCurrentUser();
-    return user && user.role === 'admin';
+    return user && (user.isAdmin || user.role === 'admin');
 }
 
 function requireAuth() {
@@ -44,7 +44,35 @@ function requireAuth() {
 }
 
 // Check authentication on page load for protected pages
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Pages that don't require authentication or user check
+    const publicPages = [
+        '/pages/login.html',
+        '/pages/register.html',
+        '/pages/forgot-password.html',
+        '/pages/reset-password.html',
+    ];
+
+    const currentPath = window.location.pathname;
+    const isPublicPage = publicPages.some(page => currentPath.includes(page));
+
+    // Check if any users exist - if not, redirect to registration (unless already on registration/login)
+    if (!isPublicPage) {
+        try {
+            const response = await fetch('/api/auth/check-users');
+            const data = await response.json();
+            
+            if (!data.hasUsers && !currentPath.includes('register.html') && !currentPath.includes('login.html')) {
+                // No users exist - redirect to registration
+                window.location.href = '/pages/register.html';
+                return;
+            }
+        } catch (error) {
+            console.error('Error checking for users:', error);
+            // Continue if check fails
+        }
+    }
+
     // Pages that require authentication
     const protectedPages = [
         '/pages/desk-booking.html',
@@ -54,12 +82,11 @@ document.addEventListener('DOMContentLoaded', () => {
         '/pages/admin.html',
     ];
 
-    const currentPath = window.location.pathname;
     const isProtectedPage = protectedPages.some(page => currentPath.includes(page));
 
     if (isProtectedPage && !isAuthenticated()) {
-        // Don't redirect from login page
-        if (!currentPath.includes('login.html')) {
+        // Don't redirect from login/register pages
+        if (!currentPath.includes('login.html') && !currentPath.includes('register.html')) {
             window.location.href = `/pages/login.html?return=${encodeURIComponent(currentPath)}`;
         }
     }
@@ -187,12 +214,22 @@ function updateUserIndicator() {
     }
 
     if (user) {
+        // Get display name (first name + last name, or email, or username)
+        let displayName = user.username;
+        if (user.firstName && user.lastName) {
+            displayName = `${user.firstName} ${user.lastName}`;
+        } else if (user.firstName) {
+            displayName = user.firstName;
+        } else if (user.email) {
+            displayName = user.email;
+        }
+
         // Add user indicator
         const userIndicator = document.createElement('li');
         userIndicator.className = 'user-indicator';
         userIndicator.innerHTML = `
             <span style="color: #4CAF50; font-weight: 500;">
-                ${user.username} ${user.role === 'admin' ? '(Admin)' : ''}
+                ${displayName} ${(user.isAdmin || user.role === 'admin') ? '(Admin)' : ''}
             </span>
             <a href="#" onclick="logout(); return false;" style="margin-left: 10px; color: #d32f2f;">Logout</a>
         `;

@@ -2,6 +2,10 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Install build dependencies for native modules (bcrypt requires Python and build tools)
+# These are build-time dependencies only, not runtime Python code
+RUN apk add --no-cache python3 make g++
+
 # Copy package files
 COPY src/frontend/package.json ./package.json
 

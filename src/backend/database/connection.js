@@ -31,39 +31,71 @@ function getPool() {
   return pool;
 }
 
-async function executeQuery(query, params = []) {
+async function executeQuery(query, params = [], retries = 3, delay = 1000) {
   const pool = getPool();
-  try {
-    const [results] = await pool.execute(query, params);
-    return results;
-  } catch (error) {
-    console.error('Database query error:', error);
-    throw error;
+  let lastError;
+  
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const [results] = await pool.execute(query, params);
+      return results;
+    } catch (error) {
+      lastError = error;
+      // Retry on DNS resolution errors (EAI_AGAIN) or connection errors
+      if ((error.code === 'EAI_AGAIN' || error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') && attempt < retries) {
+        console.error(`Database query error (attempt ${attempt + 1}/${retries + 1}):`, error.message);
+        await new Promise(resolve => setTimeout(resolve, delay * (attempt + 1)));
+        continue;
+      }
+      console.error('Database query error:', error);
+      throw error;
+    }
   }
+  
+  throw lastError;
 }
 
-async function executeTransaction(queries) {
+async function executeTransaction(queries, retries = 3, delay = 1000) {
   const pool = getPool();
-  const connection = await pool.getConnection();
+  let lastError;
   
-  try {
-    await connection.beginTransaction();
-    
-    const results = [];
-    for (const { query, params } of queries) {
-      const [result] = await connection.execute(query, params || []);
-      results.push(result);
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    let connection;
+    try {
+      connection = await pool.getConnection();
+      await connection.beginTransaction();
+      
+      const results = [];
+      for (const { query, params } of queries) {
+        const [result] = await connection.execute(query, params || []);
+        results.push(result);
+      }
+      
+      await connection.commit();
+      connection.release();
+      return results;
+    } catch (error) {
+      if (connection) {
+        try {
+          await connection.rollback();
+        } catch (rollbackError) {
+          // Ignore rollback errors
+        }
+        connection.release();
+      }
+      lastError = error;
+      // Retry on DNS resolution errors (EAI_AGAIN) or connection errors
+      if ((error.code === 'EAI_AGAIN' || error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') && attempt < retries) {
+        console.error(`Transaction error (attempt ${attempt + 1}/${retries + 1}):`, error.message);
+        await new Promise(resolve => setTimeout(resolve, delay * (attempt + 1)));
+        continue;
+      }
+      console.error('Transaction error:', error);
+      throw error;
     }
-    
-    await connection.commit();
-    return results;
-  } catch (error) {
-    await connection.rollback();
-    console.error('Transaction error:', error);
-    throw error;
-  } finally {
-    connection.release();
   }
+  
+  throw lastError;
 }
 
 async function closePool() {

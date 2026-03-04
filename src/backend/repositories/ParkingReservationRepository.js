@@ -66,6 +66,34 @@ class ParkingReservationRepository extends BaseRepository {
     return results.map(row => new ParkingReservation(row));
   }
 
+  async findOverlappingUserReservations(userId, reservationDate, timePeriod, excludeReservationId = null) {
+    // Find all active reservations for this user on the same date with overlapping time periods
+    // Conflict detection logic:
+    // - full_day conflicts with morning, afternoon, or full_day
+    // - morning conflicts with morning or full_day
+    // - afternoon conflicts with afternoon or full_day
+    let query = `
+      SELECT * FROM parking_reservations 
+      WHERE user_id = ? 
+        AND status = 'active'
+        AND reservation_date = ?
+        AND (
+          (time_period = 'full_day')
+          OR (time_period = ?)
+          OR (? = 'full_day')
+        )
+    `;
+    const params = [userId, reservationDate, timePeriod, timePeriod];
+    
+    if (excludeReservationId) {
+      query += ' AND id != ?';
+      params.push(excludeReservationId);
+    }
+    
+    const results = await this.executeRawQuery(query, params);
+    return results.map(row => new ParkingReservation(row));
+  }
+
   async create(reservation) {
     const data = reservation instanceof ParkingReservation ? reservation.toDatabaseFormat() : reservation;
     const id = await super.create(data);

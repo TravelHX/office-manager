@@ -47,6 +47,7 @@ async function authenticate(req, res, next) {
       id: user.id,
       username: user.username,
       role: user.role || 'user',
+      isAdmin: user.isAdmin || false,
       token: token,
     };
 
@@ -89,6 +90,7 @@ async function authenticate(req, res, next) {
           id: user.id,
           username: user.username,
           role: user.role || (isAdmin ? 'admin' : 'user'),
+          isAdmin: user.isAdmin || isAdmin || false,
           token: token,
         };
         return next();
@@ -136,6 +138,7 @@ async function optionalAuthenticate(req, res, next) {
         id: user.id,
         username: user.username,
         role: user.role || 'user',
+        isAdmin: user.isAdmin || false,
         token: token,
       };
     } else {
@@ -161,8 +164,12 @@ function authorize(roles = []) {
     }
 
     if (roles.length > 0) {
+      // Check isAdmin flag first (for admin role)
+      const isAdmin = req.user.isAdmin || false;
       const userRole = req.user.role || 'user';
-      if (!roles.includes(userRole)) {
+      
+      // Admin users have access to all roles
+      if (!isAdmin && !roles.includes(userRole)) {
         return res.status(403).json({
           error: {
             message: 'Insufficient permissions',

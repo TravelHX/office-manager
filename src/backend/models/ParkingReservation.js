@@ -30,16 +30,26 @@ class ParkingReservation {
   }
 
   toDatabaseFormat() {
-    return {
+    const data = {
       user_id: this.userId,
       parking_space_id: this.parkingSpaceId,
       reservation_date: this.reservationDate,
       time_period: this.timePeriod,
       status: this.status,
-      cancelled_at: this.cancelledAt,
-      cancelled_by: this.cancelledBy,
-      cancellation_reason: this.cancellationReason,
     };
+    
+    // Only include optional fields if they have values
+    if (this.cancelledAt) {
+      data.cancelled_at = this.cancelledAt;
+    }
+    if (this.cancelledBy) {
+      data.cancelled_by = this.cancelledBy;
+    }
+    if (this.cancellationReason) {
+      data.cancellation_reason = this.cancellationReason;
+    }
+    
+    return data;
   }
 }
 

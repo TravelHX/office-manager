@@ -27,8 +27,13 @@ router.get('/available', authenticate, async (req, res, next) => {
       });
     }
 
-    const availableDesks = await deskService.getAvailableDesks(startDate, endDate);
-    res.json(availableDesks.map(d => d.toJSON()));
+    const availabilityInfo = await deskService.getAvailabilityInfo(startDate, endDate);
+    res.json({
+      availableDesks: availabilityInfo.availableDesks.map(d => d.toJSON()),
+      totalDesks: availabilityInfo.totalDesks,
+      remainingDesks: availabilityInfo.remainingDesks,
+      bookedDesks: availabilityInfo.bookedDesks,
+    });
   } catch (error) {
     next(error);
   }

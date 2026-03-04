@@ -209,11 +209,12 @@ This feature will help administrators quickly see which desk numbers have been a
 
 Complete user authentication and management system with role-based access control:
 
-- **User Creation**: Admin users can create new users with alphanumeric user IDs and passwords
+- **Email as Username**: Email address serves as the username/login identifier. No separate username field is required - users log in using their email address.
+- **User Creation**: Admin users can create new users with email address (used as username/login), password, first name, last name, and office location
 - **Password Management**: Users can change their passwords
-- **Admin Configuration**: Initial admin user configured via `config.json` in the `data/` folder with configurable user ID and optional password
+- **Admin Configuration**: Initial admin user configured via `config.json` in the `data/` folder with configurable email address (used as username) and optional password
 - **User Restrictions**: Users can only book desks/spaces for themselves and update their own data
-- **Development Test User**: Test user (ID: 0001, Password: Password123) created automatically in development mode only
+- **Development Test User**: Test user (Email: test@example.com or similar, Password: Password123) created automatically in development mode only (to be removed - see First User Admin Registration feature)
 - **User Indicator**: Icon at top left of screen displays logged-in user information
 - **Access Control**: 
   - Logged-in users: Full access to all features except user creation (admin only)
@@ -221,6 +222,34 @@ Complete user authentication and management system with role-based access contro
 - **Login Redirect**: Unauthenticated users attempting to book desks/spaces are redirected to login screen
 
 This feature will provide secure user authentication and proper access control throughout the application.
+
+### 4a. Enhanced User Management
+
+Enhanced user management system with comprehensive user profiles and password recovery:
+
+- **User Profile Fields**: Users must provide first name, last name, email address (used as username/login identifier), and office location when created. No separate username field is required - email address serves as the login identifier.
+- **Office Location**: Hardcoded list of office locations (currently London or Prague)
+- **Admin Flag**: Users have an `IsAdmin` boolean flag to designate administrative privileges
+- **Admin User Creation**: Admin users can create new users through the admin interface
+- **Login Screen**: Dedicated login screen for user authentication using email address as the username/login identifier
+- **Password Reset**: Forgotten password functionality that emails a reset link to the user's email address
+- **Admin Setup Script**: Utility script to add initial admin user (paul.michaels@travelhx.com) with admin privileges
+
+This feature will provide a complete user management system with proper user profiles, role management, and password recovery capabilities.
+
+### 4b. First User Admin Registration
+
+Initial user registration system where the first user to register automatically becomes an admin:
+
+- **First User Admin**: The first user to register in the system automatically receives admin privileges (IsAdmin flag set to true)
+- **No Users Detection**: When navigating to the site with no registered users, display a registration screen informing users that they can register to become the first admin
+- **Application Startup Cleanup**: When the application starts, it automatically runs cleanup logic that:
+  - Removes the admin/password123 test user if it exists
+  - If the "admin" user exists, flushes all users from the system (clean slate for production)
+- **Registration Flow**: When no users exist, users are presented with a registration screen instead of login screen
+- **Automatic Admin Assignment**: The first registered user is automatically assigned admin privileges without manual intervention
+
+This feature will provide a clean initialization process where the first user becomes the admin, removing the need for manual admin setup scripts in production.
 
 ### 5. Booking Matrix Screen
 
@@ -258,6 +287,76 @@ Enhanced validation rules to prevent booking conflicts and ensure fair resource 
 - **Clear Error Messages**: All validation failures provide clear, user-friendly error messages explaining why the booking failed
 
 This feature will prevent double-booking conflicts and ensure fair access to office resources.
+
+### 7. Availability Display Enhancement
+
+Enhanced availability display showing remaining spaces when selecting dates for booking:
+
+- **Remaining Spaces Counter**: When selecting a day to book a desk or parking space, the screen displays the number of spaces remaining
+- **Real-Time Availability**: The count updates based on the selected date(s) and shows current availability
+- **Desk Availability**: Shows how many desks are still available for the selected date range
+- **Parking Availability**: Shows how many parking spaces are still available for the selected date and time period
+- **Visual Indicator**: Clear display of remaining spaces to help users understand availability at a glance
+
+This feature will improve user experience by providing immediate visibility into resource availability when making booking decisions.
+
+### 8. Multi-Select Desk and Parking Booking
+
+Enhanced booking interface allowing users to select and book multiple desks or parking spaces at once:
+
+- **Multi-Select Functionality**: Users can select multiple desks or parking spaces before booking
+- **Dual Button System**: Each desk and parking space has two buttons:
+  - **"Select" Button**: Adds the desk/space to a selection list (checkbox-style selection for multi-booking)
+  - **"Book" Button**: Books only that specific desk/space immediately (existing single-booking behavior)
+- **Visual Selection Indicator**: Selected desks/spaces are visually marked (e.g., highlighted, checked, or ticked)
+- **Book Selected Button**: A "Book Selected" button appears at the bottom of the list when one or more desks/spaces are selected
+- **Bulk Booking**: The "Book Selected" button books all selected desks/spaces for the same date range/time period in a single operation
+- **Selection Persistence**: Selected items remain selected when scrolling or navigating the list
+- **Clear Selection**: Ability to clear all selections or deselect individual items
+
+This feature will improve efficiency for users who need to book multiple resources at once, while maintaining the existing single-booking functionality.
+
+### 9. Remove Booking Confirmation Modal
+
+Simplified booking flow by removing the unnecessary modal dialog:
+
+- **Direct Booking**: When users click "Book" on a desk or parking space, the booking is created immediately without showing a confirmation modal
+- **Streamlined UX**: Removes an extra step in the booking process, making it faster and more efficient
+- **Success Feedback**: Booking success is indicated through other means (e.g., success message, visual update, or redirect) without requiring modal confirmation
+- **Error Handling**: Errors are still displayed appropriately without using a modal dialog
+
+This feature will streamline the booking process by removing an unnecessary confirmation step, making bookings faster and more intuitive.
+
+### 10. Comprehensive Test Coverage
+
+Comprehensive test coverage requirements to ensure quality and reliability:
+
+- **End-to-End Test Coverage**: Each use case and feature must be covered by at least one end-to-end test
+  - All documented use cases in `docs/usecases.md` must have corresponding end-to-end tests
+  - All implemented features must have at least one end-to-end test validating the complete user flow
+  - End-to-end tests should be written using Playwright
+  - Tests should validate the complete user interaction flow from start to finish
+
+- **Unit Test Coverage**: Where feasible, all units of functionality should be covered by unit tests
+  - All business logic services should have comprehensive unit test coverage
+  - All repository methods should have unit tests
+  - All utility functions and helper methods should have unit tests
+  - All API endpoints should have unit tests for their handlers
+  - Test coverage should aim for high coverage of critical business logic paths
+
+- **Test Quality Standards**:
+  - Tests must be idempotent (can run multiple times in any order without side effects)
+  - Each test should cover a single, discrete piece of functionality
+  - Tests should use meaningful names that describe the scenario
+  - Tests must validate real behavior, not test-only code paths
+  - Test-first development approach: write tests before implementing features
+
+- **Test Maintenance**:
+  - Tests should be updated when features or use cases are modified
+  - Review existing tests when adding new tests to avoid duplication
+  - All tests must pass before any code is committed
+
+This feature will ensure the application maintains high quality standards and reliability through comprehensive test coverage.
 
 ## API Endpoints
 
@@ -406,4 +505,4 @@ Use cases cover scenarios including:
 - Technology stack selected: Node.js backend, MySQL database, raw SQL data access layer, HTML/CSS/JS frontend
 - Docker support added: All services run in Docker containers, including dedicated test environment
 - Use cases documented: Seven detailed use cases covering all major user workflows (see `docs/usecases.md`)
-- Feature requests added: Enhanced admin resource configuration with flexible numbering options, improved desk number display in booking interface, admin screen display of allocated desk numbers, comprehensive user authentication and management system, booking matrix screen for visualizing bookings by people and dates, and booking validation rules to prevent conflicts
+- Feature requests added: Enhanced admin resource configuration with flexible numbering options, improved desk number display in booking interface, admin screen display of allocated desk numbers, comprehensive user authentication and management system, enhanced user management with profiles and password reset, first user admin registration system, booking matrix screen for visualizing bookings by people and dates, booking validation rules to prevent conflicts, availability display enhancement showing remaining spaces, multi-select desk and parking booking functionality, remove booking confirmation modal for streamlined UX, and comprehensive test coverage requirements

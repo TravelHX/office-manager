@@ -10,7 +10,11 @@ Write-Host ""
 
 # Stop any existing test containers
 Write-Host "Stopping any existing test containers..." -ForegroundColor Yellow
-docker-compose -f docker-compose.test.yml down 2>$null | Out-Null
+try {
+    docker-compose -f docker-compose.test.yml down 2>&1 | Out-Null
+} catch {
+    # Ignore errors when stopping containers that don't exist
+}
 
 Write-Host ""
 
@@ -25,13 +29,50 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ""
 
+# Start all test services together to ensure proper networking
+Write-Host "Starting test environment..." -ForegroundColor Yellow
+docker-compose -f docker-compose.test.yml up -d
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error: Failed to start test services!" -ForegroundColor Red
+    exit 1
+}
+
+# Wait for database to be healthy
+Write-Host "Waiting for database to be ready..." -ForegroundColor Yellow
+$maxWait = 60
+$waited = 0
+$healthy = $false
+
+while ($waited -lt $maxWait -and -not $healthy) {
+    Start-Sleep -Seconds 2
+    $waited += 2
+    $healthStatus = docker inspect --format='{{.State.Health.Status}}' office-manager-test-mysql 2>$null
+    if ($healthStatus -eq "healthy") {
+        $healthy = $true
+        Write-Host "Database is ready!" -ForegroundColor Green
+    }
+}
+
+if (-not $healthy) {
+    Write-Host "Error: Database did not become healthy within $maxWait seconds!" -ForegroundColor Red
+    docker-compose -f docker-compose.test.yml down
+    exit 1
+}
+
+# Wait a bit more for DNS and network to be ready
+Write-Host "Waiting for network to be ready..." -ForegroundColor Yellow
+Start-Sleep -Seconds 5
+
+Write-Host ""
+
 # Run all tests in Docker (unit + integration + UI)
-Write-Host "Starting test environment and running all tests..." -ForegroundColor Yellow
+Write-Host "Running all tests..." -ForegroundColor Yellow
 Write-Host ""
 
 # First run backend tests (unit + integration)
 Write-Host "Running backend tests (unit + integration)..." -ForegroundColor Yellow
-docker-compose -f docker-compose.test.yml run --rm test-backend sh -c "echo 'Waiting for database to be ready...' && sleep 5 && npm test"
+docker-compose -f docker-compose.test.yml exec -T test-backend sh -c "echo 'Waiting for database to be ready...' && sleep 5 && npm test"
 
 $backendTestExitCode = $LASTEXITCODE
 
@@ -47,7 +88,7 @@ Write-Host ""
 
 # Then run UI tests
 Write-Host "Running UI tests..." -ForegroundColor Yellow
-docker-compose -f docker-compose.test.yml run --rm test-backend sh -c "cd src/frontend && npx jest --config jest.config.js"
+docker-compose -f docker-compose.test.yml exec -T test-backend sh -c "cd src/frontend && npx jest --config jest.config.js"
 
 $uiTestExitCode = $LASTEXITCODE
 

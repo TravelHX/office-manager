@@ -90,6 +90,20 @@ class ParkingSpaceService {
     return availableSpaces;
   }
 
+  async getAvailabilityInfo(reservationDate, timePeriod) {
+    const allSpaces = await this.parkingSpaceRepository.findAllActive();
+    const availableSpaces = await this.getAvailableParkingSpaces(reservationDate, timePeriod);
+    const totalSpaces = allSpaces.length;
+    const remainingSpaces = availableSpaces.length;
+
+    return {
+      availableSpaces,
+      totalSpaces,
+      remainingSpaces,
+      bookedSpaces: totalSpaces - remainingSpaces,
+    };
+  }
+
   async checkParkingSpaceAvailability(parkingSpaceId, reservationDate, timePeriod, excludeReservationId = null) {
     const parkingSpace = await this.parkingSpaceRepository.findById(parkingSpaceId);
     if (!parkingSpace) {

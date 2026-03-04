@@ -97,5 +97,62 @@ describe('DeskService', () => {
       expect(result[0].id).toBe(1);
     });
   });
+
+  describe('getAvailabilityInfo', () => {
+    test('should return availability info with remaining desk count', async () => {
+      const allDesks = [
+        new Desk({ id: 1, desk_number: 'D001', is_active: 1 }),
+        new Desk({ id: 2, desk_number: 'D002', is_active: 1 }),
+        new Desk({ id: 3, desk_number: 'D003', is_active: 1 }),
+      ];
+
+      mockDeskRepository.findAllActive = jest.fn().mockResolvedValue(allDesks);
+      mockBookingRepository.findConflictingBookings = jest.fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ id: 1 }])
+        .mockResolvedValueOnce([]);
+
+      const result = await deskService.getAvailabilityInfo('2026-12-01', '2026-12-02');
+
+      expect(result.totalDesks).toBe(3);
+      expect(result.remainingDesks).toBe(2);
+      expect(result.bookedDesks).toBe(1);
+      expect(result.availableDesks).toHaveLength(2);
+    });
+
+    test('should return correct counts when all desks are available', async () => {
+      const allDesks = [
+        new Desk({ id: 1, desk_number: 'D001', is_active: 1 }),
+        new Desk({ id: 2, desk_number: 'D002', is_active: 1 }),
+      ];
+
+      mockDeskRepository.findAllActive = jest.fn().mockResolvedValue(allDesks);
+      mockBookingRepository.findConflictingBookings = jest.fn()
+        .mockResolvedValue([]);
+
+      const result = await deskService.getAvailabilityInfo('2026-12-01', '2026-12-02');
+
+      expect(result.totalDesks).toBe(2);
+      expect(result.remainingDesks).toBe(2);
+      expect(result.bookedDesks).toBe(0);
+    });
+
+    test('should return correct counts when all desks are booked', async () => {
+      const allDesks = [
+        new Desk({ id: 1, desk_number: 'D001', is_active: 1 }),
+        new Desk({ id: 2, desk_number: 'D002', is_active: 1 }),
+      ];
+
+      mockDeskRepository.findAllActive = jest.fn().mockResolvedValue(allDesks);
+      mockBookingRepository.findConflictingBookings = jest.fn()
+        .mockResolvedValue([{ id: 1 }]);
+
+      const result = await deskService.getAvailabilityInfo('2026-12-01', '2026-12-02');
+
+      expect(result.totalDesks).toBe(2);
+      expect(result.remainingDesks).toBe(0);
+      expect(result.bookedDesks).toBe(2);
+    });
+  });
 });
 

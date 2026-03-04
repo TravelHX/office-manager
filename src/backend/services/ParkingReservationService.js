@@ -39,12 +39,38 @@ class ParkingReservationService {
       throw new Error('Parking space is not available');
     }
 
+    // Validate: Check if user already has overlapping parking reservations
+    const userOverlaps = await this.reservationRepository.findOverlappingUserReservations(
+      userId,
+      reservationDate,
+      timePeriod
+    );
+    if (userOverlaps.length > 0) {
+      const conflictingReservation = userOverlaps[0];
+      const timePeriodLabel = timePeriod === 'full_day' ? 'full day' : timePeriod;
+      throw new Error(
+        `You already have a parking reservation (Space ${conflictingReservation.parkingSpaceId}) for ${reservationDate} ` +
+        `with time period "${conflictingReservation.timePeriod}". ` +
+        `You cannot book multiple parking spaces for overlapping periods on the same date.`
+      );
+    }
+
+    // Validate: Check if parking space is already reserved by another user
     const availability = await this.parkingSpaceService.checkParkingSpaceAvailability(
       parkingSpaceId,
       reservationDate,
       timePeriod
     );
     if (!availability.available) {
+      if (availability.conflicts && availability.conflicts.length > 0) {
+        const conflict = availability.conflicts[0];
+        const timePeriodLabel = timePeriod === 'full_day' ? 'full day' : timePeriod;
+        throw new Error(
+          `Parking space ${parkingSpace.spaceNumber || parkingSpaceId} is already reserved by another user ` +
+          `for ${reservationDate} with time period "${timePeriodLabel}". ` +
+          `The existing reservation has time period "${conflict.timePeriod}".`
+        );
+      }
       throw new Error('Parking space is not available for the selected date and time period');
     }
 
@@ -111,6 +137,10 @@ class ParkingReservationService {
 
   async getAvailableParkingSpaces(reservationDate, timePeriod) {
     return await this.parkingSpaceService.getAvailableParkingSpaces(reservationDate, timePeriod);
+  }
+
+  async getAvailabilityInfo(reservationDate, timePeriod) {
+    return await this.parkingSpaceService.getAvailabilityInfo(reservationDate, timePeriod);
   }
 }
 

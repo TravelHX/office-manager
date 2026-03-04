@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Office Manager</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .register-container {
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .register-container h2 {
+            text-align: center;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        .info-message {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 4px;
+            color: #1976d2;
+            font-size: 0.9rem;
+        }
+        .info-message strong {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: 500;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        .password-wrapper {
+            position: relative;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .password-wrapper input {
+            padding-right: 80px;
+        }
+        .btn-register {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .btn-register:hover {
+            background-color: #45a049;
+        }
+        .btn-register:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .error-message {
+            color: #d32f2f;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .success-message {
+            color: #2e7d32;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .required-indicator {
+            color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <h1>Office Manager</h1>
+                <ul class="nav-menu">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/pages/login.html">Login</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="register-container">
+            <h2>Create Administrator Account</h2>
+            <div class="info-message">
+                <strong>First User Registration</strong>
+                You are registering as the first user. The first user will automatically be assigned administrator privileges.
+            </div>
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="username">Username <span class="required-indicator">*</span></label>
+                    <input type="text" id="username" name="username" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="firstName">First Name</label>
+                    <input type="text" id="firstName" name="firstName" autocomplete="given-name">
+                </div>
+                <div class="form-group">
+                    <label for="lastName">Last Name</label>
+                    <input type="text" id="lastName" name="lastName" autocomplete="family-name">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email <span class="required-indicator">*</span></label>
+                    <input type="email" id="email" name="email" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="officeLocation">Office Location</label>
+                    <select id="officeLocation" name="officeLocation">
+                        <option value="">Select location...</option>
+                        <option value="London">London</option>
+                        <option value="Prague">Prague</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password <span class="required-indicator">*</span></label>
+                    <div class="password-wrapper">
+                        <input type="password" id="password" name="password" required autocomplete="new-password">
+                        <button type="button" class="password-toggle" id="password-toggle" aria-label="Show password">
+                            <span id="password-toggle-text">Show</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password <span class="required-indicator">*</span></label>
+                    <div class="password-wrapper">
+                        <input type="password" id="confirmPassword" name="confirmPassword" required autocomplete="new-password">
+                        <button type="button" class="password-toggle" id="confirm-password-toggle" aria-label="Show password">
+                            <span id="confirm-password-toggle-text">Show</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="register-error" class="error-message" style="display: none;"></div>
+                <div id="register-success" class="success-message" style="display: none;"></div>
+                <button type="submit" class="btn-register" id="register-button">Create Administrator Account</button>
+            </form>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Office Manager. All rights reserved.</p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/register.js"></script>
+</body>
+</html>

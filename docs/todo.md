@@ -374,37 +374,340 @@ This document contains all tasks organized by phases with clear dependencies and
 
 ### Tasks
 
-- [ ] 10.1 Design validation logic for detecting overlapping bookings for the same user
-- [ ] 10.2 Implement date range overlap detection utility function
-- [ ] 10.3 Create validation method in BookingService to check for existing user bookings in date range
-- [ ] 10.4 Implement validation: prevent user from booking multiple desks for overlapping periods
-- [ ] 10.5 Implement validation: prevent user from booking multiple parking spaces for overlapping periods
-- [ ] 10.6 Create validation method to check if desk is already booked by another user for date range
-- [ ] 10.7 Implement validation: prevent multiple users from booking same desk for same day
-- [ ] 10.8 Create validation method to check if parking space is already booked by another user for date/time period
-- [ ] 10.9 Implement validation: prevent multiple users from booking same parking space for same day/time period
-- [ ] 10.10 Update desk booking creation endpoint to validate user's existing bookings
-- [ ] 10.11 Update desk booking creation endpoint to validate desk availability for other users
-- [ ] 10.12 Update parking reservation creation endpoint to validate user's existing reservations
-- [ ] 10.13 Update parking reservation creation endpoint to validate parking space availability for other users
-- [ ] 10.14 Create clear error messages for overlapping booking conflicts
-- [ ] 10.15 Create clear error messages for desk/parking space already booked conflicts
-- [ ] 10.16 Update frontend to display validation error messages clearly
-- [ ] 10.17 Handle partial date range overlaps correctly (any date overlap triggers failure)
-- [ ] 10.18 Ensure validation works for both single-day and multi-day bookings
-- [ ] 10.19 Ensure validation works for parking time periods (morning, afternoon, full_day)
-- [ ] 10.20 Write unit tests for date range overlap detection utility
-- [ ] 10.21 Write unit tests for user booking overlap validation
-- [ ] 10.22 Write unit tests for desk availability validation
-- [ ] 10.23 Write unit tests for parking space availability validation
-- [ ] 10.24 Write integration tests: user cannot book multiple desks for overlapping dates
-- [ ] 10.25 Write integration tests: user cannot book multiple parking spaces for overlapping periods
-- [ ] 10.26 Write integration tests: multiple users cannot book same desk for same day
-- [ ] 10.27 Write integration tests: multiple users cannot book same parking space for same day/time period
-- [ ] 10.28 Write integration tests: partial date overlaps are detected correctly
-- [ ] 10.29 Write integration tests: error messages are clear and informative
-- [ ] 10.30 Write JavaScript tests for frontend error message display
-- [ ] 10.31 Validate that booking fails with appropriate error when user has overlapping desk booking
-- [ ] 10.32 Validate that booking fails with appropriate error when desk is already booked by another user
-- [ ] 10.33 Validate that parking reservation fails with appropriate error when user has overlapping reservation
-- [ ] 10.34 Validate that parking reservation fails with appropriate error when space is already reserved by another user
+- [x] 10.1 Design validation logic for detecting overlapping bookings for the same user
+- [x] 10.2 Implement date range overlap detection utility function
+- [x] 10.3 Create validation method in BookingService to check for existing user bookings in date range
+- [x] 10.4 Implement validation: prevent user from booking multiple desks for overlapping periods
+- [x] 10.5 Implement validation: prevent user from booking multiple parking spaces for overlapping periods
+- [x] 10.6 Create validation method to check if desk is already booked by another user for date range
+- [x] 10.7 Implement validation: prevent multiple users from booking same desk for same day
+- [x] 10.8 Create validation method to check if parking space is already booked by another user for date/time period
+- [x] 10.9 Implement validation: prevent multiple users from booking same parking space for same day/time period
+- [x] 10.10 Update desk booking creation endpoint to validate user's existing bookings
+- [x] 10.11 Update desk booking creation endpoint to validate desk availability for other users
+- [x] 10.12 Update parking reservation creation endpoint to validate user's existing reservations
+- [x] 10.13 Update parking reservation creation endpoint to validate parking space availability for other users
+- [x] 10.14 Create clear error messages for overlapping booking conflicts
+- [x] 10.15 Create clear error messages for desk/parking space already booked conflicts
+- [x] 10.16 Update frontend to display validation error messages clearly
+- [x] 10.17 Handle partial date range overlaps correctly (any date overlap triggers failure)
+- [x] 10.18 Ensure validation works for both single-day and multi-day bookings
+- [x] 10.19 Ensure validation works for parking time periods (morning, afternoon, full_day)
+- [x] 10.20 Write unit tests for date range overlap detection utility
+- [x] 10.21 Write unit tests for user booking overlap validation
+- [x] 10.22 Write unit tests for desk availability validation
+- [x] 10.23 Write unit tests for parking space availability validation
+- [x] 10.24 Write integration tests: user cannot book multiple desks for overlapping dates
+- [x] 10.25 Write integration tests: user cannot book multiple parking spaces for overlapping periods
+- [x] 10.26 Write integration tests: multiple users cannot book same desk for same day
+- [x] 10.27 Write integration tests: multiple users cannot book same parking space for same day/time period
+- [x] 10.28 Write integration tests: partial date overlaps are detected correctly
+- [x] 10.29 Write integration tests: error messages are clear and informative
+- [x] 10.30 Write JavaScript tests for frontend error message display
+- [x] 10.31 Validate that booking fails with appropriate error when user has overlapping desk booking
+- [x] 10.32 Validate that booking fails with appropriate error when desk is already booked by another user
+- [x] 10.33 Validate that parking reservation fails with appropriate error when user has overlapping reservation
+- [x] 10.34 Validate that parking reservation fails with appropriate error when space is already reserved by another user
+
+---
+
+## Phase 11: Comprehensive Test Coverage
+
+**Objective:** Ensure comprehensive test coverage with end-to-end tests for all use cases and features, and unit tests for all units of functionality where feasible.
+
+**Dependencies:** All previous phases (comprehensive coverage requires all features to be implemented)
+
+**Priority:** High
+
+**Estimated Effort:** 5-7 days
+
+### Tasks
+
+- [x] 11.1 Audit all use cases in `docs/usecases.md` and identify missing end-to-end test coverage
+- [x] 11.2 Create end-to-end test for Use Case 1 (Employee Books Desk for Two Days) if missing
+- [x] 11.3 Create end-to-end test for Use Case 2 (Employee Books Desk and Parking Space for Half Day) if missing
+- [x] 11.4 Create end-to-end test for Use Case 3 (Employee Attempts to Book Unavailable Desk) if missing
+- [x] 11.5 Create end-to-end test for Use Case 4 (Admin Sets Up Number of Desks and Parking Spaces) if missing
+- [x] 11.6 Create end-to-end test for Use Case 5 (Admin Cancels User Desk Booking) if missing
+- [x] 11.7 Create end-to-end test for Use Case 6 (User Cancels Their Own Desk Booking) if missing
+- [x] 11.8 Create end-to-end test for Use Case 7 (Employee Books Desk, Parking Space, and Records Overtime) if missing
+- [x] 11.9 Audit all implemented features and identify missing end-to-end test coverage
+- [x] 11.10 Create end-to-end tests for any features missing coverage (desk booking, parking tracking, overtime tracking, admin functionality, user management, etc.)
+- [x] 11.11 Audit all business logic services and identify missing unit test coverage
+- [x] 11.12 Create unit tests for DeskService methods if any are missing
+- [x] 11.13 Create unit tests for BookingService methods if any are missing
+- [x] 11.14 Create unit tests for ParkingSpaceService methods if any are missing
+- [x] 11.15 Create unit tests for ParkingReservationService methods if any are missing
+- [x] 11.16 Create unit tests for OvertimeService methods if any are missing
+- [x] 11.17 Create unit tests for AdminService methods if any are missing
+- [x] 11.18 Create unit tests for UserService methods if any are missing
+- [x] 11.19 Create unit tests for MatrixService methods if any are missing
+- [x] 11.20 Audit all repository methods and identify missing unit test coverage
+- [x] 11.21 Create unit tests for DeskRepository methods if any are missing
+- [x] 11.22 Create unit tests for BookingRepository methods if any are missing
+- [x] 11.23 Create unit tests for ParkingSpaceRepository methods if any are missing
+- [x] 11.24 Create unit tests for ParkingReservationRepository methods if any are missing
+- [x] 11.25 Create unit tests for OvertimeRecordRepository methods if any are missing
+- [x] 11.26 Create unit tests for AdminConfigurationRepository methods if any are missing
+- [x] 11.27 Create unit tests for UserRepository methods if any are missing
+- [x] 11.28 Audit all API endpoint handlers and identify missing unit test coverage
+- [x] 11.29 Create unit tests for desk booking API endpoints if any are missing (covered by integration tests)
+- [x] 11.30 Create unit tests for parking API endpoints if any are missing (covered by integration tests)
+- [x] 11.31 Create unit tests for overtime API endpoints if any are missing (covered by integration tests)
+- [x] 11.32 Create unit tests for admin API endpoints if any are missing (covered by integration tests)
+- [x] 11.33 Create unit tests for user management API endpoints if any are missing (covered by integration tests)
+- [x] 11.34 Create unit tests for authentication API endpoints if any are missing (covered by integration tests)
+- [x] 11.35 Audit all utility functions and helper methods and identify missing unit test coverage
+- [x] 11.36 Create unit tests for date range overlap detection utilities if missing
+- [x] 11.37 Create unit tests for password hashing/verification utilities if missing
+- [x] 11.38 Create unit tests for any other utility functions if missing
+- [x] 11.39 Set up test coverage reporting tool (e.g., Istanbul/nyc, Jest coverage)
+- [x] 11.40 Configure test coverage thresholds and requirements
+- [x] 11.41 Generate test coverage report and identify gaps
+- [x] 11.42 Ensure all tests are idempotent (can run multiple times in any order)
+- [x] 11.43 Review all tests to ensure they cover single, discrete functionality
+- [x] 11.44 Review all tests to ensure meaningful names that describe scenarios
+- [x] 11.45 Remove any test-only code paths from production code
+- [x] 11.46 Verify all tests pass before considering coverage complete
+- [x] 11.47 Document test coverage requirements and standards
+- [x] 11.48 Create test coverage maintenance guidelines
+- [x] 11.49 Validate that all use cases have at least one end-to-end test
+- [x] 11.50 Validate that all features have at least one end-to-end test
+- [x] 11.51 Validate that critical business logic has comprehensive unit test coverage
+
+---
+
+## Phase 12: Enhanced User Management
+
+**Objective:** Enhance user management system with comprehensive user profiles (first name, last name, email used as username/login identifier, office location), admin flag management, password reset functionality, and admin setup script. Note: No separate username field - email address serves as the login identifier.
+
+**Dependencies:** Phase 8 (User Authentication and Management)
+
+**Priority:** High
+
+**Estimated Effort:** 3-4 days
+
+### Tasks
+
+- [x] 12.1 Update database schema to add user profile fields (first_name, last_name, email used as username/login identifier, office_location, is_admin). Ensure email is unique and used for authentication.
+- [x] 12.2 Update User model to include first_name, last_name, email (as username/login identifier), office_location, and is_admin fields. No separate username field required.
+- [x] 12.3 Create OfficeLocation enum or constant with hardcoded values (London, Prague)
+- [x] 12.4 Update UserService to handle user profile fields during creation
+- [x] 12.5 Update UserService to validate email format
+- [x] 12.6 Update UserService to validate office location is from allowed list
+- [x] 12.7 Update UserService to handle IsAdmin flag assignment
+- [x] 12.8 Update user creation API endpoint (POST /api/users) to accept first_name, last_name, email (used as username/login identifier), office_location, is_admin. No separate username parameter needed.
+- [x] 12.9 Update user update API endpoint to allow updating profile fields (admin or self)
+- [x] 12.10 Create password reset token generation functionality
+- [x] 12.11 Create password reset token storage in database (reset_token, reset_token_expiry)
+- [ ] 12.12 Implement email sending functionality for password reset links (deferred - token generation and storage complete, email sending requires external service integration)
+- [x] 12.13 Create password reset request API endpoint (POST /api/auth/forgot-password) - accepts email (which is the username/login identifier)
+- [x] 12.14 Create password reset API endpoint (POST /api/auth/reset-password) - accepts token and new password
+- [x] 12.15 Update login screen to include "Forgot Password" link
+- [x] 12.16 Create forgot password page HTML/CSS/JS
+- [x] 12.17 Create reset password page HTML/CSS/JS
+- [x] 12.18 Update user creation UI to include first name, last name, email, office location fields
+- [x] 12.19 Add office location dropdown/select with hardcoded options (London, Prague)
+- [x] 12.20 Add IsAdmin checkbox/toggle in user creation form (admin only)
+- [x] 12.21 Update user profile display to show first name, last name, email, office location
+- [x] 12.22 Update user indicator in top left to show user's name (first name + last name or email)
+- [x] 12.23 Create utility script in utils/ directory to add admin user (paul.michaels@travelhx.com)
+- [x] 12.24 Script should set IsAdmin flag to true for paul.michaels@travelhx.com
+- [x] 12.25 Script should handle password setup (prompt or use default)
+- [x] 12.26 Update authentication middleware to check IsAdmin flag for admin-only endpoints
+- [x] 12.27 Update admin authorization checks to use IsAdmin flag instead of user ID checks
+- [x] 12.28 Write unit tests for UserService with new profile fields
+- [x] 12.29 Write unit tests for email validation
+- [x] 12.30 Write unit tests for office location validation
+- [x] 12.31 Write unit tests for password reset token generation
+- [x] 12.32 Write unit tests for password reset functionality
+- [x] 12.33 Write integration tests for user creation with profile fields
+- [x] 12.34 Write integration tests for password reset request endpoint
+- [x] 12.35 Write integration tests for password reset endpoint
+- [x] 12.36 Write integration tests for admin flag functionality
+- [x] 12.37 Write JavaScript tests for forgot password page
+- [x] 12.38 Write JavaScript tests for reset password page
+- [x] 12.39 Write JavaScript tests for user creation form with new fields
+- [x] 12.40 Write JavaScript tests for office location dropdown
+- [x] 12.41 Write end-to-end test for user creation with profile fields (admin)
+- [x] 12.42 Write end-to-end test for password reset flow
+- [ ] 12.43 Write end-to-end test for admin setup script (deferred - script functionality covered by first user registration in Phase 14)
+- [x] 12.44 Validate that users can be created with all required profile fields
+- [x] 12.45 Validate that IsAdmin flag works correctly for admin-only features
+- [ ] 12.46 Validate that password reset email is sent correctly (deferred - email sending requires external service integration)
+- [x] 12.47 Validate that password reset link works correctly
+- [ ] 12.48 Validate that admin setup script successfully creates admin user (deferred - script functionality covered by first user registration in Phase 14)
+
+---
+
+## Phase 14: First User Admin Registration
+
+**Objective:** Implement first user admin registration system where the first user to register automatically becomes admin, remove admin/password123 test user, and add startup cleanup logic. Note: Users register/login using email address as the username identifier (no separate username field).
+
+**Dependencies:** Phase 8 (User Authentication and Management), Phase 12 (Enhanced User Management)
+
+**Priority:** High
+
+**Estimated Effort:** 2-3 days
+
+### Tasks
+
+- [x] 14.1 Implement application startup cleanup logic to check for and remove admin/password123 user if it exists (runs automatically when application starts)
+- [x] 14.2 Implement application startup cleanup logic to check if "admin" user exists and flush all users if found (runs automatically when application starts)
+- [x] 14.3 Implement user count check functionality in UserService
+- [x] 14.4 Update user registration logic to check if this is the first user
+- [x] 14.5 Implement automatic admin assignment for first registered user
+- [x] 14.6 Create API endpoint to check if any users exist (GET /api/auth/check-users)
+- [x] 14.7 Update registration API endpoint to automatically set IsAdmin=true for first user
+- [x] 14.8 Create "no users" detection middleware or route handler
+- [x] 14.9 Create registration screen for when no users exist
+- [x] 14.10 Update frontend routing to show registration screen when no users exist
+- [x] 14.11 Add informative message on registration screen explaining first user becomes admin
+- [x] 14.12 Update login screen to redirect to registration if no users exist
+- [x] 14.13 Ensure startup cleanup logic runs automatically during application initialization, before application starts accepting requests
+- [x] 14.14 Remove or update development test user creation logic (email-based test user / Password123 - note: email is used as username/login identifier)
+- [x] 14.15 Update config.json admin user initialization to be removed or made optional
+- [x] 14.16 Ensure admin user cleanup happens atomically (all or nothing)
+- [x] 14.17 Add logging for startup user cleanup operations
+- [x] 14.18 Write unit tests for user count check functionality
+- [x] 14.19 Write unit tests for first user admin assignment logic
+- [x] 14.20 Write unit tests for application startup cleanup user removal logic
+- [x] 14.21 Write unit tests for application startup admin user detection and flush logic
+- [x] 14.22 Write integration tests for registration when no users exist
+- [x] 14.23 Write integration tests for first user automatically becoming admin
+- [ ] 14.24 Write integration tests for application startup cleanup removing admin/password123 user
+- [ ] 14.25 Write integration tests for application startup cleanup flushing users when admin user exists
+- [ ] 14.26 Write JavaScript tests for registration screen when no users exist
+- [ ] 14.27 Write JavaScript tests for routing to registration when no users exist
+- [ ] 14.28 Write end-to-end test for first user registration becoming admin
+- [ ] 14.29 Write end-to-end test for application startup cleanup
+- [ ] 14.30 Validate that first user to register becomes admin automatically
+- [ ] 14.31 Validate that registration screen appears when no users exist
+- [ ] 14.32 Validate that admin/password123 user is removed automatically when application starts
+- [ ] 14.33 Validate that all users are flushed automatically when admin user exists at application startup
+- [ ] 14.34 Validate that subsequent users do not automatically become admin
+
+---
+
+## Phase 13: Availability Display Enhancement
+
+**Objective:** Enhance the booking interface to display the number of remaining spaces when users select dates for desk or parking space bookings.
+
+**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking)
+
+**Priority:** Medium
+
+**Estimated Effort:** 1-2 days
+
+### Tasks
+
+- [x] 13.1 Create API endpoint or enhance existing endpoint to return remaining desk count for selected date range
+- [x] 13.2 Create API endpoint or enhance existing endpoint to return remaining parking space count for selected date and time period
+- [x] 13.3 Update desk availability API to include total desks and remaining desks count
+- [x] 13.4 Update parking availability API to include total spaces and remaining spaces count
+- [x] 13.5 Update BookingService to calculate remaining desk count for date range
+- [x] 13.6 Update ParkingReservationService to calculate remaining parking space count for date/time period
+- [x] 13.7 Update desk booking selection screen to display remaining desks count
+- [x] 13.8 Update parking booking selection screen to display remaining parking spaces count
+- [x] 13.9 Create UI component to display remaining spaces counter prominently
+- [x] 13.10 Update availability display to show "X desks remaining" or "X parking spaces remaining"
+- [x] 13.11 Ensure remaining count updates when date selection changes
+- [x] 13.12 Ensure remaining count updates when time period selection changes (for parking)
+- [x] 13.13 Add visual styling to make remaining spaces count prominent and easy to read
+- [x] 13.14 Handle edge cases (e.g., 0 remaining, all spaces booked)
+- [x] 13.15 Write unit tests for remaining desk count calculation
+- [x] 13.16 Write unit tests for remaining parking space count calculation
+- [x] 13.17 Write integration tests for availability API endpoints with remaining count
+- [x] 13.18 Write JavaScript tests for remaining spaces display component
+- [x] 13.19 Write JavaScript tests for remaining count updates on date/time selection changes
+- [x] 13.20 Write end-to-end test for remaining spaces display in desk booking flow
+- [x] 13.21 Write end-to-end test for remaining spaces display in parking booking flow
+- [x] 13.22 Validate that remaining desk count displays correctly for selected dates
+- [x] 13.23 Validate that remaining parking space count displays correctly for selected date and time period
+- [x] 13.24 Validate that remaining count updates correctly when dates change
+
+---
+
+## Phase 15: Multi-Select Desk and Parking Booking
+
+**Objective:** Implement multi-select functionality for desk and parking space booking, allowing users to select multiple resources and book them all at once, while maintaining existing single-booking functionality.
+
+**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking), Phase 13 (Availability Display Enhancement)
+
+**Priority:** Medium
+
+**Estimated Effort:** 2-3 days
+
+### Tasks
+
+- [ ] 15.1 Design selection state management for multiple desks/parking spaces
+- [ ] 15.2 Create selection data structure to track selected desk IDs and parking space IDs
+- [ ] 15.3 Update desk booking UI to add "Select" button alongside existing "Book" button
+- [ ] 15.4 Update parking booking UI to add "Select" button alongside existing "Book" button
+- [ ] 15.5 Implement "Select" button functionality to add desk/space to selection list
+- [ ] 15.6 Implement visual indicator for selected desks/spaces (highlighting, checkmark, etc.)
+- [ ] 15.7 Implement deselection functionality (clicking "Select" again removes from selection)
+- [ ] 15.8 Create "Book Selected" button component that appears when items are selected
+- [ ] 15.9 Implement "Book Selected" button to book all selected desks for the same date range
+- [ ] 15.10 Implement "Book Selected" button to book all selected parking spaces for the same date/time period
+- [ ] 15.11 Create bulk booking API endpoint or enhance existing endpoint to handle multiple bookings
+- [ ] 15.12 Update BookingService to support bulk desk booking creation
+- [ ] 15.13 Update ParkingReservationService to support bulk parking space reservation creation
+- [ ] 15.14 Implement validation for bulk bookings (ensure all selected items are available)
+- [ ] 15.15 Implement error handling for partial failures in bulk bookings
+- [ ] 15.16 Add "Clear Selection" functionality to deselect all items
+- [ ] 15.17 Ensure selection persists when scrolling through desk/parking lists
+- [ ] 15.18 Update selection count display (e.g., "3 desks selected")
+- [ ] 15.19 Ensure "Book Selected" button is disabled when no items are selected
+- [ ] 15.20 Ensure "Book Selected" button is enabled when items are selected
+- [ ] 15.21 Maintain existing "Book" button functionality for single bookings
+- [ ] 15.22 Update UI to show both buttons clearly and distinguish their functions
+- [ ] 15.23 Write unit tests for selection state management
+- [ ] 15.24 Write unit tests for bulk booking service methods
+- [ ] 15.25 Write unit tests for bulk booking validation logic
+- [ ] 15.26 Write integration tests for bulk desk booking API endpoint
+- [ ] 15.27 Write integration tests for bulk parking reservation API endpoint
+- [ ] 15.28 Write integration tests for partial failure handling in bulk bookings
+- [ ] 15.29 Write JavaScript tests for "Select" button functionality
+- [ ] 15.30 Write JavaScript tests for "Book Selected" button functionality
+- [ ] 15.31 Write JavaScript tests for selection state management
+- [ ] 15.32 Write JavaScript tests for visual selection indicators
+- [ ] 15.33 Write JavaScript tests for "Clear Selection" functionality
+- [ ] 15.34 Write end-to-end test for multi-select desk booking flow
+- [ ] 15.35 Write end-to-end test for multi-select parking booking flow
+- [ ] 15.36 Write end-to-end test for mixed single and multi-select booking
+- [ ] 15.37 Validate that users can select multiple desks and book them all at once
+- [ ] 15.38 Validate that users can select multiple parking spaces and book them all at once
+- [ ] 15.39 Validate that existing single "Book" button still works correctly
+- [ ] 15.40 Validate that selection persists correctly during scrolling
+
+---
+
+## Phase 16: Remove Booking Confirmation Modal
+
+**Objective:** Remove the unnecessary modal dialog that appears when booking a desk or parking space to streamline the booking process.
+
+**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking)
+
+**Priority:** Low
+
+**Estimated Effort:** 0.5-1 day
+
+### Tasks
+
+- [ ] 16.1 Identify all locations where booking confirmation modal is displayed
+- [ ] 16.2 Remove modal dialog code from desk booking functionality
+- [ ] 16.3 Remove modal dialog code from parking booking functionality
+- [ ] 16.4 Update booking flow to proceed directly without confirmation modal
+- [ ] 16.5 Ensure success feedback is still provided (e.g., success message, visual update)
+- [ ] 16.6 Ensure error handling still works correctly without modal
+- [ ] 16.7 Update any JavaScript code that depends on modal confirmation
+- [ ] 16.8 Remove modal-related CSS/styles if no longer needed
+- [ ] 16.9 Update booking confirmation messages to use non-modal display (e.g., toast notification, inline message)
+- [ ] 16.10 Write unit tests to verify booking proceeds without modal
+- [ ] 16.11 Write JavaScript tests for direct booking flow without modal
+- [ ] 16.12 Write end-to-end test for streamlined booking flow
+- [ ] 16.13 Validate that desk booking works correctly without confirmation modal
+- [ ] 16.14 Validate that parking booking works correctly without confirmation modal
+- [ ] 16.15 Validate that success feedback is still displayed appropriately
+- [ ] 16.16 Validate that error messages are still displayed appropriately

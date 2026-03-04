@@ -16,6 +16,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (endDateInput.value && endDateInput.value < startDateInput.value) {
             endDateInput.value = startDateInput.value;
         }
+        // Auto-check availability when dates change if both dates are selected
+        if (startDateInput.value && endDateInput.value) {
+            checkAvailability();
+        }
+    });
+    
+    endDateInput.addEventListener('change', () => {
+        // Auto-check availability when end date changes if both dates are selected
+        if (startDateInput.value && endDateInput.value) {
+            checkAvailability();
+        }
     });
     
     checkAvailabilityBtn.addEventListener('click', checkAvailability);
@@ -43,12 +54,23 @@ async function checkAvailability() {
     try {
         const response = await apiRequest(`/api/bookings/available?startDate=${startDate}&endDate=${endDate}`);
         
-        if (response.length === 0) {
-            messageDiv.innerHTML = '<div class="error">No desks available for the selected date range. Please try different dates.</div>';
+        // Handle both old format (array) and new format (object with counts)
+        const availableDesks = response.availableDesks || response;
+        const remainingDesks = response.remainingDesks !== undefined ? response.remainingDesks : availableDesks.length;
+        const totalDesks = response.totalDesks !== undefined ? response.totalDesks : null;
+        
+        if (availableDesks.length === 0) {
+            const remainingMessage = totalDesks !== null 
+                ? `<div class="error"><strong>No desks available</strong> for the selected date range (${totalDesks} total desks, all booked). Please try different dates.</div>`
+                : '<div class="error">No desks available for the selected date range. Please try different dates.</div>';
+            messageDiv.innerHTML = remainingMessage;
             desksContainer.innerHTML = '';
         } else {
-            messageDiv.innerHTML = `<div class="success">Found ${response.length} available desk(s) for the selected dates.</div>`;
-            displayDesks(response, startDate, endDate);
+            const remainingInfo = totalDesks !== null 
+                ? `<div class="availability-counter"><strong>${remainingDesks} desk${remainingDesks !== 1 ? 's' : ''} remaining</strong> out of ${totalDesks} total</div>`
+                : `<div class="availability-counter"><strong>${remainingDesks} desk${remainingDesks !== 1 ? 's' : ''} available</strong></div>`;
+            messageDiv.innerHTML = `<div class="success">Found ${availableDesks.length} available desk(s) for the selected dates.</div>${remainingInfo}`;
+            displayDesks(availableDesks, startDate, endDate);
         }
     } catch (error) {
         showError('Failed to check availability: ' + error.message);
@@ -110,7 +132,12 @@ async function bookDesk(deskId, deskNumber, startDate, endDate) {
             window.location.href = '/pages/bookings.html';
         }, 1500);
     } catch (error) {
-        if (error.message.includes('not available') || error.message.includes('unavailable')) {
+        if (error.message.includes('already have a desk booking') || error.message.includes('overlap')) {
+            showError(error.message || 'You already have a desk booking for overlapping dates. You cannot book multiple desks for overlapping periods.');
+        } else if (error.message.includes('already booked by another user')) {
+            showError(error.message || 'This desk is already booked by another user for the selected dates. Please check availability again.');
+            checkAvailability();
+        } else if (error.message.includes('not available') || error.message.includes('unavailable')) {
             showError('This desk is no longer available for the selected dates. Please check availability again.');
             checkAvailability();
         } else {

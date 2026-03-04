@@ -36,8 +36,13 @@ router.get('/available', optionalAuthenticate, async (req, res, next) => {
       });
     }
 
-    const availableSpaces = await parkingSpaceService.getAvailableParkingSpaces(reservationDate, timePeriod);
-    res.json(availableSpaces.map(ps => ps.toJSON()));
+    const availabilityInfo = await parkingSpaceService.getAvailabilityInfo(reservationDate, timePeriod);
+    res.json({
+      availableSpaces: availabilityInfo.availableSpaces.map(ps => ps.toJSON()),
+      totalSpaces: availabilityInfo.totalSpaces,
+      remainingSpaces: availabilityInfo.remainingSpaces,
+      bookedSpaces: availabilityInfo.bookedSpaces,
+    });
   } catch (error) {
     next(error);
   }

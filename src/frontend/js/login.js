@@ -1,14 +1,42 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const loginForm = document.getElementById('login-form');
   const loginButton = document.getElementById('login-button');
   const errorDiv = document.getElementById('login-error');
   const successDiv = document.getElementById('login-success');
+  const passwordInput = document.getElementById('password');
+  const passwordToggle = document.getElementById('password-toggle');
+  const passwordToggleText = document.getElementById('password-toggle-text');
+
+  // Password visibility toggle
+  if (passwordToggle) {
+    passwordToggle.addEventListener('click', () => {
+      const isPassword = passwordInput.type === 'password';
+      passwordInput.type = isPassword ? 'text' : 'password';
+      passwordToggleText.textContent = isPassword ? 'Hide' : 'Show';
+      passwordToggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+    });
+  }
 
   // Check if user is already logged in
   if (getAuthToken()) {
     // Redirect to home page
     window.location.href = '/';
     return;
+  }
+
+  // Check if any users exist - if not, redirect to registration
+  try {
+    const response = await fetch('/api/auth/check-users');
+    const data = await response.json();
+    
+    if (!data.hasUsers) {
+      // No users exist - redirect to registration
+      window.location.href = '/pages/register.html';
+      return;
+    }
+  } catch (error) {
+    console.error('Error checking for users:', error);
+    // Continue with login if check fails
   }
 
   loginForm.addEventListener('submit', async (e) => {

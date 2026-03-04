@@ -29,7 +29,7 @@ describe('ParkingReservationService', () => {
     test('should create reservation successfully', async () => {
       const userId = 1;
       const parkingSpaceId = 1;
-      const reservationDate = '2025-01-01';
+      const reservationDate = '2026-01-01';
       const timePeriod = 'morning';
       const mockSpace = new ParkingSpace({ id: 1, space_number: 'P001', is_active: 1 });
       const mockReservation = new ParkingReservation({
@@ -42,6 +42,7 @@ describe('ParkingReservationService', () => {
       });
 
       mockParkingSpaceRepository.findById = jest.fn().mockResolvedValue(mockSpace);
+      mockReservationRepository.findOverlappingUserReservations = jest.fn().mockResolvedValue([]);
       mockParkingSpaceService.checkParkingSpaceAvailability = jest.fn().mockResolvedValue({ available: true });
       mockReservationRepository.create = jest.fn().mockResolvedValue(mockReservation);
 
@@ -49,6 +50,11 @@ describe('ParkingReservationService', () => {
 
       expect(result).toEqual(mockReservation);
       expect(mockParkingSpaceRepository.findById).toHaveBeenCalledWith(parkingSpaceId);
+      expect(mockReservationRepository.findOverlappingUserReservations).toHaveBeenCalledWith(
+        userId,
+        reservationDate,
+        timePeriod
+      );
       expect(mockParkingSpaceService.checkParkingSpaceAvailability).toHaveBeenCalledWith(
         parkingSpaceId,
         reservationDate,
@@ -88,6 +94,106 @@ describe('ParkingReservationService', () => {
       await expect(
         reservationService.createReservation(1, 1, pastDate, 'morning')
       ).rejects.toThrow('Cannot reserve parking spaces for past dates');
+    });
+
+    test('should throw error when user has overlapping parking reservation', async () => {
+      const userId = 1;
+      const parkingSpaceId = 1;
+      const reservationDate = '2026-01-01';
+      const timePeriod = 'morning';
+      const mockSpace = new ParkingSpace({ id: 1, space_number: 'P001', is_active: 1 });
+      const existingReservation = new ParkingReservation({
+        id: 2,
+        user_id: userId,
+        parking_space_id: 2,
+        reservation_date: reservationDate,
+        time_period: 'morning',
+        status: 'active',
+      });
+
+      mockParkingSpaceRepository.findById = jest.fn().mockResolvedValue(mockSpace);
+      mockReservationRepository.findOverlappingUserReservations = jest.fn().mockResolvedValue([existingReservation]);
+
+      await expect(
+        reservationService.createReservation(userId, parkingSpaceId, reservationDate, timePeriod)
+      ).rejects.toThrow('already have a parking reservation');
+    });
+
+    test('should throw error when parking space is already reserved by another user', async () => {
+      const userId = 1;
+      const parkingSpaceId = 1;
+      const reservationDate = '2026-01-01';
+      const timePeriod = 'morning';
+      const mockSpace = new ParkingSpace({ id: 1, space_number: 'P001', is_active: 1 });
+      const conflict = {
+        id: 2,
+        userId: 2,
+        parkingSpaceId: parkingSpaceId,
+        reservationDate: reservationDate,
+        timePeriod: 'morning',
+        status: 'active',
+      };
+
+      mockParkingSpaceRepository.findById = jest.fn().mockResolvedValue(mockSpace);
+      mockReservationRepository.findOverlappingUserReservations = jest.fn().mockResolvedValue([]);
+      mockParkingSpaceService.checkParkingSpaceAvailability = jest.fn().mockResolvedValue({
+        available: false,
+        conflicts: [conflict],
+      });
+
+      await expect(
+        reservationService.createReservation(userId, parkingSpaceId, reservationDate, timePeriod)
+      ).rejects.toThrow('already reserved by another user');
+    });
+
+    test('should handle full_day time period conflicts correctly', async () => {
+      const userId = 1;
+      const parkingSpaceId = 1;
+      const reservationDate = '2026-01-01';
+      const timePeriod = 'full_day';
+      const mockSpace = new ParkingSpace({ id: 1, space_number: 'P001', is_active: 1 });
+      // User already has a morning reservation on the same date
+      const existingReservation = new ParkingReservation({
+        id: 2,
+        user_id: userId,
+        parking_space_id: 2,
+        reservation_date: reservationDate,
+        time_period: 'morning',
+        status: 'active',
+      });
+
+      mockParkingSpaceRepository.findById = jest.fn().mockResolvedValue(mockSpace);
+      mockReservationRepository.findOverlappingUserReservations = jest.fn().mockResolvedValue([existingReservation]);
+
+      await expect(
+        reservationService.createReservation(userId, parkingSpaceId, reservationDate, timePeriod)
+      ).rejects.toThrow('already have a parking reservation');
+    });
+
+    test('should allow different time periods on same date when no overlap', async () => {
+      const userId = 1;
+      const parkingSpaceId = 1;
+      const reservationDate = '2026-01-01';
+      const timePeriod = 'afternoon';
+      const mockSpace = new ParkingSpace({ id: 1, space_number: 'P001', is_active: 1 });
+      const mockReservation = new ParkingReservation({
+        id: 1,
+        user_id: userId,
+        parking_space_id: parkingSpaceId,
+        reservation_date: reservationDate,
+        time_period: timePeriod,
+        status: 'active',
+      });
+
+      mockParkingSpaceRepository.findById = jest.fn().mockResolvedValue(mockSpace);
+      // User has morning reservation, but trying to book afternoon (no overlap)
+      mockReservationRepository.findOverlappingUserReservations = jest.fn().mockResolvedValue([]);
+      mockParkingSpaceService.checkParkingSpaceAvailability = jest.fn().mockResolvedValue({ available: true });
+      mockReservationRepository.create = jest.fn().mockResolvedValue(mockReservation);
+
+      const result = await reservationService.createReservation(userId, parkingSpaceId, reservationDate, timePeriod);
+
+      expect(result).toEqual(mockReservation);
     });
   });
 

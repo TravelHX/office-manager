@@ -2,6 +2,7 @@ const BookingRepository = require('../repositories/BookingRepository');
 const DeskRepository = require('../repositories/DeskRepository');
 const DeskService = require('./DeskService');
 const Booking = require('../models/Booking');
+const { dateRangesOverlap } = require('../utils/dateUtils');
 
 class BookingService {
   constructor() {
@@ -41,8 +42,31 @@ class BookingService {
       throw new Error('Desk is not available');
     }
 
+    // Validate: Check if user already has overlapping desk bookings
+    const userOverlaps = await this.bookingRepository.findOverlappingUserBookings(
+      userId,
+      startDate,
+      endDate
+    );
+    if (userOverlaps.length > 0) {
+      const conflictingBooking = userOverlaps[0];
+      throw new Error(
+        `You already have a desk booking (Desk ${conflictingBooking.deskId}) for dates that overlap with ${startDate} to ${endDate}. ` +
+        `Your existing booking is from ${conflictingBooking.startDate} to ${conflictingBooking.endDate}. ` +
+        `You cannot book multiple desks for overlapping periods.`
+      );
+    }
+
+    // Validate: Check if desk is already booked by another user
     const availability = await this.deskService.checkDeskAvailability(deskId, startDate, endDate);
     if (!availability.available) {
+      if (availability.conflicts && availability.conflicts.length > 0) {
+        const conflict = availability.conflicts[0];
+        throw new Error(
+          `Desk ${desk.deskNumber || deskId} is already booked by another user for dates that overlap with ${startDate} to ${endDate}. ` +
+          `The existing booking is from ${conflict.startDate} to ${conflict.endDate}.`
+        );
+      }
       throw new Error('Desk is not available for the selected date range');
     }
 
@@ -105,6 +129,10 @@ class BookingService {
 
   async getAvailableDesks(startDate, endDate) {
     return await this.deskService.getAvailableDesks(startDate, endDate);
+  }
+
+  async getAvailabilityInfo(startDate, endDate) {
+    return await this.deskService.getAvailabilityInfo(startDate, endDate);
   }
 }
 

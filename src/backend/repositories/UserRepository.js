@@ -23,6 +23,12 @@ class UserRepository extends BaseRepository {
     return results.length > 0 ? new User(results[0]) : null;
   }
 
+  async findByResetToken(token) {
+    const query = 'SELECT * FROM users WHERE reset_token = ?';
+    const results = await this.executeRawQuery(query, [token]);
+    return results.length > 0 ? new User(results[0]) : null;
+  }
+
   async create(user) {
     const data = user instanceof User ? user.toDatabaseFormat() : user;
     const id = await super.create(data);
@@ -77,6 +83,27 @@ class UserRepository extends BaseRepository {
     const query = 'UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
     await this.executeRawQuery(query, [passwordHash, id]);
     return this.findById(id);
+  }
+
+  async count() {
+    const query = 'SELECT COUNT(*) as count FROM users';
+    const results = await this.executeRawQuery(query);
+    return results[0]?.count || 0;
+  }
+
+  async deleteById(id) {
+    const query = 'DELETE FROM users WHERE id = ?';
+    await this.executeRawQuery(query, [id]);
+  }
+
+  async deleteByUsername(username) {
+    const query = 'DELETE FROM users WHERE username = ?';
+    await this.executeRawQuery(query, [username]);
+  }
+
+  async deleteAll() {
+    const query = 'DELETE FROM users';
+    await this.executeRawQuery(query);
   }
 }
 

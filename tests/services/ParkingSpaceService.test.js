@@ -183,5 +183,62 @@ describe('ParkingSpaceService', () => {
       expect(result.reason).toBe('Parking space is not active');
     });
   });
+
+  describe('getAvailabilityInfo', () => {
+    test('should return availability info with remaining parking space count', async () => {
+      const allSpaces = [
+        new ParkingSpace({ id: 1, space_number: 'P001', is_active: 1 }),
+        new ParkingSpace({ id: 2, space_number: 'P002', is_active: 1 }),
+        new ParkingSpace({ id: 3, space_number: 'P003', is_active: 1 }),
+      ];
+
+      mockParkingSpaceRepository.findAllActive = jest.fn().mockResolvedValue(allSpaces);
+      mockReservationRepository.findConflictingReservations = jest.fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ id: 1 }])
+        .mockResolvedValueOnce([]);
+
+      const result = await parkingSpaceService.getAvailabilityInfo('2026-12-01', 'morning');
+
+      expect(result.totalSpaces).toBe(3);
+      expect(result.remainingSpaces).toBe(2);
+      expect(result.bookedSpaces).toBe(1);
+      expect(result.availableSpaces).toHaveLength(2);
+    });
+
+    test('should return correct counts when all spaces are available', async () => {
+      const allSpaces = [
+        new ParkingSpace({ id: 1, space_number: 'P001', is_active: 1 }),
+        new ParkingSpace({ id: 2, space_number: 'P002', is_active: 1 }),
+      ];
+
+      mockParkingSpaceRepository.findAllActive = jest.fn().mockResolvedValue(allSpaces);
+      mockReservationRepository.findConflictingReservations = jest.fn()
+        .mockResolvedValue([]);
+
+      const result = await parkingSpaceService.getAvailabilityInfo('2026-12-01', 'afternoon');
+
+      expect(result.totalSpaces).toBe(2);
+      expect(result.remainingSpaces).toBe(2);
+      expect(result.bookedSpaces).toBe(0);
+    });
+
+    test('should return correct counts when all spaces are booked', async () => {
+      const allSpaces = [
+        new ParkingSpace({ id: 1, space_number: 'P001', is_active: 1 }),
+        new ParkingSpace({ id: 2, space_number: 'P002', is_active: 1 }),
+      ];
+
+      mockParkingSpaceRepository.findAllActive = jest.fn().mockResolvedValue(allSpaces);
+      mockReservationRepository.findConflictingReservations = jest.fn()
+        .mockResolvedValue([{ id: 1 }]);
+
+      const result = await parkingSpaceService.getAvailabilityInfo('2026-12-01', 'full_day');
+
+      expect(result.totalSpaces).toBe(2);
+      expect(result.remainingSpaces).toBe(0);
+      expect(result.bookedSpaces).toBe(2);
+    });
+  });
 });
 

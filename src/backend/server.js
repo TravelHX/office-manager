@@ -24,32 +24,21 @@ async function startServer() {
     createPool();
     logger.info('Database connection pool created');
 
-    // Initialize users
+    // Perform startup cleanup operations
     try {
       const UserService = require('./services/UserService');
       const userService = new UserService();
       
-      // Initialize admin user from config.json
-      // In development mode, this will use Password123 as the password
-      try {
-        const adminUser = await userService.initializeAdminFromConfig();
-        logger.info(`Admin user initialized: ${adminUser.username} (ID: ${adminUser.id})`);
-      } catch (error) {
-        logger.warn('Could not initialize admin user from config.json:', error.message);
-      }
-
-      // Initialize development test user
-      try {
-        const testUser = await userService.initializeDevTestUser();
-        if (testUser) {
-          logger.info(`Development test user initialized: ${testUser.username} (ID: ${testUser.id})`);
-        }
-      } catch (error) {
-        logger.warn('Could not initialize development test user:', error.message);
-      }
+      // Run startup cleanup: remove admin/password123 user or flush all users if admin exists
+      await userService.performStartupCleanup();
     } catch (error) {
-      logger.warn('User initialization failed:', error.message);
+      logger.warn('Startup cleanup failed:', error.message);
+      // Continue startup even if cleanup fails
     }
+
+    // Note: Admin user initialization from config.json is now optional
+    // Only initialize if explicitly needed (can be removed in production)
+    // The first user to register will automatically become admin
 
     app.listen(config.server.port, () => {
       logger.info(`Server running on port ${config.server.port}`);

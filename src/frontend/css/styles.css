@@ -193,6 +193,23 @@ tr:hover {
     margin-bottom: 1rem;
 }
 
+.availability-counter {
+    background-color: #e8f4f8;
+    color: #2c3e50;
+    padding: 1rem 1.5rem;
+    border-radius: 6px;
+    margin: 1rem 0;
+    border-left: 4px solid #3498db;
+    font-size: 1.1rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.availability-counter strong {
+    color: #2980b9;
+    font-size: 1.2rem;
+}
+
 /* Booking form styles */
 .booking-form {
     background: white;

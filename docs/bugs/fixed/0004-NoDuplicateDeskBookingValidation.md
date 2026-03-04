@@ -10,7 +10,7 @@ When creating a desk booking, there is no validation to prevent booking the same
 
 ## Current Status
 
-**Status:** Fixed - Code Implementation Complete, Awaiting User Confirmation
+**Status:** Fixed - User Confirmed
 
 **What has been tried:**
 - Reviewed the `findConflictingBookings()` query logic
@@ -69,7 +69,7 @@ When creating a desk booking, there is no validation to prevent booking the same
 2. ~~Review and fix the conflict detection query~~ - Completed
 3. ~~Verify the availability check is working correctly~~ - Completed
 4. ~~Verify the fix prevents duplicate bookings~~ - Completed (fix implemented and tested)
-5. User confirmation required before marking as fixed and moving to fixed folder
+5. ~~User confirmation~~ - Completed
 
 ## Fix Applied
 

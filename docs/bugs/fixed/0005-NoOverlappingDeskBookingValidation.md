@@ -10,7 +10,7 @@ When creating a desk booking, there is no validation to prevent creating overlap
 
 ## Current Status
 
-**Status:** Fixed - Root Cause Identified and Resolved
+**Status:** Fixed - User Confirmed
 
 **What has been tried:**
 - Reviewed the `findConflictingBookings()` query logic
@@ -74,8 +74,8 @@ When creating a desk booking, there is no validation to prevent creating overlap
 1. ~~Create a failing test that reproduces the bug~~ - Completed
 2. ~~Review and fix the conflict detection query~~ - Completed
 3. ~~Verify all overlap scenarios are correctly detected~~ - Completed
-4. Verify the fix prevents overlapping bookings - Tests need to be run via Docker test environment
-5. User confirmation required before marking as fixed
+4. ~~Verify the fix prevents overlapping bookings~~ - Completed (tests verified)
+5. ~~User confirmation required before marking as fixed~~ - ✅ Confirmed fixed by user on 2026-02-05
 
 ## Fix Applied
 

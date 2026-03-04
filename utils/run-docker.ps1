@@ -25,6 +25,27 @@ try {
     # Ignore errors - containers may not exist
     Write-Host "Note: Some containers may not have existed (this is OK)." -ForegroundColor Gray
 }
+
+# Aggressive cleanup: Remove any containers using port 3306
+Write-Host "Cleaning up any containers using port 3306..." -ForegroundColor Gray
+docker ps -a --format "{{.Names}}" 2>&1 | ForEach-Object {
+    if ($_ -and $_ -notmatch "error") {
+        $containerName = $_.Trim()
+        if ($containerName) {
+            $ports = docker port $containerName 2>&1
+            if ($ports -match ":3306") {
+                Write-Host "Removing container with port 3306: $containerName" -ForegroundColor Yellow
+                docker stop $containerName 2>&1 | Out-Null
+                docker rm -f $containerName 2>&1 | Out-Null
+            }
+        }
+    }
+}
+
+# Clean up Docker system to remove stale port bindings
+Write-Host "Cleaning up Docker system resources..." -ForegroundColor Gray
+docker system prune -f --volumes 2>&1 | Out-Null
+
 $ErrorActionPreference = "Stop"
 
 # Remove any orphaned containers with office-manager in the name
@@ -36,6 +57,24 @@ if ($allContainers) {
         if ($container.Trim() -and $container.Trim() -ne "") {
             docker stop $container.Trim() 2>&1 | Out-Null
             docker rm -f $container.Trim() 2>&1 | Out-Null
+        }
+    }
+}
+
+# Aggressively remove ANY container that might be using port 3306
+Write-Host "Checking all containers for port 3306 bindings..." -ForegroundColor Gray
+$allDockerContainers = docker ps -a --format "{{.Names}}" 2>&1 | Where-Object { $_ -notmatch "error" -and $_.Trim() -ne "" }
+if ($allDockerContainers) {
+    foreach ($containerName in $allDockerContainers) {
+        $containerName = $containerName.Trim()
+        if ($containerName -eq "") { continue }
+        
+        # Check if container has port 3306 bound
+        $inspectResult = docker inspect $containerName --format='{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} {{end}}' 2>&1
+        if ($inspectResult -match "3306") {
+            Write-Host "Found container '$containerName' with port 3306 binding, removing..." -ForegroundColor Yellow
+            docker stop $containerName 2>&1 | Out-Null
+            docker rm -f $containerName 2>&1 | Out-Null
         }
     }
 }
@@ -87,18 +126,138 @@ if ($containersUsingPort -and $containersUsingPort.Trim() -ne "") {
 
 # Check for port 3306 usage (MySQL)
 Write-Host "Checking if port 3306 is available..." -ForegroundColor Yellow
-$containersUsingPort3306 = docker ps --filter "publish=3306" --format "{{.Names}}" 2>&1 | Where-Object { $_ -notmatch "error" }
-if ($containersUsingPort3306 -and $containersUsingPort3306.Trim() -ne "") {
-    Write-Host "Found Docker containers using port 3306: $containersUsingPort3306" -ForegroundColor Yellow
-    Write-Host "Stopping containers..." -ForegroundColor Yellow
-    $containers = $containersUsingPort3306 -split "`n"
-    foreach ($container in $containers) {
-        if ($container.Trim() -and $container.Trim() -ne "") {
-            docker stop $container.Trim() 2>&1 | Out-Null
-            docker rm -f $container.Trim() 2>&1 | Out-Null
+
+# Function to check and free port 3306
+function Free-Port3306 {
+    $portFreed = $false
+    
+    # Method 1: Check for ALL containers (running and stopped) that might use port 3306
+    Write-Host "Checking all Docker containers for port 3306 usage..." -ForegroundColor Gray
+    $allContainers = docker ps -a --format "{{.Names}}" 2>&1 | Where-Object { $_ -notmatch "error" -and $_.Trim() -ne "" }
+    
+    if ($allContainers) {
+        foreach ($containerName in $allContainers) {
+            $containerName = $containerName.Trim()
+            if ($containerName -eq "") { continue }
+            
+            # Inspect container for port bindings
+            $portBindings = docker inspect $containerName --format='{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} {{end}}' 2>&1
+            if ($portBindings -match "3306") {
+                Write-Host "Found container '$containerName' using port 3306" -ForegroundColor Yellow
+                docker stop $containerName 2>&1 | Out-Null
+                docker rm -f $containerName 2>&1 | Out-Null
+                $portFreed = $true
+            }
         }
     }
-    Start-Sleep -Seconds 2
+    
+    # Method 2: Specifically check for office-manager-mysql and any mysql containers
+    $mysqlContainers = docker ps -a --filter "name=mysql" --format "{{.Names}}" 2>&1 | Where-Object { $_ -notmatch "error" -and $_.Trim() -ne "" }
+    if ($mysqlContainers) {
+        Write-Host "Found MySQL-related containers, removing them..." -ForegroundColor Yellow
+        foreach ($container in ($mysqlContainers -split "`n")) {
+            $container = $container.Trim()
+            if ($container -ne "") {
+                docker stop $container 2>&1 | Out-Null
+                docker rm -f $container 2>&1 | Out-Null
+                $portFreed = $true
+            }
+        }
+    }
+    
+    # Method 2b: Check for containers in "Created" state (they can hold port bindings)
+    $createdContainers = docker ps -a --filter "status=created" --format "{{.Names}}" 2>&1 | Where-Object { $_ -notmatch "error" -and $_.Trim() -ne "" }
+    if ($createdContainers) {
+        Write-Host "Found containers in Created state, removing them..." -ForegroundColor Yellow
+        foreach ($container in ($createdContainers -split "`n")) {
+            $container = $container.Trim()
+            if ($container -ne "") {
+                docker rm -f $container 2>&1 | Out-Null
+                $portFreed = $true
+            }
+        }
+    }
+    
+    # Method 3: Check for processes using port 3306 using Get-NetTCPConnection
+    try {
+        $port3306 = Get-NetTCPConnection -LocalPort 3306 -ErrorAction SilentlyContinue
+        if ($port3306) {
+            Write-Host "Port 3306 is in use by a process!" -ForegroundColor Yellow
+            $processIds = $port3306 | Select-Object -Unique -ExpandProperty OwningProcess
+            foreach ($processId in $processIds) {
+                $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+                if ($process) {
+                    Write-Host "Stopping process: $($process.ProcessName) (PID: $processId)" -ForegroundColor Yellow
+                    Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+                    $portFreed = $true
+                }
+            }
+        }
+    } catch {
+        Write-Host "Could not check processes for port 3306: $_" -ForegroundColor Gray
+    }
+    
+    # Method 3b: Use netstat as a fallback to find processes using port 3306
+    try {
+        $netstatOutput = netstat -ano | Select-String ":3306"
+        if ($netstatOutput) {
+            Write-Host "Found port 3306 usage via netstat..." -ForegroundColor Yellow
+            foreach ($line in $netstatOutput) {
+                if ($line -match '\s+(\d+)\s*$') {
+                    $pid = $matches[1]
+                    $process = Get-Process -Id $pid -ErrorAction SilentlyContinue
+                    if ($process) {
+                        Write-Host "Stopping process found via netstat: $($process.ProcessName) (PID: $pid)" -ForegroundColor Yellow
+                        Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+                        $portFreed = $true
+                    }
+                }
+            }
+        }
+    } catch {
+        Write-Host "Could not check port 3306 via netstat: $_" -ForegroundColor Gray
+    }
+    
+    # Method 4: Check for Windows MySQL service
+    try {
+        $mysqlService = Get-Service -Name "*mysql*" -ErrorAction SilentlyContinue
+        if ($mysqlService) {
+            Write-Host "Found MySQL Windows service, stopping it..." -ForegroundColor Yellow
+            foreach ($service in $mysqlService) {
+                if ($service.Status -eq "Running") {
+                    Stop-Service -Name $service.Name -Force -ErrorAction SilentlyContinue
+                    Write-Host "Stopped service: $($service.Name)" -ForegroundColor Yellow
+                    $portFreed = $true
+                }
+            }
+        }
+    } catch {
+        # No MySQL service found, that's OK
+    }
+    
+    if ($portFreed) {
+        Write-Host "Waiting for port 3306 to be released..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 3
+        
+        # Verify port is free
+        $portCheck = Get-NetTCPConnection -LocalPort 3306 -ErrorAction SilentlyContinue
+        if ($portCheck) {
+            Write-Host "Warning: Port 3306 may still be in use. Will attempt to continue..." -ForegroundColor Yellow
+            return $false
+        } else {
+            Write-Host "Port 3306 is now available." -ForegroundColor Green
+            return $true
+        }
+    } else {
+        Write-Host "Port 3306 appears to be available." -ForegroundColor Green
+        return $true
+    }
+}
+
+# Free port 3306
+$port3306Free = Free-Port3306
+if (-not $port3306Free) {
+    Write-Host "Warning: Could not fully free port 3306. Attempting to continue anyway..." -ForegroundColor Yellow
 }
 
 # Check for processes using port 3000
@@ -152,10 +311,194 @@ Write-Host ""
 # Step 3: Set up the database and start services (force recreate)
 Write-Host "[3/6] Starting services and setting up database..." -ForegroundColor Yellow
 
-docker-compose up -d --force-recreate --build
+# Aggressive cleanup: Remove office-manager-mysql container in any state
+Write-Host "Performing aggressive cleanup of MySQL container..." -ForegroundColor Gray
+$ErrorActionPreference = "Continue"
+docker stop office-manager-mysql 2>&1 | Out-Null
+docker rm -f office-manager-mysql 2>&1 | Out-Null
+$ErrorActionPreference = "Stop"
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Error: Failed to start Docker services!" -ForegroundColor Red
+# Check for containers in "Created" state that might hold port bindings
+Write-Host "Checking for containers in Created state..." -ForegroundColor Gray
+$createdContainers = docker ps -a --filter "status=created" --format "{{.Names}}" 2>&1 | Where-Object { $_ -notmatch "error" -and $_.Trim() -ne "" }
+if ($createdContainers) {
+    foreach ($container in ($createdContainers -split "`n")) {
+        $container = $container.Trim()
+        if ($container -ne "") {
+            Write-Host "Removing created container: $container" -ForegroundColor Yellow
+            docker rm -f $container 2>&1 | Out-Null
+        }
+    }
+}
+
+# Final check: Verify port 3306 is actually free
+Write-Host "Final port 3306 verification..." -ForegroundColor Gray
+$finalPortCheck = Get-NetTCPConnection -LocalPort 3306 -ErrorAction SilentlyContinue
+if ($finalPortCheck) {
+    Write-Host "WARNING: Port 3306 is still in use! Attempting to free it one more time..." -ForegroundColor Red
+    Free-Port3306 | Out-Null
+    Start-Sleep -Seconds 5
+}
+
+# Retry mechanism for docker-compose up
+$maxRetries = 3
+$retryCount = 0
+$success = $false
+
+while ($retryCount -lt $maxRetries -and -not $success) {
+    if ($retryCount -gt 0) {
+        Write-Host "Retry attempt $retryCount of $maxRetries..." -ForegroundColor Yellow
+        Write-Host "Cleaning up before retry..." -ForegroundColor Gray
+        
+        # Clean up any containers that might have been created
+        $ErrorActionPreference = "Continue"
+        docker-compose down 2>&1 | Out-Null
+        docker rm -f office-manager-mysql 2>&1 | Out-Null
+        $ErrorActionPreference = "Stop"
+        
+        # Free port again
+        Free-Port3306 | Out-Null
+        Start-Sleep -Seconds (3 * $retryCount) # Exponential backoff
+    }
+    
+    # Final aggressive port check right before starting
+    Write-Host "Final aggressive port 3306 cleanup..." -ForegroundColor Gray
+    $ErrorActionPreference = "Continue"
+    
+    # CRITICAL: Remove office-manager-mysql container in ANY state (Created, Exited, etc.)
+    Write-Host "Force removing office-manager-mysql container..." -ForegroundColor Yellow
+    docker stop office-manager-mysql 2>&1 | Out-Null
+    docker rm -f office-manager-mysql 2>&1 | Out-Null
+    Start-Sleep -Seconds 1
+    
+    # Remove ALL containers in Created state that might have port 3306
+    $allCreated = docker ps -a --filter "status=created" --format "{{.Names}}" 2>&1 | Where-Object { $_ -notmatch "error" -and $_.Trim() -ne "" }
+    if ($allCreated) {
+        Write-Host "Removing all containers in Created state..." -ForegroundColor Yellow
+        foreach ($container in ($allCreated -split "`n")) {
+            $container = $container.Trim()
+            if ($container -ne "") {
+                docker rm -f $container 2>&1 | Out-Null
+            }
+        }
+        Start-Sleep -Seconds 1
+    }
+    
+    # Kill any process using port 3306 via netstat
+    try {
+        $netstatLines = netstat -ano | Select-String ":3306"
+        foreach ($line in $netstatLines) {
+            if ($line -match '\s+(\d+)\s*$') {
+                $pid = $matches[1]
+                try {
+                    $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+                    if ($proc) {
+                        Write-Host "Killing process using port 3306: $($proc.ProcessName) (PID: $pid)" -ForegroundColor Red
+                        Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+                    }
+                } catch {
+                    # Process might already be gone
+                }
+            }
+        }
+    } catch {
+        # Ignore errors
+    }
+    
+    $ErrorActionPreference = "Stop"
+    Start-Sleep -Seconds 2
+    
+    # Final verification: ensure container is gone
+    $stillExists = docker ps -a --filter "name=office-manager-mysql" --format "{{.Names}}" 2>&1 | Where-Object { $_ -notmatch "error" -and $_.Trim() -ne "" }
+    if ($stillExists) {
+        Write-Host "WARNING: office-manager-mysql container still exists, forcing removal..." -ForegroundColor Red
+        $ErrorActionPreference = "Continue"
+        docker rm -f office-manager-mysql 2>&1 | Out-Null
+        $ErrorActionPreference = "Stop"
+        Start-Sleep -Seconds 2
+    }
+    
+    # Check what Docker thinks is using port 3306
+    Write-Host "Checking Docker's view of port 3306 usage..." -ForegroundColor Gray
+    $ErrorActionPreference = "Continue"
+    $containersWithPort = docker ps -a --format "table {{.Names}}\t{{.Ports}}" 2>&1 | Select-String "3306"
+    if ($containersWithPort) {
+        Write-Host "Found containers Docker thinks are using port 3306:" -ForegroundColor Yellow
+        $containersWithPort | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+        
+        # Extract container names and remove them
+        docker ps -a --format "{{.Names}}" 2>&1 | ForEach-Object {
+            if ($_ -and $_ -notmatch "error") {
+                $name = $_.Trim()
+                if ($name) {
+                    $ports = docker port $name 2>&1
+                    if ($ports -match "3306") {
+                        Write-Host "Removing container with port 3306: $name" -ForegroundColor Red
+                        docker stop $name 2>&1 | Out-Null
+                        docker rm -f $name 2>&1 | Out-Null
+                    }
+                }
+            }
+        }
+        Start-Sleep -Seconds 2
+    }
+    
+    # Final Docker system cleanup to remove any stale port bindings
+    Write-Host "Final Docker system cleanup..." -ForegroundColor Gray
+    docker system prune -f 2>&1 | Out-Null
+    Start-Sleep -Seconds 2
+    
+    Write-Host "Starting Docker Compose services..." -ForegroundColor Yellow
+    # Set ErrorActionPreference to Continue to prevent PowerShell from throwing on stderr output
+    # Docker-compose writes informational messages to stderr (like "Network Creating")
+    $ErrorActionPreference = "Continue"
+    $composeOutput = docker-compose up -d --force-recreate --build 2>&1
+    $composeExitCode = $LASTEXITCODE
+    
+    if ($composeExitCode -eq 0) {
+        $success = $true
+        Write-Host "Docker Compose started successfully!" -ForegroundColor Green
+    } else {
+        # Check if the error is about port 3306 being allocated
+        if ($composeOutput -match "port.*3306.*already allocated") {
+            Write-Host "Port 3306 conflict detected. Cleaning up and retrying..." -ForegroundColor Red
+            
+            # Remove the container that was just created but failed to start
+            $ErrorActionPreference = "Continue"
+            docker rm -f office-manager-mysql 2>&1 | Out-Null
+            
+            # Wait longer to ensure port is released
+            Write-Host "Waiting for port 3306 to be released..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 5
+            
+            # Try to free the port again
+            Free-Port3306 | Out-Null
+            Start-Sleep -Seconds 3
+            
+            $ErrorActionPreference = "Stop"
+        }
+        
+        $retryCount++
+        if ($retryCount -lt $maxRetries) {
+            Write-Host "Failed to start services. Will retry..." -ForegroundColor Yellow
+        }
+    }
+}
+
+if (-not $success) {
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host "ERROR: Failed to start Docker services after $maxRetries attempts!" -ForegroundColor Red
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Port 3306 appears to be in use. This may be a Docker Desktop issue on Windows." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Try the following solutions:" -ForegroundColor Cyan
+    Write-Host "1. Restart Docker Desktop (right-click Docker icon in system tray -> Restart)" -ForegroundColor White
+    Write-Host "2. Check if another MySQL service is running: Get-Service | Where-Object { `$_.Name -like '*mysql*' }" -ForegroundColor White
+    Write-Host "3. Check what's using port 3306: netstat -ano | findstr :3306" -ForegroundColor White
+    Write-Host "4. Manually remove any office-manager containers: docker rm -f office-manager-mysql" -ForegroundColor White
+    Write-Host ""
     exit 1
 }
 
