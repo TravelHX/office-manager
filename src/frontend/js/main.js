@@ -1,6 +1,6 @@
 // Office Manager Main JavaScript
 
-const API_BASE_URL = window.__API_URL__ || 'http://localhost:3000';
+// const API_BASE_URL = window.__API_URL__ || 'http://localhost:3000';
 
 // Authentication functions
 function getAuthToken() {
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function apiRequest(endpoint, options = {}) {
-    const url = `${API_BASE_URL}${endpoint}`;
+    // const url = `${API_BASE_URL}${endpoint}`;
     const token = getAuthToken();
     
     const defaultHeaders = {
@@ -97,8 +97,8 @@ async function apiRequest(endpoint, options = {}) {
     }
 
     try {
-        const response = await fetch(url, config);
-        
+        // const response = await fetch(url, config);
+        const response = await fetch(endpoint, config);
         // Handle 204 No Content (empty response body)
         if (response.status === 204) {
             return null;
