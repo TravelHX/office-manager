@@ -40,3 +40,4 @@ jobs:
           tags: |
             ghcr.io/${{ env.OWNER_LC }}/office-manager:latest
             ghcr.io/${{ env.OWNER_LC }}/office-manager:${{ github.sha }}
+
