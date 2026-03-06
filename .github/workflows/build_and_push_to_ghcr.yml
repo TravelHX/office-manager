@@ -1,0 +1,41 @@
+name: Build and Push Docker Image to GHCR
+
+on:
+  push:
+    branches:
+      - main
+      
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Set lowercase owner
+        run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ env.OWNER_LC }}/office-manager:latest
+            ghcr.io/${{ env.OWNER_LC }}/office-manager:${{ github.sha }}
+
