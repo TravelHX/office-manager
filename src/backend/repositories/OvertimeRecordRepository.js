@@ -35,11 +35,11 @@ class OvertimeRecordRepository extends BaseRepository {
 
   async findByStatus(status) {
     const query = `
-      SELECT or.*, u.username 
-      FROM overtime_records or
-      JOIN users u ON or.user_id = u.id
-      WHERE or.status = ?
-      ORDER BY or.record_date DESC, or.created_at DESC
+      SELECT ot.*, u.username 
+      FROM overtime_records ot
+      JOIN users u ON ot.user_id = u.id
+      WHERE ot.status = ?
+      ORDER BY ot.record_date DESC, ot.created_at DESC
     `;
     const results = await this.executeRawQuery(query, [status]);
     return results.map(row => ({
@@ -86,10 +86,10 @@ class OvertimeRecordRepository extends BaseRepository {
 
   async findAll() {
     const query = `
-      SELECT or.*, u.username 
-      FROM overtime_records or
-      JOIN users u ON or.user_id = u.id
-      ORDER BY or.record_date DESC, or.created_at DESC
+      SELECT ot.*, u.username 
+      FROM overtime_records ot
+      JOIN users u ON ot.user_id = u.id
+      ORDER BY ot.record_date DESC, ot.created_at DESC
     `;
     const results = await this.executeRawQuery(query);
     return results.map(row => ({

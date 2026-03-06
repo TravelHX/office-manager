@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
   registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const username = document.getElementById('username').value.trim();
     const firstName = document.getElementById('firstName').value.trim();
     const lastName = document.getElementById('lastName').value.trim();
     const email = document.getElementById('email').value.trim();
@@ -45,8 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
     successDiv.style.display = 'none';
 
     // Validation
-    if (!username || !email || !password) {
-      errorDiv.textContent = 'Username, email, and password are required';
+    if (!email || !password) {
+      errorDiv.textContent = 'Email and password are required';
       errorDiv.style.display = 'block';
       return;
     }
@@ -68,7 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const body = {
-        username,
         email,
         password,
       };

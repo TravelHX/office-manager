@@ -328,5 +328,134 @@ describe('ParkingReservationService', () => {
       expect(mockParkingSpaceService.getAvailableParkingSpaces).toHaveBeenCalledWith('2025-01-01', 'morning');
     });
   });
+
+  describe('createBulkReservations', () => {
+    test('should create multiple reservations successfully', async () => {
+      const userId = 1;
+      const parkingSpaceIds = [1, 2, 3];
+      const reservationDate = '2026-12-15';
+      const timePeriod = 'morning';
+      
+      const mockSpaces = [
+        new ParkingSpace({ id: 1, space_number: 'P001', is_active: 1 }),
+        new ParkingSpace({ id: 2, space_number: 'P002', is_active: 1 }),
+        new ParkingSpace({ id: 3, space_number: 'P003', is_active: 1 }),
+      ];
+      
+      const mockReservations = [
+        new ParkingReservation({ id: 1, user_id: userId, parking_space_id: 1, reservation_date: reservationDate, time_period: timePeriod, status: 'active' }),
+        new ParkingReservation({ id: 2, user_id: userId, parking_space_id: 2, reservation_date: reservationDate, time_period: timePeriod, status: 'active' }),
+        new ParkingReservation({ id: 3, user_id: userId, parking_space_id: 3, reservation_date: reservationDate, time_period: timePeriod, status: 'active' }),
+      ];
+
+      mockReservationRepository.findOverlappingUserReservations = jest.fn().mockResolvedValue([]);
+      mockParkingSpaceRepository.findById = jest.fn()
+        .mockResolvedValueOnce(mockSpaces[0])
+        .mockResolvedValueOnce(mockSpaces[1])
+        .mockResolvedValueOnce(mockSpaces[2]);
+      mockParkingSpaceService.checkParkingSpaceAvailability = jest.fn().mockResolvedValue({ available: true });
+      mockReservationRepository.create = jest.fn()
+        .mockResolvedValueOnce(mockReservations[0])
+        .mockResolvedValueOnce(mockReservations[1])
+        .mockResolvedValueOnce(mockReservations[2]);
+
+      const result = await reservationService.createBulkReservations(userId, parkingSpaceIds, reservationDate, timePeriod);
+
+      expect(result.successful).toHaveLength(3);
+      expect(result.failed).toHaveLength(0);
+      expect(result.errors).toHaveLength(0);
+      expect(mockReservationRepository.findOverlappingUserReservations).toHaveBeenCalledWith(userId, reservationDate, timePeriod);
+    });
+
+    test('should handle partial failures in bulk reservations', async () => {
+      const userId = 1;
+      const parkingSpaceIds = [1, 2, 3];
+      const reservationDate = '2026-12-15';
+      const timePeriod = 'morning';
+      
+      const mockSpaces = [
+        new ParkingSpace({ id: 1, space_number: 'P001', is_active: 1 }),
+        new ParkingSpace({ id: 2, space_number: 'P002', is_active: 0 }), // Inactive space
+        new ParkingSpace({ id: 3, space_number: 'P003', is_active: 1 }),
+      ];
+      
+      const mockReservations = [
+        new ParkingReservation({ id: 1, user_id: userId, parking_space_id: 1, reservation_date: reservationDate, time_period: timePeriod, status: 'active' }),
+        new ParkingReservation({ id: 3, user_id: userId, parking_space_id: 3, reservation_date: reservationDate, time_period: timePeriod, status: 'active' }),
+      ];
+
+      mockReservationRepository.findOverlappingUserReservations = jest.fn().mockResolvedValue([]);
+      mockParkingSpaceRepository.findById = jest.fn()
+        .mockResolvedValueOnce(mockSpaces[0])
+        .mockResolvedValueOnce(mockSpaces[1])
+        .mockResolvedValueOnce(mockSpaces[2]);
+      mockParkingSpaceService.checkParkingSpaceAvailability = jest.fn()
+        .mockResolvedValueOnce({ available: true })
+        .mockResolvedValueOnce({ available: true });
+      mockReservationRepository.create = jest.fn()
+        .mockResolvedValueOnce(mockReservations[0])
+        .mockResolvedValueOnce(mockReservations[1]);
+
+      const result = await reservationService.createBulkReservations(userId, parkingSpaceIds, reservationDate, timePeriod);
+
+      expect(result.successful).toHaveLength(2);
+      expect(result.failed).toHaveLength(1);
+      expect(result.failed[0].parkingSpaceId).toBe(2);
+      expect(result.failed[0].reason).toContain('not available');
+    });
+
+    test('should throw error when user has overlapping reservation', async () => {
+      const userId = 1;
+      const parkingSpaceIds = [1, 2];
+      const reservationDate = '2026-12-15';
+      const timePeriod = 'morning';
+      const existingReservation = new ParkingReservation({
+        id: 2,
+        user_id: userId,
+        parking_space_id: 5,
+        reservation_date: reservationDate,
+        time_period: timePeriod,
+        status: 'active',
+      });
+
+      mockReservationRepository.findOverlappingUserReservations = jest.fn().mockResolvedValue([existingReservation]);
+
+      await expect(
+        reservationService.createBulkReservations(userId, parkingSpaceIds, reservationDate, timePeriod)
+      ).rejects.toThrow('already have a parking reservation');
+    });
+
+    test('should throw error when all reservations fail', async () => {
+      const userId = 1;
+      const parkingSpaceIds = [999, 998]; // Non-existent spaces
+      const reservationDate = '2026-12-15';
+      const timePeriod = 'morning';
+
+      mockReservationRepository.findOverlappingUserReservations = jest.fn().mockResolvedValue([]);
+      mockParkingSpaceRepository.findById = jest.fn().mockResolvedValue(null);
+
+      await expect(
+        reservationService.createBulkReservations(userId, parkingSpaceIds, reservationDate, timePeriod)
+      ).rejects.toThrow('Failed to reserve any parking spaces');
+    });
+
+    test('should throw error when parkingSpaceIds is empty', async () => {
+      await expect(
+        reservationService.createBulkReservations(1, [], '2026-12-15', 'morning')
+      ).rejects.toThrow('At least one parking space ID is required');
+    });
+
+    test('should throw error when reservationDate is missing', async () => {
+      await expect(
+        reservationService.createBulkReservations(1, [1, 2], null, 'morning')
+      ).rejects.toThrow('Reservation date is required');
+    });
+
+    test('should throw error when timePeriod is invalid', async () => {
+      await expect(
+        reservationService.createBulkReservations(1, [1, 2], '2026-12-15', 'invalid')
+      ).rejects.toThrow('Time period must be morning, afternoon, or full_day');
+    });
+  });
 });
 

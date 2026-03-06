@@ -327,7 +327,22 @@ Simplified booking flow by removing the unnecessary modal dialog:
 
 This feature will streamline the booking process by removing an unnecessary confirmation step, making bookings faster and more intuitive.
 
-### 10. Comprehensive Test Coverage
+### 10. Admin User Deletion
+
+Administrative functionality to delete users with safety constraints:
+
+- **Admin User Deletion**: Admin users can delete other users from the system
+- **Minimum Admin Constraint**: The system must always maintain at least one admin user
+  - If attempting to delete the last admin user, the operation is prevented with an appropriate error message
+  - Validation checks the number of admin users before allowing deletion
+- **User Deletion**: Admin users can delete regular (non-admin) users without restrictions
+- **Admin Deletion**: Admin users can delete other admin users, but only if at least one admin will remain
+- **Error Handling**: Clear error messages when deletion is prevented due to minimum admin constraint
+- **Cascade Handling**: Determine how to handle bookings, reservations, and overtime records associated with deleted users (e.g., mark as cancelled, reassign, or prevent deletion if active bookings exist)
+
+This feature will provide administrators with user management capabilities while ensuring system integrity through the minimum admin constraint.
+
+### 11. Comprehensive Test Coverage
 
 Comprehensive test coverage requirements to ensure quality and reliability:
 
@@ -505,4 +520,4 @@ Use cases cover scenarios including:
 - Technology stack selected: Node.js backend, MySQL database, raw SQL data access layer, HTML/CSS/JS frontend
 - Docker support added: All services run in Docker containers, including dedicated test environment
 - Use cases documented: Seven detailed use cases covering all major user workflows (see `docs/usecases.md`)
-- Feature requests added: Enhanced admin resource configuration with flexible numbering options, improved desk number display in booking interface, admin screen display of allocated desk numbers, comprehensive user authentication and management system, enhanced user management with profiles and password reset, first user admin registration system, booking matrix screen for visualizing bookings by people and dates, booking validation rules to prevent conflicts, availability display enhancement showing remaining spaces, multi-select desk and parking booking functionality, remove booking confirmation modal for streamlined UX, and comprehensive test coverage requirements
+- Feature requests added: Enhanced admin resource configuration with flexible numbering options, improved desk number display in booking interface, admin screen display of allocated desk numbers, comprehensive user authentication and management system, enhanced user management with profiles and password reset, first user admin registration system, admin user deletion with minimum admin constraint, booking matrix screen for visualizing bookings by people and dates, booking validation rules to prevent conflicts, availability display enhancement showing remaining spaces, multi-select desk and parking booking functionality, remove booking confirmation modal for streamlined UX, and comprehensive test coverage requirements

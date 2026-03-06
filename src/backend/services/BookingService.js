@@ -134,6 +134,109 @@ class BookingService {
   async getAvailabilityInfo(startDate, endDate) {
     return await this.deskService.getAvailabilityInfo(startDate, endDate);
   }
+
+  async createBulkBookings(userId, deskIds, startDate, endDate) {
+    if (!deskIds || !Array.isArray(deskIds) || deskIds.length === 0) {
+      throw new Error('At least one desk ID is required');
+    }
+
+    if (!startDate || !endDate) {
+      throw new Error('Start date and end date are required');
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      throw new Error('Invalid date format');
+    }
+
+    if (start > end) {
+      throw new Error('Start date must be before or equal to end date');
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (start < today) {
+      throw new Error('Cannot book desks for past dates');
+    }
+
+    // Validate: Check if user already has overlapping desk bookings
+    const userOverlaps = await this.bookingRepository.findOverlappingUserBookings(
+      userId,
+      startDate,
+      endDate
+    );
+    if (userOverlaps.length > 0) {
+      const conflictingBooking = userOverlaps[0];
+      throw new Error(
+        `You already have a desk booking (Desk ${conflictingBooking.deskId}) for dates that overlap with ${startDate} to ${endDate}. ` +
+        `Your existing booking is from ${conflictingBooking.startDate} to ${conflictingBooking.endDate}. ` +
+        `You cannot book multiple desks for overlapping periods.`
+      );
+    }
+
+    // Validate all desks exist and are available
+    const results = {
+      successful: [],
+      failed: [],
+      errors: [],
+    };
+
+    for (const deskId of deskIds) {
+      try {
+        const desk = await this.deskRepository.findById(deskId);
+        if (!desk) {
+          results.failed.push({ deskId, reason: 'Desk not found' });
+          results.errors.push(`Desk ${deskId} not found`);
+          continue;
+        }
+
+        if (!desk.isActive) {
+          results.failed.push({ deskId, reason: 'Desk is not available' });
+          results.errors.push(`Desk ${desk.deskNumber || deskId} is not available`);
+          continue;
+        }
+
+        // Check if desk is already booked by another user
+        const availability = await this.deskService.checkDeskAvailability(deskId, startDate, endDate);
+        if (!availability.available) {
+          if (availability.conflicts && availability.conflicts.length > 0) {
+            const conflict = availability.conflicts[0];
+            results.failed.push({ deskId, reason: 'Desk already booked' });
+            results.errors.push(
+              `Desk ${desk.deskNumber || deskId} is already booked by another user for dates that overlap with ${startDate} to ${endDate}`
+            );
+          } else {
+            results.failed.push({ deskId, reason: 'Desk not available' });
+            results.errors.push(`Desk ${desk.deskNumber || deskId} is not available for the selected date range`);
+          }
+          continue;
+        }
+
+        // Create the booking
+        const booking = new Booking({
+          user_id: userId,
+          desk_id: deskId,
+          start_date: startDate,
+          end_date: endDate,
+          status: 'active',
+        });
+
+        const createdBooking = await this.bookingRepository.create(booking);
+        results.successful.push(createdBooking.toJSON());
+      } catch (error) {
+        results.failed.push({ deskId, reason: error.message });
+        results.errors.push(`Desk ${deskId}: ${error.message}`);
+      }
+    }
+
+    if (results.successful.length === 0) {
+      throw new Error(`Failed to book any desks: ${results.errors.join('; ')}`);
+    }
+
+    return results;
+  }
 }
 
 module.exports = BookingService;

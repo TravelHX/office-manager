@@ -291,6 +291,96 @@ tr:hover {
     margin-top: 1rem;
 }
 
+.desk-card.selected {
+    border: 2px solid #3498db;
+    background-color: #e8f4f8;
+}
+
+.desk-card .selection-indicator {
+    background-color: #3498db;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+}
+
+.desk-card-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    align-items: stretch;
+}
+
+.desk-card-buttons .select-desk-btn,
+.desk-card-buttons .book-desk-btn {
+    flex: 1;
+    height: auto;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-secondary {
+    background-color: #95a5a6;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+    height: fit-content;
+}
+
+.btn-secondary:hover {
+    background-color: #7f8c8d;
+}
+
+.selection-controls {
+    background-color: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.selection-controls #book-selected-btn,
+.selection-controls #reserve-selected-btn {
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.selection-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.selection-info #selection-count {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 1.1rem;
+}
+
+#book-selected-btn:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+#book-selected-btn:disabled:hover {
+    background-color: #bdc3c7;
+}
+
 /* Status badges */
 .status-badge {
     display: inline-block;
@@ -327,6 +417,15 @@ tr:hover {
 
 .text-muted {
     color: #999;
+}
+
+.last-admin-user {
+    background-color: #fff3cd;
+}
+
+.last-admin-user td {
+    font-weight: 500;
+}
     font-style: italic;
 }
 

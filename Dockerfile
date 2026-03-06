@@ -4,7 +4,10 @@ WORKDIR /app
 
 # Install build dependencies for native modules (bcrypt requires Python and build tools)
 # These are build-time dependencies only, not runtime Python code
-RUN apk add --no-cache python3 make g++
+# Update package index first, with retry logic for network issues
+RUN apk update || (sleep 10 && apk update) && \
+    apk add --no-cache python3 make g++ || \
+    (sleep 10 && apk update && apk add --no-cache python3 make g++)
 
 # Copy package files
 COPY src/frontend/package.json ./package.json

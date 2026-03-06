@@ -149,6 +149,70 @@ router.post('/', authenticate, async (req, res, next) => {
   }
 });
 
+router.post('/bulk', authenticate, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { deskIds, startDate, endDate } = req.body;
+    
+    if (!deskIds || !Array.isArray(deskIds) || deskIds.length === 0) {
+      return res.status(400).json({
+        error: {
+          message: 'At least one desk ID is required',
+          code: 'MISSING_DESK_IDS',
+        },
+      });
+    }
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        error: {
+          message: 'Start date and end date are required',
+          code: 'MISSING_DATES',
+        },
+      });
+    }
+
+    const results = await bookingService.createBulkBookings(
+      userId,
+      deskIds.map(id => parseInt(id)),
+      startDate,
+      endDate
+    );
+    
+    // Return 201 if all succeeded, 207 (Multi-Status) if partial success
+    const statusCode = results.failed.length === 0 ? 201 : 207;
+    res.status(statusCode).json(results);
+  } catch (error) {
+    console.error('Bulk booking creation error:', error);
+    
+    if (error.message.includes('not available') || error.message.includes('not found')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'DESK_UNAVAILABLE',
+        },
+      });
+    }
+    if (error.message.includes('date')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'INVALID_DATE',
+        },
+      });
+    }
+    if (error.message.includes('overlap') || error.message.includes('already have')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'OVERLAPPING_BOOKING',
+        },
+      });
+    }
+    next(error);
+  }
+});
+
 router.delete('/:id', authenticate, async (req, res, next) => {
   try {
     const userId = req.user.id;

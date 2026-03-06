@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const usersTabBtn = document.getElementById('users-tab-btn');
         if (usersTabBtn) {
             usersTabBtn.style.display = 'block';
+            loadAllUsers();
         }
     }
     
@@ -46,6 +47,11 @@ function setupTabs() {
             const targetContent = document.getElementById(`${targetTab}-tab`);
             if (targetContent) {
                 targetContent.classList.add('active');
+            }
+            
+            // Reload users when users tab is opened
+            if (targetTab === 'users' && typeof isAdmin !== 'undefined' && isAdmin()) {
+                loadAllUsers();
             }
         });
     });
@@ -597,6 +603,9 @@ async function createUser() {
         
         messageDiv.innerHTML = '<div class="success">User created successfully!</div>';
         
+        // Reload user list
+        loadAllUsers();
+        
         // Clear form
         document.getElementById('newUsername').value = '';
         document.getElementById('newFirstName').value = '';
@@ -641,5 +650,120 @@ async function changePassword() {
         document.getElementById('confirmPassword').value = '';
     } catch (error) {
         messageDiv.innerHTML = `<div class="error">Failed to change password: ${error.message}</div>`;
+    }
+}
+
+async function loadAllUsers() {
+    const container = document.getElementById('all-users-container');
+    if (!container) return;
+    
+    container.innerHTML = '<p>Loading users...</p>';
+    
+    try {
+        const users = await apiRequest('/api/auth/users');
+        
+        if (users.length === 0) {
+            container.innerHTML = '<p>No users found.</p>';
+            return;
+        }
+        
+        displayAllUsers(users);
+    } catch (error) {
+        showNotification('Failed to load users: ' + error.message, 'error');
+        container.innerHTML = '<p>Failed to load users.</p>';
+    }
+}
+
+async function displayAllUsers(users) {
+    const container = document.getElementById('all-users-container');
+    if (!container) return;
+    
+    // Count admin users to determine if we can delete admins
+    const adminCount = users.filter(u => u.isAdmin).length;
+    
+    const usersHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Office Location</th>
+                    <th>Role</th>
+                    <th>Admin</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${users.map(user => {
+                    const isLastAdmin = user.isAdmin && adminCount === 1;
+                    const displayName = user.firstName && user.lastName 
+                        ? `${user.firstName} ${user.lastName}` 
+                        : user.firstName || user.lastName || 'N/A';
+                    return `
+                    <tr class="${isLastAdmin ? 'last-admin-user' : ''}">
+                        <td>${user.id}</td>
+                        <td><strong>${user.username}</strong></td>
+                        <td>${displayName}</td>
+                        <td>${user.email}</td>
+                        <td>${user.officeLocation || 'N/A'}</td>
+                        <td>
+                            <span class="status-badge ${user.role === 'admin' ? 'status-approved' : 'status-active'}">
+                                ${user.role}
+                            </span>
+                        </td>
+                        <td>
+                            ${user.isAdmin ? '<span class="status-badge status-approved">Yes</span>' : '<span class="status-badge status-pending">No</span>'}
+                        </td>
+                        <td>
+                            ${isLastAdmin 
+                                ? '<span class="text-muted" title="Cannot delete the last admin user">Delete Disabled</span>' 
+                                : `<button class="btn-danger delete-user-btn" data-user-id="${user.id}" data-username="${user.username}">Delete</button>`
+                            }
+                        </td>
+                    </tr>
+                `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = usersHTML;
+    
+    // Add event listeners for delete buttons
+    document.querySelectorAll('.delete-user-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const userId = btn.getAttribute('data-user-id');
+            const username = btn.getAttribute('data-username');
+            deleteUser(userId, username);
+        });
+    });
+}
+
+async function deleteUser(userId, username) {
+    if (!confirm(`Are you sure you want to delete user "${username}" (ID: ${userId})?\n\nThis will also delete all associated bookings, reservations, and overtime records.`)) {
+        return;
+    }
+    
+    const messageDiv = document.getElementById('users-message');
+    messageDiv.innerHTML = '<p>Deleting user...</p>';
+    
+    try {
+        await apiRequest(`/api/auth/users/${userId}`, {
+            method: 'DELETE',
+        });
+        
+        messageDiv.innerHTML = '<div class="success">User deleted successfully!</div>';
+        loadAllUsers();
+    } catch (error) {
+        if (error.message.includes('last admin user')) {
+            messageDiv.innerHTML = `<div class="error">Cannot delete user: ${error.message}</div>`;
+        } else if (error.message.includes('not found')) {
+            messageDiv.innerHTML = `<div class="error">User not found. It may have already been deleted.</div>`;
+            loadAllUsers();
+        } else {
+            messageDiv.innerHTML = `<div class="error">Failed to delete user: ${error.message}</div>`;
+        }
     }
 }

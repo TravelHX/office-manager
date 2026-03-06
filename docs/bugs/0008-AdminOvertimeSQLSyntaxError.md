@@ -16,11 +16,14 @@ You have an error in your SQL syntax; check the manual that corresponds to your 
 
 ## Current Status
 
-**Status:** Open - Investigation Needed
+**Status:** Fixed - Code Implementation Complete, Awaiting User Confirmation
 
 **What has been tried:**
 - Initial investigation shows the error occurs in `OvertimeRecordRepository.js`
 - The error is related to using `or` as a table alias in SQL queries
+- Identified that `or` is a MySQL reserved keyword causing syntax errors
+- Created failing test to reproduce the bug
+- Fixed both `findByStatus()` and `findAll()` methods by changing alias from `or` to `ot`
 
 **Current State:**
 - Error occurs when calling `loadAllOvertimeRecords()` function in `admin.js` (line 298)
@@ -71,11 +74,26 @@ JOIN users u ON or.user_id = u.id
 
 ## Next Steps
 
-1. Create a failing test that reproduces the bug
-2. Fix the SQL queries by either:
-   - Escaping the alias with backticks: `` `or` ``
-   - Changing the alias to a non-reserved keyword (e.g., `ot`, `overtime`, `overtime_rec`)
-3. Update both `findByStatus()` and `findAll()` methods
-4. Verify the fix works end-to-end
-5. Check for similar issues in other repository files
-6. Ensure all table aliases use non-reserved keywords or are properly escaped
+1. ~~Create a failing test that reproduces the bug~~ - Completed (added test for findAll method)
+2. ~~Fix the SQL queries by changing the alias to a non-reserved keyword~~ - Completed (changed `or` to `ot`)
+3. ~~Update both `findByStatus()` and `findAll()` methods~~ - Completed
+4. Verify the fix works end-to-end - User confirmation required
+5. ~~Check for similar issues in other repository files~~ - Completed (no other instances found)
+6. ~~Ensure all table aliases use non-reserved keywords~~ - Completed
+
+## Fix Applied
+
+**Root Cause Identified:**
+The SQL queries in `OvertimeRecordRepository` used `or` as a table alias for `overtime_records`. Since `or` is a MySQL reserved keyword (logical OR operator), MySQL interpreted it as the operator instead of an alias, causing syntax errors.
+
+**Fix Applied:**
+Changed the table alias from `or` to `ot` (a non-reserved keyword) in both affected methods:
+1. `findByStatus()` - Changed all references from `or.*`, `or.user_id`, `or.status`, `or.record_date`, `or.created_at` to `ot.*`, `ot.user_id`, `ot.status`, `ot.record_date`, `ot.created_at`
+2. `findAll()` - Changed all references from `or.*`, `or.user_id`, `or.record_date`, `ot.created_at` to `ot.*`, `ot.user_id`, `ot.record_date`, `ot.created_at`
+
+**Files Modified:**
+- `src/backend/repositories/OvertimeRecordRepository.js` - Fixed SQL queries in `findByStatus()` and `findAll()` methods
+
+**Test Coverage:**
+- Added test in `tests/repositories/OvertimeRecordRepository.test.js` for `findAll()` method to verify it works without SQL syntax errors
+- Existing test for `findByStatus()` now passes without errors

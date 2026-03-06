@@ -1,6 +1,6 @@
 // Parking Reservation JavaScript
 
-let selectedParkingSpaceId = null;
+let selectedParkingSpaceIds = new Set(); // Track selected parking space IDs for multi-select
 
 document.addEventListener('DOMContentLoaded', () => {
     const reservationDateInput = document.getElementById('reservationDate');
@@ -14,12 +14,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Auto-check availability when date or time period changes
     reservationDateInput.addEventListener('change', () => {
+        // Clear selection when date or time period changes
+        selectedParkingSpaceIds.clear();
         if (reservationDateInput.value && timePeriodSelect.value) {
             checkAvailability();
         }
     });
     
     timePeriodSelect.addEventListener('change', () => {
+        // Clear selection when date or time period changes
+        selectedParkingSpaceIds.clear();
         if (reservationDateInput.value && timePeriodSelect.value) {
             checkAvailability();
         }
@@ -73,6 +77,7 @@ function displayParkingSpaces(spaces, reservationDate, timePeriod) {
     
     if (spaces.length === 0) {
         container.innerHTML = '<p>No parking spaces available.</p>';
+        updateParkingSelectionUI();
         return;
     }
     
@@ -80,20 +85,45 @@ function displayParkingSpaces(spaces, reservationDate, timePeriod) {
     
     const spacesHTML = `
         <h3>Available Parking Spaces</h3>
+        <div class="selection-controls" id="parking-selection-controls" style="display: none;">
+            <div class="selection-info">
+                <span id="parking-selection-count">0 spaces selected</span>
+                <button class="btn-secondary" id="clear-parking-selection-btn">Clear Selection</button>
+            </div>
+            <button class="btn-primary" id="reserve-selected-btn" disabled>Reserve Selected</button>
+        </div>
         <div class="desks-grid">
-            ${spaces.map(space => `
-                <div class="desk-card" data-space-id="${space.id}">
+            ${spaces.map(space => {
+                const isSelected = selectedParkingSpaceIds.has(space.id.toString());
+                return `
+                <div class="desk-card ${isSelected ? 'selected' : ''}" data-space-id="${space.id}">
+                    ${isSelected ? '<div class="selection-indicator">✓ Selected</div>' : ''}
                     <h4><strong>Space ${space.spaceNumber}</strong></h4>
                     ${space.location ? `<p><strong>Location:</strong> ${space.location}</p>` : ''}
                     ${space.description ? `<p>${space.description}</p>` : ''}
-                    <button class="btn-primary book-space-btn" data-space-id="${space.id}" data-space-number="${space.spaceNumber}">Reserve This Space</button>
+                    <div class="desk-card-buttons">
+                        <button class="btn-secondary select-space-btn" data-space-id="${space.id}" data-space-number="${space.spaceNumber}">
+                            ${isSelected ? 'Deselect' : 'Select'}
+                        </button>
+                        <button class="btn-primary book-space-btn" data-space-id="${space.id}" data-space-number="${space.spaceNumber}">Reserve</button>
+                    </div>
                 </div>
-            `).join('')}
+            `;
+            }).join('')}
         </div>
     `;
     
     container.innerHTML = spacesHTML;
     
+    // Add event listeners for Select buttons
+    document.querySelectorAll('.select-space-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const spaceId = btn.getAttribute('data-space-id');
+            toggleParkingSpaceSelection(spaceId, reservationDate, timePeriod);
+        });
+    });
+    
+    // Add event listeners for Reserve buttons (single reservation)
     document.querySelectorAll('.book-space-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const spaceId = btn.getAttribute('data-space-id');
@@ -101,15 +131,148 @@ function displayParkingSpaces(spaces, reservationDate, timePeriod) {
             reserveParkingSpace(spaceId, spaceNumber, reservationDate, timePeriod);
         });
     });
+    
+    // Add event listener for Reserve Selected button
+    const reserveSelectedBtn = document.getElementById('reserve-selected-btn');
+    if (reserveSelectedBtn) {
+        reserveSelectedBtn.addEventListener('click', () => {
+            reserveSelectedParkingSpaces(reservationDate, timePeriod);
+        });
+    }
+    
+    // Add event listener for Clear Selection button
+    const clearSelectionBtn = document.getElementById('clear-parking-selection-btn');
+    if (clearSelectionBtn) {
+        clearSelectionBtn.addEventListener('click', clearParkingSelection);
+    }
+    
+    updateParkingSelectionUI();
 }
 
-async function reserveParkingSpace(spaceId, spaceNumber, reservationDate, timePeriod) {
-    const timePeriodLabel = timePeriod === 'morning' ? 'Morning' : timePeriod === 'afternoon' ? 'Afternoon' : 'Full Day';
+function toggleParkingSpaceSelection(spaceId, reservationDate, timePeriod) {
+    const spaceIdStr = spaceId.toString();
+    const wasSelected = selectedParkingSpaceIds.has(spaceIdStr);
     
-    if (!confirm(`Confirm reservation for Parking Space ${spaceNumber} on ${reservationDate} (${timePeriodLabel})?`)) {
+    if (wasSelected) {
+        selectedParkingSpaceIds.delete(spaceIdStr);
+    } else {
+        selectedParkingSpaceIds.add(spaceIdStr);
+    }
+    
+    // Update only the specific card without re-rendering everything
+    const spaceCard = document.querySelector(`.desk-card[data-space-id="${spaceId}"]`);
+    if (spaceCard) {
+        const selectBtn = spaceCard.querySelector('.select-space-btn');
+        const reserveBtn = spaceCard.querySelector('.book-space-btn');
+        
+        if (selectedParkingSpaceIds.has(spaceIdStr)) {
+            // Mark as selected
+            spaceCard.classList.add('selected');
+            if (!spaceCard.querySelector('.selection-indicator')) {
+                const indicator = document.createElement('div');
+                indicator.className = 'selection-indicator';
+                indicator.textContent = '✓ Selected';
+                spaceCard.insertBefore(indicator, spaceCard.querySelector('h4'));
+            }
+            if (selectBtn) selectBtn.textContent = 'Deselect';
+        } else {
+            // Mark as not selected
+            spaceCard.classList.remove('selected');
+            const indicator = spaceCard.querySelector('.selection-indicator');
+            if (indicator) indicator.remove();
+            if (selectBtn) selectBtn.textContent = 'Select';
+        }
+    }
+    
+    // Update selection UI (count, buttons)
+    updateParkingSelectionUI();
+}
+
+function clearParkingSelection() {
+    selectedParkingSpaceIds.clear();
+    
+    // Update all parking space cards without re-rendering
+    document.querySelectorAll('.desk-card[data-space-id]').forEach(card => {
+        card.classList.remove('selected');
+        const indicator = card.querySelector('.selection-indicator');
+        if (indicator) indicator.remove();
+        const selectBtn = card.querySelector('.select-space-btn');
+        if (selectBtn) selectBtn.textContent = 'Select';
+    });
+    
+    // Update selection UI
+    updateParkingSelectionUI();
+}
+
+function updateParkingSelectionUI() {
+    const selectionControls = document.getElementById('parking-selection-controls');
+    const selectionCount = document.getElementById('parking-selection-count');
+    const reserveSelectedBtn = document.getElementById('reserve-selected-btn');
+    
+    const count = selectedParkingSpaceIds.size;
+    
+    if (selectionControls) {
+        selectionControls.style.display = count > 0 ? 'block' : 'none';
+    }
+    
+    if (selectionCount) {
+        selectionCount.textContent = `${count} space${count !== 1 ? 's' : ''} selected`;
+    }
+    
+    if (reserveSelectedBtn) {
+        reserveSelectedBtn.disabled = count === 0;
+    }
+}
+
+async function reserveSelectedParkingSpaces(reservationDate, timePeriod) {
+    if (selectedParkingSpaceIds.size === 0) {
+        showError('Please select at least one parking space to reserve');
         return;
     }
     
+    const spaceIds = Array.from(selectedParkingSpaceIds).map(id => parseInt(id));
+    
+    try {
+        const response = await apiRequest('/api/parking-reservations/bulk', {
+            method: 'POST',
+            body: {
+                parkingSpaceIds: spaceIds,
+                reservationDate: reservationDate,
+                timePeriod: timePeriod,
+            },
+        });
+        
+        const successCount = response.successful || spaceIds.length;
+        const failedCount = response.failed ? response.failed.length : 0;
+        
+        if (failedCount === 0) {
+            showSuccess(`Successfully reserved ${successCount} parking space${successCount !== 1 ? 's' : ''}!`);
+        } else {
+            showError(`Reserved ${successCount} parking space${successCount !== 1 ? 's' : ''}, but ${failedCount} failed. ${response.errors ? response.errors.join(' ') : ''}`);
+        }
+        
+        // Clear selection after reservation
+        selectedParkingSpaceIds.clear();
+        
+        setTimeout(() => {
+            window.location.href = '/pages/bookings.html';
+        }, 1500);
+    } catch (error) {
+        if (error.message.includes('already have a parking reservation') || error.message.includes('overlapping')) {
+            showError(error.message || 'Some parking spaces could not be reserved due to overlapping periods.');
+        } else if (error.message.includes('already reserved by another user')) {
+            showError(error.message || 'Some parking spaces are already reserved by other users. Please check availability again.');
+            checkAvailability();
+        } else if (error.message.includes('not available') || error.message.includes('unavailable')) {
+            showError('Some parking spaces are no longer available. Please check availability again.');
+            checkAvailability();
+        } else {
+            showError('Failed to reserve selected parking spaces: ' + error.message);
+        }
+    }
+}
+
+async function reserveParkingSpace(spaceId, spaceNumber, reservationDate, timePeriod) {
     try {
         const response = await apiRequest('/api/parking-reservations', {
             method: 'POST',

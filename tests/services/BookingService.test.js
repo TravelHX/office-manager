@@ -187,5 +187,128 @@ describe('BookingService', () => {
       ).rejects.toThrow('only cancel your own');
     });
   });
+
+  describe('createBulkBookings', () => {
+    test('should create multiple bookings successfully', async () => {
+      const userId = 1;
+      const deskIds = [1, 2, 3];
+      const startDate = '2026-12-15';
+      const endDate = '2026-12-16';
+      
+      const mockDesks = [
+        new Desk({ id: 1, desk_number: 'D001', is_active: 1 }),
+        new Desk({ id: 2, desk_number: 'D002', is_active: 1 }),
+        new Desk({ id: 3, desk_number: 'D003', is_active: 1 }),
+      ];
+      
+      const mockBookings = [
+        new Booking({ id: 1, user_id: userId, desk_id: 1, start_date: startDate, end_date: endDate, status: 'active' }),
+        new Booking({ id: 2, user_id: userId, desk_id: 2, start_date: startDate, end_date: endDate, status: 'active' }),
+        new Booking({ id: 3, user_id: userId, desk_id: 3, start_date: startDate, end_date: endDate, status: 'active' }),
+      ];
+
+      mockBookingRepository.findOverlappingUserBookings = jest.fn().mockResolvedValue([]);
+      mockDeskRepository.findById = jest.fn()
+        .mockResolvedValueOnce(mockDesks[0])
+        .mockResolvedValueOnce(mockDesks[1])
+        .mockResolvedValueOnce(mockDesks[2]);
+      mockDeskService.checkDeskAvailability = jest.fn().mockResolvedValue({ available: true });
+      mockBookingRepository.create = jest.fn()
+        .mockResolvedValueOnce(mockBookings[0])
+        .mockResolvedValueOnce(mockBookings[1])
+        .mockResolvedValueOnce(mockBookings[2]);
+
+      const result = await bookingService.createBulkBookings(userId, deskIds, startDate, endDate);
+
+      expect(result.successful).toHaveLength(3);
+      expect(result.failed).toHaveLength(0);
+      expect(result.errors).toHaveLength(0);
+      expect(mockBookingRepository.findOverlappingUserBookings).toHaveBeenCalledWith(userId, startDate, endDate);
+    });
+
+    test('should handle partial failures in bulk bookings', async () => {
+      const userId = 1;
+      const deskIds = [1, 2, 3];
+      const startDate = '2026-12-15';
+      const endDate = '2026-12-16';
+      
+      const mockDesks = [
+        new Desk({ id: 1, desk_number: 'D001', is_active: 1 }),
+        new Desk({ id: 2, desk_number: 'D002', is_active: 0 }), // Inactive desk
+        new Desk({ id: 3, desk_number: 'D003', is_active: 1 }),
+      ];
+      
+      const mockBookings = [
+        new Booking({ id: 1, user_id: userId, desk_id: 1, start_date: startDate, end_date: endDate, status: 'active' }),
+        new Booking({ id: 3, user_id: userId, desk_id: 3, start_date: startDate, end_date: endDate, status: 'active' }),
+      ];
+
+      mockBookingRepository.findOverlappingUserBookings = jest.fn().mockResolvedValue([]);
+      mockDeskRepository.findById = jest.fn()
+        .mockResolvedValueOnce(mockDesks[0])
+        .mockResolvedValueOnce(mockDesks[1])
+        .mockResolvedValueOnce(mockDesks[2]);
+      mockDeskService.checkDeskAvailability = jest.fn()
+        .mockResolvedValueOnce({ available: true })
+        .mockResolvedValueOnce({ available: true });
+      mockBookingRepository.create = jest.fn()
+        .mockResolvedValueOnce(mockBookings[0])
+        .mockResolvedValueOnce(mockBookings[1]);
+
+      const result = await bookingService.createBulkBookings(userId, deskIds, startDate, endDate);
+
+      expect(result.successful).toHaveLength(2);
+      expect(result.failed).toHaveLength(1);
+      expect(result.failed[0].deskId).toBe(2);
+      expect(result.failed[0].reason).toContain('not available');
+    });
+
+    test('should throw error when user has overlapping booking', async () => {
+      const userId = 1;
+      const deskIds = [1, 2];
+      const startDate = '2026-12-15';
+      const endDate = '2026-12-16';
+      const existingBooking = new Booking({
+        id: 2,
+        user_id: userId,
+        desk_id: 5,
+        start_date: '2026-12-14',
+        end_date: '2026-12-17',
+        status: 'active',
+      });
+
+      mockBookingRepository.findOverlappingUserBookings = jest.fn().mockResolvedValue([existingBooking]);
+
+      await expect(
+        bookingService.createBulkBookings(userId, deskIds, startDate, endDate)
+      ).rejects.toThrow('already have a desk booking');
+    });
+
+    test('should throw error when all bookings fail', async () => {
+      const userId = 1;
+      const deskIds = [999, 998]; // Non-existent desks
+      const startDate = '2026-12-15';
+      const endDate = '2026-12-16';
+
+      mockBookingRepository.findOverlappingUserBookings = jest.fn().mockResolvedValue([]);
+      mockDeskRepository.findById = jest.fn().mockResolvedValue(null);
+
+      await expect(
+        bookingService.createBulkBookings(userId, deskIds, startDate, endDate)
+      ).rejects.toThrow('Failed to book any desks');
+    });
+
+    test('should throw error when deskIds is empty', async () => {
+      await expect(
+        bookingService.createBulkBookings(1, [], '2026-12-15', '2026-12-16')
+      ).rejects.toThrow('At least one desk ID is required');
+    });
+
+    test('should throw error when dates are missing', async () => {
+      await expect(
+        bookingService.createBulkBookings(1, [1, 2], null, '2026-12-16')
+      ).rejects.toThrow('Start date and end date are required');
+    });
+  });
 });
 

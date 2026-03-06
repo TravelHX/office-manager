@@ -91,6 +91,12 @@ class UserRepository extends BaseRepository {
     return results[0]?.count || 0;
   }
 
+  async countAdmins() {
+    const query = 'SELECT COUNT(*) as count FROM users WHERE is_admin = TRUE';
+    const results = await this.executeRawQuery(query);
+    return results[0]?.count || 0;
+  }
+
   async deleteById(id) {
     const query = 'DELETE FROM users WHERE id = ?';
     await this.executeRawQuery(query, [id]);

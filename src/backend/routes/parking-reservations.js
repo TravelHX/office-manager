@@ -160,6 +160,79 @@ router.post('/', authenticate, async (req, res, next) => {
   }
 });
 
+router.post('/bulk', authenticate, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { parkingSpaceIds, reservationDate, timePeriod } = req.body;
+    
+    if (!parkingSpaceIds || !Array.isArray(parkingSpaceIds) || parkingSpaceIds.length === 0) {
+      return res.status(400).json({
+        error: {
+          message: 'At least one parking space ID is required',
+          code: 'MISSING_PARKING_SPACE_IDS',
+        },
+      });
+    }
+
+    if (!reservationDate || !timePeriod) {
+      return res.status(400).json({
+        error: {
+          message: 'Reservation date and time period are required',
+          code: 'MISSING_PARAMETERS',
+        },
+      });
+    }
+
+    if (!['morning', 'afternoon', 'full_day'].includes(timePeriod)) {
+      return res.status(400).json({
+        error: {
+          message: 'Time period must be morning, afternoon, or full_day',
+          code: 'INVALID_TIME_PERIOD',
+        },
+      });
+    }
+
+    const results = await reservationService.createBulkReservations(
+      userId,
+      parkingSpaceIds.map(id => parseInt(id)),
+      reservationDate,
+      timePeriod
+    );
+    
+    // Return 201 if all succeeded, 207 (Multi-Status) if partial success
+    const statusCode = results.failed.length === 0 ? 201 : 207;
+    res.status(statusCode).json(results);
+  } catch (error) {
+    console.error('Bulk parking reservation creation error:', error);
+    
+    if (error.message.includes('not available') || error.message.includes('not found')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'PARKING_SPACE_UNAVAILABLE',
+        },
+      });
+    }
+    if (error.message.includes('date') || error.message.includes('Time period')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'INVALID_DATE_OR_PERIOD',
+        },
+      });
+    }
+    if (error.message.includes('overlap') || error.message.includes('already have')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'OVERLAPPING_RESERVATION',
+        },
+      });
+    }
+    next(error);
+  }
+});
+
 router.delete('/:id', authenticate, async (req, res, next) => {
   try {
     const userId = req.user.id;

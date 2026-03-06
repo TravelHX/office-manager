@@ -640,39 +640,39 @@ This document contains all tasks organized by phases with clear dependencies and
 
 ### Tasks
 
-- [ ] 15.1 Design selection state management for multiple desks/parking spaces
-- [ ] 15.2 Create selection data structure to track selected desk IDs and parking space IDs
-- [ ] 15.3 Update desk booking UI to add "Select" button alongside existing "Book" button
-- [ ] 15.4 Update parking booking UI to add "Select" button alongside existing "Book" button
-- [ ] 15.5 Implement "Select" button functionality to add desk/space to selection list
-- [ ] 15.6 Implement visual indicator for selected desks/spaces (highlighting, checkmark, etc.)
-- [ ] 15.7 Implement deselection functionality (clicking "Select" again removes from selection)
-- [ ] 15.8 Create "Book Selected" button component that appears when items are selected
-- [ ] 15.9 Implement "Book Selected" button to book all selected desks for the same date range
-- [ ] 15.10 Implement "Book Selected" button to book all selected parking spaces for the same date/time period
-- [ ] 15.11 Create bulk booking API endpoint or enhance existing endpoint to handle multiple bookings
-- [ ] 15.12 Update BookingService to support bulk desk booking creation
-- [ ] 15.13 Update ParkingReservationService to support bulk parking space reservation creation
-- [ ] 15.14 Implement validation for bulk bookings (ensure all selected items are available)
-- [ ] 15.15 Implement error handling for partial failures in bulk bookings
-- [ ] 15.16 Add "Clear Selection" functionality to deselect all items
-- [ ] 15.17 Ensure selection persists when scrolling through desk/parking lists
-- [ ] 15.18 Update selection count display (e.g., "3 desks selected")
-- [ ] 15.19 Ensure "Book Selected" button is disabled when no items are selected
-- [ ] 15.20 Ensure "Book Selected" button is enabled when items are selected
-- [ ] 15.21 Maintain existing "Book" button functionality for single bookings
-- [ ] 15.22 Update UI to show both buttons clearly and distinguish their functions
-- [ ] 15.23 Write unit tests for selection state management
-- [ ] 15.24 Write unit tests for bulk booking service methods
-- [ ] 15.25 Write unit tests for bulk booking validation logic
-- [ ] 15.26 Write integration tests for bulk desk booking API endpoint
-- [ ] 15.27 Write integration tests for bulk parking reservation API endpoint
-- [ ] 15.28 Write integration tests for partial failure handling in bulk bookings
-- [ ] 15.29 Write JavaScript tests for "Select" button functionality
-- [ ] 15.30 Write JavaScript tests for "Book Selected" button functionality
-- [ ] 15.31 Write JavaScript tests for selection state management
-- [ ] 15.32 Write JavaScript tests for visual selection indicators
-- [ ] 15.33 Write JavaScript tests for "Clear Selection" functionality
+- [x] 15.1 Design selection state management for multiple desks/parking spaces
+- [x] 15.2 Create selection data structure to track selected desk IDs and parking space IDs
+- [x] 15.3 Update desk booking UI to add "Select" button alongside existing "Book" button
+- [x] 15.4 Update parking booking UI to add "Select" button alongside existing "Book" button
+- [x] 15.5 Implement "Select" button functionality to add desk/space to selection list
+- [x] 15.6 Implement visual indicator for selected desks/spaces (highlighting, checkmark, etc.)
+- [x] 15.7 Implement deselection functionality (clicking "Select" again removes from selection)
+- [x] 15.8 Create "Book Selected" button component that appears when items are selected
+- [x] 15.9 Implement "Book Selected" button to book all selected desks for the same date range
+- [x] 15.10 Implement "Book Selected" button to book all selected parking spaces for the same date/time period
+- [x] 15.11 Create bulk booking API endpoint or enhance existing endpoint to handle multiple bookings
+- [x] 15.12 Update BookingService to support bulk desk booking creation
+- [x] 15.13 Update ParkingReservationService to support bulk parking space reservation creation
+- [x] 15.14 Implement validation for bulk bookings (ensure all selected items are available)
+- [x] 15.15 Implement error handling for partial failures in bulk bookings
+- [x] 15.16 Add "Clear Selection" functionality to deselect all items
+- [x] 15.17 Ensure selection persists when scrolling through desk/parking lists
+- [x] 15.18 Update selection count display (e.g., "3 desks selected")
+- [x] 15.19 Ensure "Book Selected" button is disabled when no items are selected
+- [x] 15.20 Ensure "Book Selected" button is enabled when items are selected
+- [x] 15.21 Maintain existing "Book" button functionality for single bookings
+- [x] 15.22 Update UI to show both buttons clearly and distinguish their functions
+- [x] 15.23 Write unit tests for selection state management
+- [x] 15.24 Write unit tests for bulk booking service methods
+- [x] 15.25 Write unit tests for bulk booking validation logic
+- [x] 15.26 Write integration tests for bulk desk booking API endpoint
+- [x] 15.27 Write integration tests for bulk parking reservation API endpoint
+- [x] 15.28 Write integration tests for partial failure handling in bulk bookings
+- [x] 15.29 Write JavaScript tests for "Select" button functionality
+- [x] 15.30 Write JavaScript tests for "Book Selected" button functionality
+- [x] 15.31 Write JavaScript tests for selection state management
+- [x] 15.32 Write JavaScript tests for visual selection indicators
+- [x] 15.33 Write JavaScript tests for "Clear Selection" functionality
 - [ ] 15.34 Write end-to-end test for multi-select desk booking flow
 - [ ] 15.35 Write end-to-end test for multi-select parking booking flow
 - [ ] 15.36 Write end-to-end test for mixed single and multi-select booking
@@ -695,19 +695,68 @@ This document contains all tasks organized by phases with clear dependencies and
 
 ### Tasks
 
-- [ ] 16.1 Identify all locations where booking confirmation modal is displayed
-- [ ] 16.2 Remove modal dialog code from desk booking functionality
-- [ ] 16.3 Remove modal dialog code from parking booking functionality
-- [ ] 16.4 Update booking flow to proceed directly without confirmation modal
-- [ ] 16.5 Ensure success feedback is still provided (e.g., success message, visual update)
-- [ ] 16.6 Ensure error handling still works correctly without modal
-- [ ] 16.7 Update any JavaScript code that depends on modal confirmation
-- [ ] 16.8 Remove modal-related CSS/styles if no longer needed
-- [ ] 16.9 Update booking confirmation messages to use non-modal display (e.g., toast notification, inline message)
-- [ ] 16.10 Write unit tests to verify booking proceeds without modal
-- [ ] 16.11 Write JavaScript tests for direct booking flow without modal
-- [ ] 16.12 Write end-to-end test for streamlined booking flow
-- [ ] 16.13 Validate that desk booking works correctly without confirmation modal
-- [ ] 16.14 Validate that parking booking works correctly without confirmation modal
-- [ ] 16.15 Validate that success feedback is still displayed appropriately
-- [ ] 16.16 Validate that error messages are still displayed appropriately
+- [x] 16.1 Identify all locations where booking confirmation modal is displayed
+- [x] 16.2 Remove modal dialog code from desk booking functionality
+- [x] 16.3 Remove modal dialog code from parking booking functionality
+- [x] 16.4 Update booking flow to proceed directly without confirmation modal
+- [x] 16.5 Ensure success feedback is still provided (e.g., success message, visual update)
+- [x] 16.6 Ensure error handling still works correctly without modal
+- [x] 16.7 Update any JavaScript code that depends on modal confirmation
+- [x] 16.8 Remove modal-related CSS/styles if no longer needed
+- [x] 16.9 Update booking confirmation messages to use non-modal display (e.g., toast notification, inline message)
+- [x] 16.10 Write unit tests to verify booking proceeds without modal
+- [x] 16.11 Write JavaScript tests for direct booking flow without modal
+- [x] 16.12 Write end-to-end test for streamlined booking flow
+- [x] 16.13 Validate that desk booking works correctly without confirmation modal
+- [x] 16.14 Validate that parking booking works correctly without confirmation modal
+- [x] 16.15 Validate that success feedback is still displayed appropriately
+- [x] 16.16 Validate that error messages are still displayed appropriately
+
+---
+
+## Phase 17: Admin User Deletion
+
+**Objective:** Implement admin user deletion functionality with constraint that there must always be at least one admin user in the system.
+
+**Dependencies:** Phase 8 (User Authentication and Management), Phase 12 (Enhanced User Management)
+
+**Priority:** Medium
+
+**Estimated Effort:** 2-3 days
+
+### Tasks
+
+- [x] 17.1 Design user deletion logic with minimum admin constraint validation
+- [x] 17.2 Implement method to count admin users in UserService
+- [x] 17.3 Implement validation to check if deletion would leave zero admin users
+- [x] 17.4 Create user deletion method in UserService with admin count validation
+- [x] 17.5 Determine handling strategy for user's associated data (bookings, reservations, overtime records)
+- [x] 17.6 Implement cascade handling for user's bookings (cancel, reassign, or prevent deletion)
+- [x] 17.7 Implement cascade handling for user's parking reservations
+- [x] 17.8 Implement cascade handling for user's overtime records
+- [x] 17.9 Create user deletion API endpoint (DELETE /api/users/:id) - admin only
+- [x] 17.10 Implement validation in API endpoint to prevent deleting last admin
+- [x] 17.11 Create clear error message for attempting to delete last admin user
+- [x] 17.12 Update admin user management UI to include delete button/action
+- [x] 17.13 Add confirmation dialog for user deletion (to prevent accidental deletions)
+- [x] 17.14 Display appropriate error message in UI when deletion is prevented
+- [x] 17.15 Update user list to show which users can be deleted (highlight last admin if applicable)
+- [x] 17.16 Disable delete button for last admin user in UI
+- [x] 17.17 Write unit tests for admin user count functionality
+- [x] 17.18 Write unit tests for minimum admin constraint validation
+- [x] 17.19 Write unit tests for user deletion with various scenarios
+- [x] 17.20 Write unit tests for cascade handling of user data
+- [x] 17.21 Write integration tests for user deletion API endpoint
+- [x] 17.22 Write integration tests for preventing deletion of last admin user
+- [x] 17.23 Write integration tests for cascade handling of bookings/reservations/overtime
+- [ ] 17.24 Write JavaScript tests for delete button functionality
+- [ ] 17.25 Write JavaScript tests for deletion confirmation dialog
+- [ ] 17.26 Write JavaScript tests for error message display
+- [ ] 17.27 Write end-to-end test for admin deleting a regular user
+- [ ] 17.28 Write end-to-end test for admin deleting another admin (when multiple admins exist)
+- [ ] 17.29 Write end-to-end test for preventing deletion of last admin user
+- [ ] 17.30 Validate that regular users can be deleted successfully
+- [ ] 17.31 Validate that admin users can be deleted when multiple admins exist
+- [ ] 17.32 Validate that last admin user cannot be deleted
+- [ ] 17.33 Validate that appropriate error message is shown when attempting to delete last admin
+- [ ] 17.34 Validate that user's associated data is handled correctly upon deletion

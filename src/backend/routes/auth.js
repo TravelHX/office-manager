@@ -21,22 +21,23 @@ router.get('/check-users', async (req, res, next) => {
 // Register endpoint (public - first user becomes admin)
 router.post('/register', async (req, res, next) => {
   try {
-    const { username, email, password, first_name, last_name, office_location } = req.body;
+    const { email, password, first_name, last_name, office_location } = req.body;
     const logger = require('../utils/logger');
 
-    logger.info(`Registration attempt for username: ${username}`);
+    logger.info(`Registration attempt for email: ${email}`);
 
-    if (!username || !email || !password) {
+    if (!email || !password) {
       return res.status(400).json({
         error: {
-          message: 'Username, email, and password are required',
+          message: 'Email and password are required',
           code: 'MISSING_FIELDS',
         },
       });
     }
 
+    // Use email as username for registration
     const user = await userService.registerUser({
-      username,
+      username: email,
       email,
       password,
       first_name,
@@ -46,7 +47,7 @@ router.post('/register', async (req, res, next) => {
 
     const token = generateToken(user);
 
-    logger.info(`Registration successful for username: ${username}, isAdmin: ${user.isAdmin}`);
+    logger.info(`Registration successful for email: ${email}, isAdmin: ${user.isAdmin}`);
 
     res.status(201).json({
       token,
@@ -271,6 +272,53 @@ router.put('/users/password', authenticate, async (req, res, next) => {
         error: {
           message: error.message,
           code: 'INVALID_PASSWORD',
+        },
+      });
+    }
+    next(error);
+  }
+});
+
+// Delete user endpoint (admin only)
+router.delete('/users/:id', authenticate, authorize(['admin']), async (req, res, next) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const deletedBy = req.user.id;
+
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid user ID',
+          code: 'INVALID_USER_ID',
+        },
+      });
+    }
+
+    await userService.deleteUser(userId, deletedBy);
+
+    res.status(204).send();
+  } catch (error) {
+    if (error.message === 'User not found') {
+      return res.status(404).json({
+        error: {
+          message: error.message,
+          code: 'USER_NOT_FOUND',
+        },
+      });
+    }
+    if (error.message.includes('Only admins can delete users')) {
+      return res.status(403).json({
+        error: {
+          message: error.message,
+          code: 'FORBIDDEN',
+        },
+      });
+    }
+    if (error.message.includes('last admin user')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'CANNOT_DELETE_LAST_ADMIN',
         },
       });
     }

@@ -97,6 +97,22 @@ describe('OvertimeRecordRepository', () => {
     });
   });
 
+  describe('findAll', () => {
+    test('should return all records with username (Bug 0008: SQL syntax error fix)', async () => {
+      await executeQuery(`
+        INSERT INTO overtime_records (user_id, record_date, start_time, end_time, total_hours, status)
+        VALUES (?, '2026-12-01', '17:00:00', '18:00:00', 1.0, 'pending'),
+               (?, '2026-12-02', '17:00:00', '19:00:00', 2.0, 'approved')
+      `, [userId1, userId1]);
+
+      const records = await repository.findAll();
+
+      expect(records.length).toBeGreaterThan(0);
+      expect(records[0].username).toBeDefined();
+      expect(records.every(r => r.username === 'user1')).toBe(true);
+    });
+  });
+
   describe('getTotalHoursByUser', () => {
     test('should return total approved hours', async () => {
       await executeQuery(`

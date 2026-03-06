@@ -500,12 +500,56 @@ class UserService {
   }
 
   /**
+   * Get count of admin users in the system
+   * @returns {Promise<number>} Admin user count
+   */
+  async getAdminCount() {
+    return await this.userRepository.countAdmins();
+  }
+
+  /**
    * Check if any users exist in the system
    * @returns {Promise<boolean>} True if users exist, false otherwise
    */
   async hasUsers() {
     const count = await this.getUserCount();
     return count > 0;
+  }
+
+  /**
+   * Delete a user (admin only)
+   * Prevents deletion if it would leave zero admin users
+   * Associated data (bookings, reservations, overtime) is automatically deleted via CASCADE
+   * @param {number} userId - User ID to delete
+   * @param {number} deletedBy - ID of admin performing the deletion
+   * @returns {Promise<void>}
+   */
+  async deleteUser(userId, deletedBy) {
+    // Check if deleter is admin
+    const deleter = await this.userRepository.findById(deletedBy);
+    if (!deleter || !deleter.isAdmin) {
+      throw new Error('Only admins can delete users');
+    }
+
+    // Check if user exists
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Check if user is an admin
+    if (user.isAdmin) {
+      // Count total admin users
+      const adminCount = await this.getAdminCount();
+      
+      // Prevent deletion if this is the last admin
+      if (adminCount <= 1) {
+        throw new Error('Cannot delete the last admin user. There must always be at least one admin user in the system.');
+      }
+    }
+
+    // Delete user (cascade will handle associated data automatically)
+    await this.userRepository.deleteById(userId);
   }
 
   /**
@@ -590,8 +634,13 @@ class UserService {
    */
   async registerUser(userData) {
     // Validate required fields
-    if (!userData.username || !userData.email || !userData.password) {
-      throw new Error('Username, email, and password are required');
+    if (!userData.email || !userData.password) {
+      throw new Error('Email and password are required');
+    }
+    
+    // Use email as username if username not provided
+    if (!userData.username) {
+      userData.username = userData.email;
     }
 
     // Validate email format

@@ -194,5 +194,94 @@ describe('Desk Booking API Integration Tests', () => {
       expect(withinResponse.body.error.code).toBe('DESK_UNAVAILABLE');
     });
   });
+
+  describe('POST /api/bookings/bulk - Multi-select desk booking', () => {
+    test('should create multiple bookings successfully', async () => {
+      const userToken = 'Bearer user_1';
+      const deskIds = [1, 2, 3];
+      const startDate = '2025-12-28';
+      const endDate = '2025-12-29';
+
+      const response = await request(app)
+        .post('/api/bookings/bulk')
+        .set('Authorization', userToken)
+        .send({ deskIds, startDate, endDate });
+
+      expect(response.status).toBe(201);
+      expect(response.body).toHaveProperty('successful');
+      expect(response.body).toHaveProperty('failed');
+      expect(response.body).toHaveProperty('errors');
+      expect(Array.isArray(response.body.successful)).toBe(true);
+      expect(response.body.successful.length).toBeGreaterThan(0);
+    });
+
+    test('should return 400 when deskIds is empty', async () => {
+      const userToken = 'Bearer user_1';
+
+      const response = await request(app)
+        .post('/api/bookings/bulk')
+        .set('Authorization', userToken)
+        .send({ deskIds: [], startDate: '2025-12-28', endDate: '2025-12-29' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('MISSING_DESK_IDS');
+    });
+
+    test('should return 400 when dates are missing', async () => {
+      const userToken = 'Bearer user_1';
+
+      const response = await request(app)
+        .post('/api/bookings/bulk')
+        .set('Authorization', userToken)
+        .send({ deskIds: [1, 2] });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('MISSING_DATES');
+    });
+
+    test('should handle partial failures in bulk bookings', async () => {
+      const userToken = 'Bearer user_1';
+      const deskIds = [999, 998]; // Non-existent desks
+      const startDate = '2025-12-30';
+      const endDate = '2025-12-31';
+
+      const response = await request(app)
+        .post('/api/bookings/bulk')
+        .set('Authorization', userToken)
+        .send({ deskIds, startDate, endDate });
+
+      // Should return 400 if all fail, or 207 if partial success
+      expect([400, 207]).toContain(response.status);
+      expect(response.body).toHaveProperty('successful');
+      expect(response.body).toHaveProperty('failed');
+    });
+
+    test('should prevent bulk booking when user has overlapping booking', async () => {
+      const userToken = 'Bearer user_1';
+      
+      // Create an existing booking first
+      await request(app)
+        .post('/api/bookings')
+        .set('Authorization', userToken)
+        .send({
+          deskId: 1,
+          startDate: '2026-01-01',
+          endDate: '2026-01-03',
+        });
+
+      // Try to bulk book desks for overlapping dates
+      const response = await request(app)
+        .post('/api/bookings/bulk')
+        .set('Authorization', userToken)
+        .send({
+          deskIds: [2, 3],
+          startDate: '2026-01-02',
+          endDate: '2026-01-04',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('OVERLAPPING_BOOKING');
+    });
+  });
 });
 

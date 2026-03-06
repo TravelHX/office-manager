@@ -21,6 +21,7 @@ describe('UserService', () => {
       updatePassword: jest.fn(),
       findAll: jest.fn(),
       count: jest.fn(),
+      countAdmins: jest.fn(),
       deleteById: jest.fn(),
       deleteByUsername: jest.fn(),
       deleteAll: jest.fn(),
@@ -867,6 +868,140 @@ describe('UserService', () => {
       await userService.performStartupCleanup();
 
       expect(mockUserRepository.findByUsername).toHaveBeenCalledWith('admin');
+    });
+  });
+
+  describe('getAdminCount', () => {
+    it('should return admin user count', async () => {
+      mockUserRepository.countAdmins.mockResolvedValue(2);
+
+      const count = await userService.getAdminCount();
+
+      expect(count).toBe(2);
+      expect(mockUserRepository.countAdmins).toHaveBeenCalled();
+    });
+
+    it('should return 0 when no admin users exist', async () => {
+      mockUserRepository.countAdmins.mockResolvedValue(0);
+
+      const count = await userService.getAdminCount();
+
+      expect(count).toBe(0);
+    });
+  });
+
+  describe('deleteUser', () => {
+    it('should delete a regular user successfully', async () => {
+      const adminUser = new User({
+        id: 1,
+        username: 'admin',
+        email: 'admin@example.com',
+        passwordHash: 'hash',
+        isAdmin: true,
+        role: 'admin',
+      });
+
+      const regularUser = new User({
+        id: 2,
+        username: 'user',
+        email: 'user@example.com',
+        passwordHash: 'hash',
+        isAdmin: false,
+        role: 'user',
+      });
+
+      mockUserRepository.findById
+        .mockResolvedValueOnce(adminUser) // Deleter
+        .mockResolvedValueOnce(regularUser); // User to delete
+      mockUserRepository.countAdmins.mockResolvedValue(1);
+      mockUserRepository.deleteById.mockResolvedValue();
+
+      await userService.deleteUser(2, 1);
+
+      expect(mockUserRepository.deleteById).toHaveBeenCalledWith(2);
+    });
+
+    it('should delete an admin user when multiple admins exist', async () => {
+      const adminUser1 = new User({
+        id: 1,
+        username: 'admin1',
+        email: 'admin1@example.com',
+        passwordHash: 'hash',
+        isAdmin: true,
+        role: 'admin',
+      });
+
+      const adminUser2 = new User({
+        id: 2,
+        username: 'admin2',
+        email: 'admin2@example.com',
+        passwordHash: 'hash',
+        isAdmin: true,
+        role: 'admin',
+      });
+
+      mockUserRepository.findById
+        .mockResolvedValueOnce(adminUser1) // Deleter
+        .mockResolvedValueOnce(adminUser2); // User to delete
+      mockUserRepository.countAdmins.mockResolvedValue(2);
+      mockUserRepository.deleteById.mockResolvedValue();
+
+      await userService.deleteUser(2, 1);
+
+      expect(mockUserRepository.deleteById).toHaveBeenCalledWith(2);
+    });
+
+    it('should throw error when attempting to delete last admin user', async () => {
+      const adminUser = new User({
+        id: 1,
+        username: 'admin',
+        email: 'admin@example.com',
+        passwordHash: 'hash',
+        isAdmin: true,
+        role: 'admin',
+      });
+
+      mockUserRepository.findById
+        .mockResolvedValueOnce(adminUser) // Deleter
+        .mockResolvedValueOnce(adminUser); // User to delete (same user)
+      mockUserRepository.countAdmins.mockResolvedValue(1);
+
+      await expect(userService.deleteUser(1, 1)).rejects.toThrow('Cannot delete the last admin user');
+      expect(mockUserRepository.deleteById).not.toHaveBeenCalled();
+    });
+
+    it('should throw error when deleter is not admin', async () => {
+      const regularUser = new User({
+        id: 1,
+        username: 'user',
+        email: 'user@example.com',
+        passwordHash: 'hash',
+        isAdmin: false,
+        role: 'user',
+      });
+
+      mockUserRepository.findById.mockResolvedValue(regularUser);
+
+      await expect(userService.deleteUser(2, 1)).rejects.toThrow('Only admins can delete users');
+      expect(mockUserRepository.deleteById).not.toHaveBeenCalled();
+    });
+
+    it('should throw error when user to delete does not exist', async () => {
+      const adminUser = new User({
+        id: 1,
+        username: 'admin',
+        email: 'admin@example.com',
+        passwordHash: 'hash',
+        isAdmin: true,
+        role: 'admin',
+      });
+
+      mockUserRepository.findById
+        .mockResolvedValueOnce(adminUser) // Deleter
+        .mockResolvedValueOnce(null); // User to delete (not found)
+
+      await expect(userService.deleteUser(999, 1)).rejects.toThrow('User not found');
+      expect(mockUserRepository.deleteById).not.toHaveBeenCalled();
     });
   });
 });
