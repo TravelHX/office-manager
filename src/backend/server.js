@@ -24,6 +24,16 @@ async function startServer() {
     createPool();
     logger.info('Database connection pool created');
 
+    // Run database migrations to ensure schema is up to date
+    try {
+      const { runMigrations } = require('./database/migrations');
+      await runMigrations();
+    } catch (error) {
+      logger.error('Migration failed:', error.message);
+      // Continue startup even if migration fails (might be a temporary issue)
+      // But log it as an error since schema issues can cause runtime errors
+    }
+
     // Perform startup cleanup operations
     try {
       const UserService = require('./services/UserService');

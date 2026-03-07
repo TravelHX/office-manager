@@ -1004,5 +1004,52 @@ describe('UserService', () => {
       expect(mockUserRepository.deleteById).not.toHaveBeenCalled();
     });
   });
+
+  describe('initializeDevAdminUser', () => {
+    beforeEach(() => {
+      // Mock process.env.NODE_ENV to be 'development'
+      process.env.NODE_ENV = 'development';
+    });
+
+    afterEach(() => {
+      delete process.env.NODE_ENV;
+    });
+
+    it('should create admin user without first_name or last_name fields (Bug 0010)', async () => {
+      mockUserRepository.findByUsername.mockResolvedValue(null);
+      
+      const createdAdmin = new User({
+        id: 9999,
+        username: 'admin',
+        email: 'admin@example.com',
+        passwordHash: 'hashed',
+        isAdmin: true,
+        role: 'admin',
+      });
+      
+      mockUserRepository.createWithId.mockResolvedValue(createdAdmin);
+
+      const result = await userService.initializeDevAdminUser();
+
+      expect(result).toBeDefined();
+      expect(result.username).toBe('admin');
+      expect(mockUserRepository.createWithId).toHaveBeenCalled();
+      
+      // Verify that the User object passed to createWithId doesn't have first_name in toDatabaseFormat
+      const userPassedToCreate = mockUserRepository.createWithId.mock.calls[0][0];
+      const dbFormat = userPassedToCreate.toDatabaseFormat();
+      expect(dbFormat).not.toHaveProperty('first_name');
+      expect(dbFormat).not.toHaveProperty('last_name');
+    });
+
+    it('should return null in production mode', async () => {
+      process.env.NODE_ENV = 'production';
+      
+      const result = await userService.initializeDevAdminUser();
+      
+      expect(result).toBeNull();
+      expect(mockUserRepository.findByUsername).not.toHaveBeenCalled();
+    });
+  });
 });
 
