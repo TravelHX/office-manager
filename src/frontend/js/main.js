@@ -91,7 +91,60 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Update user indicator if authenticated
     updateUserIndicator();
+    
+    // Load and display application version
+    loadApplicationVersion();
 });
+
+// Load application version
+async function loadApplicationVersion() {
+    try {
+        // Version endpoint is public, use fetch directly
+        const response = await fetch('/api/version');
+        if (!response.ok) {
+            throw new Error('Failed to fetch version');
+        }
+        const data = await response.json();
+        const versionElement = document.getElementById('version-number');
+        if (versionElement && data && data.versionNumber) {
+            versionElement.textContent = data.versionNumber;
+            // Store version in localStorage for client-side access
+            localStorage.setItem('appVersion', data.versionNumber);
+        }
+    } catch (error) {
+        console.error('Failed to load application version:', error);
+        const versionElement = document.getElementById('version-number');
+        if (versionElement) {
+            versionElement.textContent = 'Unknown';
+        }
+    }
+}
+
+// Get application version from localStorage or API
+async function getApplicationVersion() {
+    // Try localStorage first
+    const cachedVersion = localStorage.getItem('appVersion');
+    if (cachedVersion) {
+        return cachedVersion;
+    }
+    
+    // If not in localStorage, fetch from API
+    try {
+        // Version endpoint is public, use fetch directly
+        const response = await fetch('/api/version');
+        if (response.ok) {
+            const data = await response.json();
+            if (data && data.versionNumber) {
+                localStorage.setItem('appVersion', data.versionNumber);
+                return data.versionNumber;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to get application version:', error);
+    }
+    
+    return 'Unknown';
+}
 
 async function apiRequest(endpoint, options = {}) {
     const token = getAuthToken();

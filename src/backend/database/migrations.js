@@ -170,6 +170,34 @@ async function runMigrations() {
     }
     logger.info('Migration verification passed: first_name column confirmed present');
 
+    // Ensure version tracking table exists
+    try {
+      await executeQuery('SELECT 1 FROM app_version LIMIT 1');
+      logger.info('Version tracking table exists');
+    } catch (error) {
+      logger.info('Creating version tracking table...');
+      const versionTableSQL = `
+        CREATE TABLE IF NOT EXISTS app_version (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          version_number VARCHAR(20) NOT NULL UNIQUE,
+          deployment_info TEXT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_version_number (version_number)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `;
+      await executeQuery(versionTableSQL);
+      
+      // Insert initial version if table was just created
+      const initialVersionSQL = `
+        INSERT INTO app_version (version_number, deployment_info) 
+        VALUES ('0.1.0', 'Initial version')
+        ON DUPLICATE KEY UPDATE version_number = version_number
+      `;
+      await executeQuery(initialVersionSQL);
+      logger.info('Version tracking table created');
+    }
+
   } catch (error) {
     logger.error('========================================');
     logger.error('MIGRATION FAILED');

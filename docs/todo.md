@@ -760,3 +760,50 @@ This document contains all tasks organized by phases with clear dependencies and
 - [ ] 17.32 Validate that last admin user cannot be deleted
 - [ ] 17.33 Validate that appropriate error message is shown when attempting to delete last admin
 - [ ] 17.34 Validate that user's associated data is handled correctly upon deletion
+
+---
+
+## Phase 18: Version Tracking and Management
+
+**Objective:** Implement automatic version tracking system that increments version number on each commit/deployment using semantic versioning, stores version in database and client config, and updates version on application startup.
+
+**Dependencies:** Phase 1 (Project Setup and Infrastructure)
+
+**Priority:** Medium
+
+**Estimated Effort:** 2-3 days
+
+### Tasks
+
+- [x] 18.1 Design database schema for version tracking table (version_number, updated_at, deployment_info)
+- [x] 18.2 Create Version model and related DTOs
+- [x] 18.3 Implement Version repository with CRUD operations using raw SQL queries
+- [x] 18.4 Create VersionService with business logic for version management
+- [x] 18.5 Implement semantic versioning parser and increment logic (MAJOR.MINOR.PATCH)
+- [x] 18.6 Create script or process to read current version and increment on commit/deployment
+- [x] 18.7 Implement version increment logic (determine which part to increment: major, minor, or patch)
+- [x] 18.8 Create application startup hook to update version in database (runs first thing on startup)
+- [x] 18.9 Implement error handling for version update failures
+- [x] 18.10 Create error display mechanism to show version update errors on screen
+- [x] 18.11 Create client-side configuration file/table for version storage
+- [x] 18.12 Implement client-side version reading and storage
+- [x] 18.13 Create API endpoint to retrieve current version (GET /api/version)
+- [x] 18.14 Create API endpoint to update version (POST /api/version) - internal use
+- [x] 18.15 Implement version comparison logic (if needed for migrations or compatibility checks)
+- [x] 18.16 Add version number to application startup logs
+- [x] 18.17 Create UI component to display version number (optional - footer or about page)
+- [x] 18.18 Write unit tests for semantic versioning parser
+- [x] 18.19 Write unit tests for version increment logic
+- [x] 18.20 Write unit tests for VersionService
+- [x] 18.21 Write unit tests for version update on startup
+- [x] 18.22 Write unit tests for error handling
+- [x] 18.23 Write integration tests for version database operations
+- [x] 18.24 Write integration tests for startup version update
+- [x] 18.25 Write integration tests for version API endpoints
+- [x] 18.26 Write JavaScript tests for client-side version config
+- [ ] 18.27 Write end-to-end test for version tracking on deployment
+- [ ] 18.28 Validate that version increments correctly on each commit/deployment
+- [ ] 18.29 Validate that version is updated in database on application startup
+- [ ] 18.30 Validate that error is displayed if version update fails
+- [ ] 18.31 Validate that version is stored in client config
+- [ ] 18.32 Validate that version follows semantic versioning format

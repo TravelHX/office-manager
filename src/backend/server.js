@@ -54,6 +54,18 @@ async function startServer() {
       // Continue startup even if cleanup fails
     }
 
+    // Initialize version tracking on startup
+    try {
+      const VersionService = require('./services/VersionService');
+      const versionService = new VersionService();
+      const currentVersion = await versionService.initializeVersionOnStartup();
+      logger.info(`Application version initialized: ${currentVersion.versionNumber}`);
+    } catch (error) {
+      logger.error('Version initialization failed:', error.message);
+      // Continue startup even if version initialization fails
+      // Error details are logged within VersionService
+    }
+
     // Note: Admin user initialization from config.json is now optional
     // Only initialize if explicitly needed (can be removed in production)
     // The first user to register will automatically become admin

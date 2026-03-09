@@ -373,6 +373,20 @@ Comprehensive test coverage requirements to ensure quality and reliability:
 
 This feature will ensure the application maintains high quality standards and reliability through comprehensive test coverage.
 
+### 12. Version Tracking and Management
+
+Automatic version tracking system that increments on each deployment/commit:
+
+- **Semantic Versioning**: Version numbers follow semantic versioning format (MAJOR.MINOR.PATCH, e.g., 1.2.3)
+- **Automatic Increment**: Each commit/deployment automatically increments the version number
+- **Database Storage**: Version number is stored in a database table
+- **Startup Version Update**: The first thing the application does on startup is attempt to update the version number in the database
+- **Error Handling**: If the version number cannot be updated in the database, an error is displayed on the screen
+- **Client Configuration**: Version number is also stored in a client-side configuration table/file
+- **Version Display**: Version number should be accessible and displayable in the application
+
+This feature will provide version tracking for deployments and help identify which version of the application is running.
+
 ## API Endpoints
 
 ### Authentication
@@ -520,4 +534,4 @@ Use cases cover scenarios including:
 - Technology stack selected: Node.js backend, MySQL database, raw SQL data access layer, HTML/CSS/JS frontend
 - Docker support added: All services run in Docker containers, including dedicated test environment
 - Use cases documented: Seven detailed use cases covering all major user workflows (see `docs/usecases.md`)
-- Feature requests added: Enhanced admin resource configuration with flexible numbering options, improved desk number display in booking interface, admin screen display of allocated desk numbers, comprehensive user authentication and management system, enhanced user management with profiles and password reset, first user admin registration system, admin user deletion with minimum admin constraint, booking matrix screen for visualizing bookings by people and dates, booking validation rules to prevent conflicts, availability display enhancement showing remaining spaces, multi-select desk and parking booking functionality, remove booking confirmation modal for streamlined UX, and comprehensive test coverage requirements
+- Feature requests added: Enhanced admin resource configuration with flexible numbering options, improved desk number display in booking interface, admin screen display of allocated desk numbers, comprehensive user authentication and management system, enhanced user management with profiles and password reset, first user admin registration system, admin user deletion with minimum admin constraint, booking matrix screen for visualizing bookings by people and dates, booking validation rules to prevent conflicts, availability display enhancement showing remaining spaces, multi-select desk and parking booking functionality, remove booking confirmation modal for streamlined UX, comprehensive test coverage requirements, and version tracking with semantic versioning
