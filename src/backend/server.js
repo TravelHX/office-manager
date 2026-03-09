@@ -25,13 +25,21 @@ async function startServer() {
     logger.info('Database connection pool created');
 
     // Run database migrations to ensure schema is up to date
+    // This MUST succeed before continuing, as schema issues will cause runtime errors
+    logger.info('Running database migrations...');
     try {
       const { runMigrations } = require('./database/migrations');
       await runMigrations();
+      logger.info('Database migrations completed successfully');
     } catch (error) {
-      logger.error('Migration failed:', error.message);
-      // Continue startup even if migration fails (might be a temporary issue)
-      // But log it as an error since schema issues can cause runtime errors
+      logger.error('========================================');
+      logger.error('CRITICAL: Database migration failed');
+      logger.error('The server cannot start without a properly migrated database schema.');
+      logger.error('Error:', error.message);
+      logger.error('Full error:', error);
+      logger.error('========================================');
+      // Don't continue startup - schema issues will cause runtime errors
+      throw new Error(`Database migration failed: ${error.message}`);
     }
 
     // Perform startup cleanup operations

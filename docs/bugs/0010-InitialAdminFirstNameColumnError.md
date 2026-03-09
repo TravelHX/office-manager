@@ -77,9 +77,18 @@ The database table was missing the `first_name` column (and potentially other co
 6. Added test case in `tests/services/UserService.test.js` to verify that `initializeDevAdminUser()` works correctly
 
 **Files Modified:**
-- `src/backend/database/migrations.js` - Created new migration runner module
-- `src/backend/server.js` - Added migration runner to startup sequence
+- `src/backend/database/migrations.js` - Created migration runner module with comprehensive logging and error handling
+- `src/backend/server.js` - Added migration runner to startup sequence (server will fail to start if migration fails)
 - `tests/services/UserService.test.js` - Added test case for `initializeDevAdminUser()`
+
+**Migration Improvements (Latest Update):**
+- Added database connection verification before running migrations (waits for DB to be ready)
+- Added detailed logging at each step of the migration process with clear success/failure indicators
+- Individual column checks and additions (MySQL doesn't support multiple ADD COLUMN IF NOT EXISTS in one statement)
+- Post-migration verification to ensure columns were added successfully
+- Server will fail to start if migration fails (prevents runtime errors from missing schema)
+- Comprehensive error logging with stack traces and error codes
+- Migration status written to logs at startup for debugging
 
 **Test Coverage:**
 - Added test in `tests/services/UserService.test.js` for `initializeDevAdminUser()` that verifies:
