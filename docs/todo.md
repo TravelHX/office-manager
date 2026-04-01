@@ -1,5 +1,9 @@
 # TODO List
 
+## Document Purpose
+
+This file (`docs/todo.md`) lists **tasks to execute** so the codebase and product **match** `docs/spec.md`. Completing these tasks (in order, respecting dependencies) moves the project toward the intended functionality described in the specification. It is not the specification itself; see `docs/spec.md`. For what is **already implemented**, see `README.md` in the project root.
+
 This document contains all tasks organized by phases with clear dependencies and priorities.
 
 ## Phase 1: Project Setup and Infrastructure

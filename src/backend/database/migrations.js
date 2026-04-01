@@ -64,14 +64,16 @@ async function runMigrations() {
       throw new Error('Users table not found. Please ensure database schema is initialized.');
     }
 
-    // Check each column individually and add if missing
+    // Check each column individually and add if missing.
+    // Do NOT use "ADD COLUMN IF NOT EXISTS": unsupported on MySQL 5.7 and many Azure Database for MySQL
+    // configurations (ER_PARSE_ERROR). We already verify absence via information_schema before each ADD.
     const columnsToAdd = [
-      { name: 'first_name', sql: 'ADD COLUMN IF NOT EXISTS first_name VARCHAR(100) NULL AFTER username' },
-      { name: 'last_name', sql: 'ADD COLUMN IF NOT EXISTS last_name VARCHAR(100) NULL AFTER first_name' },
-      { name: 'office_location', sql: 'ADD COLUMN IF NOT EXISTS office_location VARCHAR(50) NULL AFTER email' },
-      { name: 'is_admin', sql: 'ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE AFTER office_location' },
-      { name: 'reset_token', sql: 'ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255) NULL AFTER password_hash' },
-      { name: 'reset_token_expiry', sql: 'ADD COLUMN IF NOT EXISTS reset_token_expiry TIMESTAMP NULL AFTER reset_token' }
+      { name: 'first_name', sql: 'ADD COLUMN first_name VARCHAR(100) NULL AFTER username' },
+      { name: 'last_name', sql: 'ADD COLUMN last_name VARCHAR(100) NULL AFTER first_name' },
+      { name: 'office_location', sql: 'ADD COLUMN office_location VARCHAR(50) NULL AFTER email' },
+      { name: 'is_admin', sql: 'ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT FALSE AFTER office_location' },
+      { name: 'reset_token', sql: 'ADD COLUMN reset_token VARCHAR(255) NULL AFTER password_hash' },
+      { name: 'reset_token_expiry', sql: 'ADD COLUMN reset_token_expiry TIMESTAMP NULL AFTER reset_token' }
     ];
 
     let migrationNeeded = false;
@@ -96,7 +98,6 @@ async function runMigrations() {
       logger.info('========================================');
 
       // Run migration SQL - add columns one at a time to avoid issues
-      // MySQL doesn't support multiple ADD COLUMN IF NOT EXISTS in a single ALTER TABLE statement
       for (const column of columnsToAdd) {
         if (missingColumns.includes(column.name)) {
           try {
@@ -130,13 +131,13 @@ async function runMigrations() {
         }
       }
 
-      // Create indexes if they don't exist
+      // Create indexes if missing (no CREATE INDEX IF NOT EXISTS on MySQL 5.7 / older Azure MySQL)
       logger.info('Creating indexes...');
       try {
-        await executeQuery('CREATE INDEX IF NOT EXISTS idx_is_admin ON users(is_admin)');
-        logger.info('✓ Index idx_is_admin created or already exists');
+        await executeQuery('CREATE INDEX idx_is_admin ON users(is_admin)');
+        logger.info('✓ Index idx_is_admin created');
       } catch (error) {
-        if (error.message.includes('Duplicate key name')) {
+        if (error.errno === 1061 || error.message.includes('Duplicate key name')) {
           logger.info('✓ Index idx_is_admin already exists');
         } else {
           logger.warn(`Warning creating idx_is_admin index: ${error.message}`);
@@ -144,10 +145,10 @@ async function runMigrations() {
       }
 
       try {
-        await executeQuery('CREATE INDEX IF NOT EXISTS idx_reset_token ON users(reset_token)');
-        logger.info('✓ Index idx_reset_token created or already exists');
+        await executeQuery('CREATE INDEX idx_reset_token ON users(reset_token)');
+        logger.info('✓ Index idx_reset_token created');
       } catch (error) {
-        if (error.message.includes('Duplicate key name')) {
+        if (error.errno === 1061 || error.message.includes('Duplicate key name')) {
           logger.info('✓ Index idx_reset_token already exists');
         } else {
           logger.warn(`Warning creating idx_reset_token index: ${error.message}`);

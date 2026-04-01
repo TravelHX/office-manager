@@ -1,5 +1,9 @@
 # Office Manager
 
+## Document Purpose
+
+This file (`docs/spec.md`) is the **product specification**. It describes the **intended functionality** of Office Manager: what the system is meant to do, how it should behave, and what capabilities it should offer (including features not yet built). It is not a task list; for work items see `docs/todo.md`. For what is **already implemented and deployed**, see `README.md` in the project root.
+
 ## Project Overview
 
 Office Manager is a web application designed to manage office operations and resources. The application provides tools for tracking and managing various aspects of office life, including desk bookings, parking spaces, and overtime hours.
@@ -172,7 +176,7 @@ Integration and polish features:
 - **Notification System**: Client-side notification system for success, error, info, and warning messages
 - **Unified My Bookings View**: Integrated view showing all desk bookings, parking reservations, and overtime records
 - **Navigation**: Consistent navigation across all pages
-- **Documentation**: API documentation and user guides
+- **Documentation**: API and product specification in this file (`docs/spec.md`); end-user documentation in root `README.md` (User Guide section)
 
 ## Not Yet Implemented
 
