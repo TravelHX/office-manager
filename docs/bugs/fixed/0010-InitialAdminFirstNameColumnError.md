@@ -14,7 +14,7 @@ Unknown column 'first_name' in 'field list'
 
 ## Current Status
 
-**Status:** Fixed - Code Implementation Complete, Awaiting User Confirmation
+**Status:** Fixed - User Confirmed
 
 **What has been tried:**
 - Investigated the `initializeDevAdminUser()` method in `UserService.js`
@@ -99,5 +99,5 @@ The database table was missing the `first_name` column (and potentially other co
 ## Next Steps
 
 1. ✅ Create a failing test that reproduces the bug (initial admin creation should succeed)
-2. ✅ Fix the schema mismatch - enhanced `toDatabaseFormat()` to be more defensive about optional fields
-3. ⏳ Verify the fix and request user confirmation
+2. ✅ Fix the schema mismatch - startup migration ensures `users` table has required columns (see `migrations.js`)
+3. ✅ User confirmed fixed (2026-04-01)

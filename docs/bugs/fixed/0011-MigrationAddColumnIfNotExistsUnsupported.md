@@ -22,7 +22,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100) NULL AFTER us
 
 ## Current Status
 
-**Status:** Fixed - Code implementation complete, awaiting user confirmation after Azure redeploy
+**Status:** Fixed - User Confirmed
 
 **What has been tried:**
 
@@ -57,5 +57,5 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100) NULL AFTER us
 
 ## Next Steps
 
-1. Redeploy to Azure and confirm log stream shows migration success and server start.
-2. Mark bug fixed and move to `docs/bugs/fixed/` after user confirms production behavior.
+1. ✅ Redeploy to Azure; migration succeeds with plain `ADD COLUMN` (log stream verified).
+2. ✅ User confirmed fixed (2026-04-01); bug archived under `docs/bugs/fixed/`.
