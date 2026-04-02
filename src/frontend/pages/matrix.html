@@ -23,11 +23,12 @@
             font-size: 0.9rem;
         }
         .matrix-table th {
-            background-color: #f5f5f5;
+            background-color: #e3f2fd;
             font-weight: 600;
             position: sticky;
             top: 0;
             z-index: 10;
+            color: #1565c0;
         }
         .matrix-table th.user-column {
             position: sticky;
@@ -126,9 +127,9 @@
             border-radius: 4px;
         }
         .view-toggle button.active {
-            background-color: #4CAF50;
+            background-color: #1565c0;
             color: white;
-            border-color: #4CAF50;
+            border-color: #1565c0;
         }
         .date-header {
             writing-mode: vertical-rl;
@@ -206,11 +207,14 @@
             <div id="matrix-container" class="matrix-container">
                 <p>Select a date range and click "Load Matrix" to view bookings.</p>
             </div>
+                </div>
+            </main>
         </div>
-    </main>
+    </div>
 
-    <footer>
+    <footer class="app-footer">
         <p>&copy; 2025 Office Manager. All rights reserved.</p>
+        <p id="app-version" style="font-size: 0.85rem; opacity: 0.85; margin-top: 0.5rem;">Version: <span id="version-number">-</span></p>
     </footer>
 
     <div id="matrix-tooltip" class="matrix-tooltip"></div>

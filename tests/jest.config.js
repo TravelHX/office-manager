@@ -1,7 +1,8 @@
 module.exports = {
   rootDir: process.cwd(),
   testEnvironment: 'node',
-  testMatch: ['**/tests/**/*.test.js'],
+  // Only the repo-root tests/ tree (not src/frontend/tests; those run via frontend Jest)
+  testMatch: ['<rootDir>/tests/**/*.test.js'],
   collectCoverageFrom: [
     'src/backend/**/*.js',
     '!src/backend/server.js',

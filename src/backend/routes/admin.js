@@ -3,13 +3,13 @@ const router = express.Router();
 const AdminService = require('../services/AdminService');
 const BookingService = require('../services/BookingService');
 const ParkingReservationService = require('../services/ParkingReservationService');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, authorize, requireCompleteProfile } = require('../middleware/auth');
 
 const adminService = new AdminService();
 const bookingService = new BookingService();
 const reservationService = new ParkingReservationService();
 
-router.get('/configuration', authenticate, authorize(['admin']), async (req, res, next) => {
+router.get('/configuration', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const config = await adminService.getConfiguration();
     res.json(config);
@@ -18,7 +18,7 @@ router.get('/configuration', authenticate, authorize(['admin']), async (req, res
   }
 });
 
-router.put('/configuration/desk-count', authenticate, authorize(['admin']), async (req, res, next) => {
+router.put('/configuration/desk-count', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const { deskCount, numberingMode = 'auto', startNumber = 1 } = req.body;
     
@@ -46,7 +46,7 @@ router.put('/configuration/desk-count', authenticate, authorize(['admin']), asyn
   }
 });
 
-router.put('/configuration/parking-count', authenticate, authorize(['admin']), async (req, res, next) => {
+router.put('/configuration/parking-count', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const { parkingCount, numberingMode = 'auto', startNumber = 1 } = req.body;
     
@@ -74,7 +74,7 @@ router.put('/configuration/parking-count', authenticate, authorize(['admin']), a
   }
 });
 
-router.get('/bookings', authenticate, authorize(['admin']), async (req, res, next) => {
+router.get('/bookings', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const bookings = await adminService.getAllBookings();
     res.json(bookings);
@@ -83,7 +83,7 @@ router.get('/bookings', authenticate, authorize(['admin']), async (req, res, nex
   }
 });
 
-router.get('/parking-reservations', authenticate, authorize(['admin']), async (req, res, next) => {
+router.get('/parking-reservations', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const reservations = await adminService.getAllParkingReservations();
     res.json(reservations);
@@ -92,7 +92,7 @@ router.get('/parking-reservations', authenticate, authorize(['admin']), async (r
   }
 });
 
-router.get('/overtime-records', authenticate, authorize(['admin']), async (req, res, next) => {
+router.get('/overtime-records', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const records = await adminService.getAllOvertimeRecords();
     res.json(records);
@@ -101,7 +101,7 @@ router.get('/overtime-records', authenticate, authorize(['admin']), async (req, 
   }
 });
 
-router.get('/desks', authenticate, authorize(['admin']), async (req, res, next) => {
+router.get('/desks', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const desks = await adminService.getAllDesks();
     res.json(desks.map(d => d.toJSON()));
@@ -110,7 +110,7 @@ router.get('/desks', authenticate, authorize(['admin']), async (req, res, next) 
   }
 });
 
-router.get('/parking-spaces', authenticate, authorize(['admin']), async (req, res, next) => {
+router.get('/parking-spaces', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const spaces = await adminService.getAllParkingSpaces();
     res.json(spaces.map(s => s.toJSON()));
@@ -119,7 +119,7 @@ router.get('/parking-spaces', authenticate, authorize(['admin']), async (req, re
   }
 });
 
-router.delete('/bookings/:id', authenticate, authorize(['admin']), async (req, res, next) => {
+router.delete('/bookings/:id', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const adminId = req.user.id;
     const { reason } = req.body;
@@ -147,7 +147,7 @@ router.delete('/bookings/:id', authenticate, authorize(['admin']), async (req, r
   }
 });
 
-router.delete('/parking-reservations/:id', authenticate, authorize(['admin']), async (req, res, next) => {
+router.delete('/parking-reservations/:id', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const adminId = req.user.id;
     const { reason } = req.body;
@@ -176,7 +176,7 @@ router.delete('/parking-reservations/:id', authenticate, authorize(['admin']), a
 });
 
 // Bulk desk creation endpoint
-router.post('/desks/bulk', authenticate, authorize(['admin']), async (req, res, next) => {
+router.post('/desks/bulk', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const { count, numberingMode = 'auto', startNumber = 1 } = req.body;
     
@@ -205,7 +205,7 @@ router.post('/desks/bulk', authenticate, authorize(['admin']), async (req, res, 
 });
 
 // Bulk parking space creation endpoint
-router.post('/parking-spaces/bulk', authenticate, authorize(['admin']), async (req, res, next) => {
+router.post('/parking-spaces/bulk', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const { count, numberingMode = 'auto', startNumber = 1 } = req.body;
     
@@ -234,7 +234,7 @@ router.post('/parking-spaces/bulk', authenticate, authorize(['admin']), async (r
 });
 
 // Manual desk number assignment endpoint
-router.put('/desks/:id/number', authenticate, authorize(['admin']), async (req, res, next) => {
+router.put('/desks/:id/number', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const { deskNumber } = req.body;
     
@@ -271,7 +271,7 @@ router.put('/desks/:id/number', authenticate, authorize(['admin']), async (req, 
 });
 
 // Manual parking space number assignment endpoint
-router.put('/parking-spaces/:id/number', authenticate, authorize(['admin']), async (req, res, next) => {
+router.put('/parking-spaces/:id/number', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const { spaceNumber } = req.body;
     

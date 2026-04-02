@@ -199,6 +199,40 @@ async function runMigrations() {
       logger.info('Version tracking table created');
     }
 
+    // Phase 19: profile completion and admin provisioning (invitation token)
+    const usersProvisionColumns = [
+      { name: 'profile_complete', sql: 'ADD COLUMN profile_complete BOOLEAN NOT NULL DEFAULT TRUE' },
+      { name: 'invitation_token', sql: 'ADD COLUMN invitation_token VARCHAR(255) NULL' },
+      { name: 'invitation_token_expiry', sql: 'ADD COLUMN invitation_token_expiry TIMESTAMP NULL' },
+    ];
+
+    for (const col of usersProvisionColumns) {
+      const exists = await columnExists(col.name);
+      if (!exists) {
+        logger.info(`Adding users column: ${col.name}...`);
+        await executeQuery(`ALTER TABLE users ${col.sql}`);
+        logger.info(`Column ${col.name} added`);
+      }
+    }
+
+    try {
+      await executeQuery(`
+        ALTER TABLE users MODIFY COLUMN password_hash VARCHAR(255) NULL
+      `);
+      logger.info('password_hash column allows NULL (provisioned users)');
+    } catch (alterErr) {
+      logger.warn(`password_hash NULL migration note: ${alterErr.message}`);
+    }
+
+    try {
+      await executeQuery('CREATE INDEX idx_invitation_token ON users(invitation_token)');
+      logger.info('Index idx_invitation_token created or attempted');
+    } catch (idxErr) {
+      if (!idxErr.message.includes('Duplicate')) {
+        logger.warn(`idx_invitation_token: ${idxErr.message}`);
+      }
+    }
+
   } catch (error) {
     logger.error('========================================');
     logger.error('MIGRATION FAILED');

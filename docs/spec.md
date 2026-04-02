@@ -214,7 +214,7 @@ This feature will help administrators quickly see which desk numbers have been a
 Complete user authentication and management system with role-based access control:
 
 - **Email as Username**: Email address serves as the username/login identifier. No separate username field is required - users log in using their email address.
-- **User Creation**: Admin users can create new users with email address (used as username/login), password, first name, last name, and office location
+- **User Creation**: Admin users **provision** new users with **email address** (login identifier) and **name** only. Password, office location, and other profile fields are **not** set by the admin; the user supplies them on first login (see **### 13. Minimal Admin User Provisioning and First-Login Profile Completion**).
 - **Password Management**: Users can change their passwords
 - **Admin Configuration**: Initial admin user configured via `config.json` in the `data/` folder with configurable email address (used as username) and optional password
 - **User Restrictions**: Users can only book desks/spaces for themselves and update their own data
@@ -231,10 +231,10 @@ This feature will provide secure user authentication and proper access control t
 
 Enhanced user management system with comprehensive user profiles and password recovery:
 
-- **User Profile Fields**: Users must provide first name, last name, email address (used as username/login identifier), and office location when created. No separate username field is required - email address serves as the login identifier.
+- **User Profile Fields**: Email address is the login identifier (no separate username). Full name is stored from registration or from admin provisioning plus profile completion. Office location is chosen by the user (London or Prague) when they complete their profile after provisioning or at registration.
 - **Office Location**: Hardcoded list of office locations (currently London or Prague)
 - **Admin Flag**: Users have an `IsAdmin` boolean flag to designate administrative privileges
-- **Admin User Creation**: Admin users can create new users through the admin interface
+- **Admin User Creation**: Admin users provision new users with **email and name only** through the admin interface; the user sets password and office via the profile setup link (see **### 13**). Self-registration (first user and subsequent users where enabled) collects email, password, name, and office as implemented for that flow.
 - **Login Screen**: Dedicated login screen for user authentication using email address as the username/login identifier
 - **Password Reset**: Forgotten password functionality that emails a reset link to the user's email address
 - **Admin Setup Script**: Utility script to add initial admin user (paul.michaels@travelhx.com) with admin privileges
@@ -390,6 +390,39 @@ Automatic version tracking system that increments on each deployment/commit:
 - **Version Display**: Version number should be accessible and displayable in the application
 
 This feature will provide version tracking for deployments and help identify which version of the application is running.
+
+### 13. Minimal Admin User Provisioning and First-Login Profile Completion
+
+Intended behavior for bringing new users into the system with minimal admin effort and completing sensitive or personal data only when the user signs in themselves.
+
+- **Admin input only**: When creating a new user, the admin enters **email address** (used as the login identifier) and **name** only. The admin does **not** set the user's password, office location, or other personal profile fields at creation time.
+
+- **Provisioned account state**: Newly created users are in a state that reflects **incomplete profile** (or equivalent), such as: no usable password set yet, or profile completion flag false, as implemented. The exact mechanics (e.g. invitation link, first password set flow, or integration with an enterprise identity provider) are implementation choices, but the **user experience** must be: the person authenticates (or validates their email) and is then prompted to supply what the admin did not enter.
+
+- **First-login (or first authenticated session) onboarding**: After the user signs in for the first time (per the chosen authentication approach), they must be guided through collecting at least:
+  - **Password** (when the application uses local passwords)
+  - **Office location** (and any other required profile fields defined elsewhere in this specification)
+  - Optional: confirm or adjust **name** if the implementation allows the user to correct how they are displayed
+
+- **Access until complete**: Users with an incomplete profile must **not** have full access to actions that require a complete identity (e.g. making desk or parking bookings, recording overtime, or other protected features as defined during implementation). Viewing limited public or informational screens may be allowed if appropriate; the goal is to force completion before normal use.
+
+- **Security and abuse**: Provisioning must not introduce accounts that others can take over without verification. Any invitation, magic link, or first-login flow must follow secure practices (e.g. time-limited tokens, email verification, or reliance on corporate IdP where applicable).
+
+- **Existing users**: Users who already have a full profile are unaffected. Migrations must define behavior for any existing rows (e.g. treat as profile complete).
+
+This feature reduces admin burden and ensures passwords and office choices are owned by the end user.
+
+### 14. Global Application Shell, Navigation, and Visual Theme
+
+Consistent layout and styling across every page of the application.
+
+- **Left navigation (collapsible)**: Primary navigation appears as a **vertical menu on the left** of the screen. The menu can be **collapsed** (e.g. hidden or minimized via a control, with state remembered where appropriate) so more space is available for content. On the **Admin** dashboard, the former horizontal tab strip becomes this **left-hand vertical** menu so admin sections behave like the rest of the site.
+
+- **Right account area (collapsible)**: The **top-right** of the shell hosts an **account control** that expands/collapses a small menu. When **no user is logged in**, **Log in** (and other appropriate links such as Register on auth pages) appear in that menu. When **logged in**, the trigger shows the current user; the menu contains **user details** (e.g. name, email, office, admin indicator where applicable) and **Log out** as options **under** the user identity, not as a duplicate top-level bar item.
+
+- **System-wide consistency**: The same shell (top bar + left nav pattern + right account menu) and interaction patterns apply to **all** pages, including login, registration, password reset, profile completion, and error-style views, with only the **contents** of the left nav varying where necessary (e.g. admin vs standard app).
+
+- **Colour scheme**: **Blue** is the **primary** brand colour (headers, key actions, active states). **Complementary** colours (e.g. teal or blue-gray accents, neutral surfaces) support readability and hierarchy without clashing with the primary blue.
 
 ## API Endpoints
 

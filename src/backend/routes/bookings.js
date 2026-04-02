@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const BookingService = require('../services/BookingService');
-const { authenticate, optionalAuthenticate } = require('../middleware/auth');
+const { authenticate, optionalAuthenticate, requireCompleteProfile, optionalRequireCompleteProfile } = require('../middleware/auth');
 
 const bookingService = new BookingService();
 
-router.get('/my-bookings', authenticate, async (req, res, next) => {
+router.get('/my-bookings', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const userId = req.user.id;
     const bookings = await bookingService.getUserBookings(userId);
@@ -15,7 +15,7 @@ router.get('/my-bookings', authenticate, async (req, res, next) => {
   }
 });
 
-router.get('/available', optionalAuthenticate, async (req, res, next) => {
+router.get('/available', optionalAuthenticate, optionalRequireCompleteProfile, async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query;
     
@@ -73,7 +73,7 @@ router.get('/check-availability', authenticate, async (req, res, next) => {
   }
 });
 
-router.get('/:id', authenticate, async (req, res, next) => {
+router.get('/:id', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const booking = await bookingService.getBookingById(parseInt(req.params.id));
     res.json(booking.toJSON());
@@ -149,7 +149,7 @@ router.post('/', authenticate, async (req, res, next) => {
   }
 });
 
-router.post('/bulk', authenticate, async (req, res, next) => {
+router.post('/bulk', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { deskIds, startDate, endDate } = req.body;
@@ -213,7 +213,7 @@ router.post('/bulk', authenticate, async (req, res, next) => {
   }
 });
 
-router.delete('/:id', authenticate, async (req, res, next) => {
+router.delete('/:id', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const userId = req.user.id;
     await bookingService.cancelUserBooking(parseInt(req.params.id), userId);

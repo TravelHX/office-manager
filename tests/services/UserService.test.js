@@ -15,10 +15,12 @@ describe('UserService', () => {
       findById: jest.fn(),
       findByUsername: jest.fn(),
       findByEmail: jest.fn(),
+      findByInvitationToken: jest.fn(),
       create: jest.fn(),
       createWithId: jest.fn(),
       update: jest.fn(),
       updatePassword: jest.fn(),
+      executeRawQuery: jest.fn(),
       findAll: jest.fn(),
       count: jest.fn(),
       countAdmins: jest.fn(),
@@ -35,8 +37,41 @@ describe('UserService', () => {
     jest.clearAllMocks();
   });
 
-  describe('createUser', () => {
-    it('should create a new user when admin creates it', async () => {
+  describe('createUser (admin provisioning)', () => {
+    it('should provision a user with email and name and return invitation token', async () => {
+      const creator = new User({
+        id: 1000,
+        username: 'admin',
+        email: 'admin@example.com',
+        passwordHash: 'hash',
+        isAdmin: true,
+        role: 'admin',
+        profileComplete: true,
+      });
+
+      mockUserRepository.findById.mockResolvedValue(creator);
+      mockUserRepository.findByUsername.mockResolvedValue(null);
+      mockUserRepository.findByEmail.mockResolvedValue(null);
+      mockUserRepository.create.mockImplementation(async (u) => {
+        const row = u instanceof User ? u : new User(u);
+        row.id = 1;
+        return row;
+      });
+
+      const result = await userService.createUser(
+        { email: 'newuser@example.com', name: 'New User', role: 'user' },
+        1000
+      );
+
+      expect(result.user).toBeDefined();
+      expect(result.invitationToken).toBeDefined();
+      expect(result.user.email).toBe('newuser@example.com');
+      expect(result.user.username).toBe('newuser@example.com');
+      expect(result.user.profileComplete).toBe(false);
+      expect(mockUserRepository.create).toHaveBeenCalled();
+    });
+
+    it('should reject forbidden fields from admin create payload', async () => {
       const creator = new User({
         id: 1000,
         username: 'admin',
@@ -47,28 +82,10 @@ describe('UserService', () => {
       });
 
       mockUserRepository.findById.mockResolvedValue(creator);
-      mockUserRepository.findByUsername.mockResolvedValue(null);
-      mockUserRepository.findByEmail.mockResolvedValue(null);
-      mockUserRepository.create.mockResolvedValue(new User({
-        id: 1,
-        username: 'newuser',
-        email: 'newuser@example.com',
-        passwordHash: 'hashed',
-        role: 'user',
-      }));
 
-      const userData = {
-        username: 'newuser',
-        email: 'newuser@example.com',
-        password: 'password123',
-        role: 'user',
-      };
-
-      const result = await userService.createUser(userData, 1000);
-
-      expect(result).toBeDefined();
-      expect(result.username).toBe('newuser');
-      expect(mockUserRepository.create).toHaveBeenCalled();
+      await expect(
+        userService.createUser({ email: 'a@b.com', name: 'A', password: 'x' }, 1000)
+      ).rejects.toThrow('Admin user creation accepts only');
     });
 
     it('should throw error if creator is not admin', async () => {
@@ -83,16 +100,12 @@ describe('UserService', () => {
 
       mockUserRepository.findById.mockResolvedValue(creator);
 
-      const userData = {
-        username: 'newuser',
-        email: 'newuser@example.com',
-        password: 'password123',
-      };
-
-      await expect(userService.createUser(userData, 1)).rejects.toThrow('Only admins can create users');
+      await expect(
+        userService.createUser({ email: 'new@example.com', name: 'N' }, 1)
+      ).rejects.toThrow('Only admins can create users');
     });
 
-    it('should throw error if username already exists', async () => {
+    it('should throw error if email username already exists', async () => {
       const creator = new User({
         id: 1000,
         username: 'admin',
@@ -104,8 +117,8 @@ describe('UserService', () => {
 
       const existingUser = new User({
         id: 2,
-        username: 'existing',
-        email: 'existing@example.com',
+        username: 'taken@example.com',
+        email: 'taken@example.com',
         passwordHash: 'hash',
         role: 'user',
       });
@@ -113,13 +126,9 @@ describe('UserService', () => {
       mockUserRepository.findById.mockResolvedValue(creator);
       mockUserRepository.findByUsername.mockResolvedValue(existingUser);
 
-      const userData = {
-        username: 'existing',
-        email: 'newuser@example.com',
-        password: 'password123',
-      };
-
-      await expect(userService.createUser(userData, 1000)).rejects.toThrow('Username already exists');
+      await expect(
+        userService.createUser({ email: 'taken@example.com', name: 'Taken' }, 1000)
+      ).rejects.toThrow('A user with this email already exists');
     });
 
     it('should throw error if email already exists', async () => {
@@ -134,7 +143,7 @@ describe('UserService', () => {
 
       const existingUser = new User({
         id: 2,
-        username: 'existing',
+        username: 'other',
         email: 'existing@example.com',
         passwordHash: 'hash',
         role: 'user',
@@ -144,13 +153,9 @@ describe('UserService', () => {
       mockUserRepository.findByUsername.mockResolvedValue(null);
       mockUserRepository.findByEmail.mockResolvedValue(existingUser);
 
-      const userData = {
-        username: 'newuser',
-        email: 'existing@example.com',
-        password: 'password123',
-      };
-
-      await expect(userService.createUser(userData, 1000)).rejects.toThrow('Email already exists');
+      await expect(
+        userService.createUser({ email: 'existing@example.com', name: 'X' }, 1000)
+      ).rejects.toThrow('Email already exists');
     });
   });
 
@@ -240,6 +245,22 @@ describe('UserService', () => {
         userService.authenticate('user', 'wrongpassword')
       ).rejects.toThrow('Invalid username or password');
     });
+
+    it('should reject login when user has no password (provisioned)', async () => {
+      const user = new User({
+        id: 1,
+        username: 'u@example.com',
+        email: 'u@example.com',
+        passwordHash: null,
+        role: 'user',
+      });
+
+      mockUserRepository.findByUsername.mockResolvedValue(user);
+
+      await expect(
+        userService.authenticate('u@example.com', 'any')
+      ).rejects.toThrow('Invalid username or password');
+    });
   });
 
   describe('getUserById', () => {
@@ -283,126 +304,34 @@ describe('UserService', () => {
     });
   });
 
-  describe('createUser with profile fields', () => {
-    it('should create user with first name, last name, email, and office location', async () => {
-      const creator = new User({
-        id: 1000,
-        username: 'admin',
-        email: 'admin@example.com',
-        passwordHash: 'hash',
-        isAdmin: true,
-        role: 'admin',
+  describe('completeProfileByInvitationToken', () => {
+    it('should set password, office, and clear invitation', async () => {
+      const pending = new User({
+        id: 5,
+        username: 'u@example.com',
+        email: 'u@example.com',
+        passwordHash: null,
+        profileComplete: false,
+        invitationToken: 'tok',
+        invitationTokenExpiry: new Date(Date.now() + 3600000),
       });
 
-      mockUserRepository.findById.mockResolvedValue(creator);
-      mockUserRepository.findByUsername.mockResolvedValue(null);
-      mockUserRepository.findByEmail.mockResolvedValue(null);
-      mockUserRepository.create.mockResolvedValue(new User({
-        id: 1,
-        username: 'newuser',
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'john.doe@example.com',
+      mockUserRepository.findByInvitationToken.mockResolvedValue(pending);
+      mockUserRepository.executeRawQuery.mockResolvedValue(undefined);
+      const done = new User({
+        id: 5,
+        username: 'u@example.com',
+        email: 'u@example.com',
+        passwordHash: 'hashed',
         officeLocation: 'London',
-        passwordHash: 'hashed',
-        isAdmin: false,
-        role: 'user',
-      }));
-
-      const userData = {
-        username: 'newuser',
-        first_name: 'John',
-        last_name: 'Doe',
-        email: 'john.doe@example.com',
-        office_location: 'London',
-        password: 'password123',
-      };
-
-      const result = await userService.createUser(userData, 1000);
-
-      expect(result).toBeDefined();
-      expect(result.username).toBe('newuser');
-      expect(mockUserRepository.create).toHaveBeenCalled();
-    });
-
-    it('should throw error for invalid email format', async () => {
-      const creator = new User({
-        id: 1000,
-        username: 'admin',
-        email: 'admin@example.com',
-        passwordHash: 'hash',
-        isAdmin: true,
-        role: 'admin',
+        profileComplete: true,
+        invitationToken: null,
       });
+      mockUserRepository.findById.mockResolvedValue(done);
 
-      mockUserRepository.findById.mockResolvedValue(creator);
-
-      const userData = {
-        username: 'newuser',
-        email: 'invalid-email',
-        password: 'password123',
-      };
-
-      await expect(userService.createUser(userData, 1000)).rejects.toThrow('Invalid email format');
-    });
-
-    it('should throw error for invalid office location', async () => {
-      const creator = new User({
-        id: 1000,
-        username: 'admin',
-        email: 'admin@example.com',
-        passwordHash: 'hash',
-        isAdmin: true,
-        role: 'admin',
-      });
-
-      mockUserRepository.findById.mockResolvedValue(creator);
-      mockUserRepository.findByUsername.mockResolvedValue(null);
-      mockUserRepository.findByEmail.mockResolvedValue(null);
-
-      const userData = {
-        username: 'newuser',
-        email: 'newuser@example.com',
-        office_location: 'New York',
-        password: 'password123',
-      };
-
-      await expect(userService.createUser(userData, 1000)).rejects.toThrow('Invalid office location');
-    });
-
-    it('should set isAdmin flag when is_admin is true', async () => {
-      const creator = new User({
-        id: 1000,
-        username: 'admin',
-        email: 'admin@example.com',
-        passwordHash: 'hash',
-        isAdmin: true,
-        role: 'admin',
-      });
-
-      mockUserRepository.findById.mockResolvedValue(creator);
-      mockUserRepository.findByUsername.mockResolvedValue(null);
-      mockUserRepository.findByEmail.mockResolvedValue(null);
-      mockUserRepository.create.mockResolvedValue(new User({
-        id: 1,
-        username: 'newadmin',
-        email: 'newadmin@example.com',
-        passwordHash: 'hashed',
-        isAdmin: true,
-        role: 'admin',
-      }));
-
-      const userData = {
-        username: 'newadmin',
-        email: 'newadmin@example.com',
-        password: 'password123',
-        is_admin: true,
-      };
-
-      const result = await userService.createUser(userData, 1000);
-
-      expect(result).toBeDefined();
-      expect(mockUserRepository.create).toHaveBeenCalled();
+      const out = await userService.completeProfileByInvitationToken('tok', 'newpass123', 'London');
+      expect(out.profileComplete).toBe(true);
+      expect(mockUserRepository.executeRawQuery).toHaveBeenCalled();
     });
   });
 

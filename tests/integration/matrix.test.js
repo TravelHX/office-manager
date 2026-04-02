@@ -6,6 +6,7 @@ const ParkingReservationService = require('../../src/backend/services/ParkingRes
 const DeskService = require('../../src/backend/services/DeskService');
 const ParkingSpaceService = require('../../src/backend/services/ParkingSpaceService');
 const { generateToken } = require('../../src/backend/utils/token');
+const { createProvisionedUserWithPassword } = require('../helpers/provisionUser');
 
 describe('Matrix API Integration Tests', () => {
   let adminToken;
@@ -19,31 +20,29 @@ describe('Matrix API Integration Tests', () => {
 
   beforeAll(async () => {
     const userService = new UserService();
-    
-    // Create admin user
+    const seedAdmin = await userService.getUserByUsername('admin');
+
     try {
-      adminUser = await userService.createUser({
-        username: 'matrixadmin',
+      adminUser = await createProvisionedUserWithPassword(seedAdmin.id, {
         email: 'matrixadmin@test.com',
+        name: 'Matrix Admin',
         password: 'Password123',
+        is_admin: true,
         role: 'admin',
-      }, 1);
+      });
     } catch (error) {
-      // User might already exist
-      adminUser = await userService.userRepository.findByUsername('matrixadmin');
+      adminUser = await userService.getUserByUsername('matrixadmin@test.com');
     }
     adminToken = generateToken(adminUser);
 
-    // Create regular user
     try {
-      regularUser = await userService.createUser({
-        username: 'matrixuser',
+      regularUser = await createProvisionedUserWithPassword(seedAdmin.id, {
         email: 'matrixuser@test.com',
+        name: 'Matrix User',
         password: 'Password123',
-        role: 'user',
-      }, 2);
+      });
     } catch (error) {
-      regularUser = await userService.userRepository.findByUsername('matrixuser');
+      regularUser = await userService.getUserByUsername('matrixuser@test.com');
     }
     userToken = generateToken(regularUser);
 

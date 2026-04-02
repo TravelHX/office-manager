@@ -2,407 +2,242 @@
  * @jest-environment jsdom
  */
 
-describe('User Creation Form', () => {
+describe('User provisioning form (Phase 19)', () => {
+  const domContentLoadedCallbacks = [];
+  let addEventListenerSpy;
+
   beforeEach(() => {
-    localStorage.clear();
+    jest.resetModules();
+    domContentLoadedCallbacks.length = 0;
+    const orig = Document.prototype.addEventListener.bind(document);
+    addEventListenerSpy = jest.spyOn(document, 'addEventListener').mockImplementation((type, listener, options) => {
+      if (type === 'DOMContentLoaded') {
+        domContentLoadedCallbacks.push(listener);
+        return undefined;
+      }
+      return orig(type, listener, options);
+    });
+
     global.fetch = jest.fn();
-    global.apiRequest = jest.fn();
-    document.body.innerHTML = '';
+    global.showNotification = jest.fn();
+    global.apiRequest = jest.fn().mockImplementation((url, opts) => {
+      if (url === '/api/admin/configuration') {
+        return Promise.resolve({ deskCount: 1, parkingCount: 1 });
+      }
+      if (url === '/api/auth/users' && opts && opts.method === 'POST') {
+        return Promise.resolve({ id: 1 });
+      }
+      if (url === '/api/auth/users') {
+        return Promise.resolve([]);
+      }
+      if (String(url).startsWith('/api/admin/')) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([]);
+    });
+    global.isAdmin = jest.fn(() => true);
+    mountMinimalAdminPage();
   });
 
   afterEach(() => {
+    addEventListenerSpy.mockRestore();
     jest.clearAllMocks();
-    localStorage.clear();
   });
 
-  describe('User Creation Form Fields', () => {
-    it('should collect all form fields including profile fields', async () => {
-      global.apiRequest.mockResolvedValueOnce({
-        id: 1,
-        username: 'newuser',
-        email: 'newuser@example.com',
-        firstName: 'John',
-        lastName: 'Doe',
-        officeLocation: 'London',
-        isAdmin: false,
+  function loadAdminDashboard() {
+    require('../js/admin.js');
+    const cb = domContentLoadedCallbacks.pop();
+    if (cb) {
+      cb();
+    }
+  }
+
+  function mountMinimalAdminPage() {
+    document.body.innerHTML = `
+      <div id="admin-container">
+        <div id="admin-tabs">
+          <button class="tab-btn active" data-tab="configuration">Resource Configuration</button>
+          <button class="tab-btn" data-tab="desks">Desks</button>
+          <button class="tab-btn" data-tab="parking-spaces">Parking Spaces</button>
+          <button class="tab-btn" data-tab="bookings">All Bookings</button>
+          <button class="tab-btn" data-tab="parking">All Parking Reservations</button>
+          <button class="tab-btn" data-tab="overtime">All Overtime Records</button>
+          <button class="tab-btn" data-tab="matrix">Booking Matrix</button>
+          <button class="tab-btn" data-tab="users" id="users-tab-btn" style="display: none;">User Management</button>
+          <button class="tab-btn" data-tab="password">Change Password</button>
+        </div>
+        <div id="configuration-tab" class="tab-content active">
+          <input type="number" id="deskCount" value="1" />
+          <select id="deskNumberingMode"><option value="auto">Auto</option></select>
+          <input type="number" id="deskStartNumber" value="1" />
+          <input type="number" id="parkingCount" value="1" />
+          <select id="parkingNumberingMode"><option value="auto">Auto</option></select>
+          <input type="number" id="parkingStartNumber" value="1" />
+          <button id="saveConfigurationBtn">Save Configuration</button>
+          <div id="configuration-message"></div>
+        </div>
+        <div id="desks-tab" class="tab-content"><div id="all-desks-container"></div></div>
+        <div id="parking-spaces-tab" class="tab-content"><div id="all-parking-spaces-container"></div></div>
+        <div id="bookings-tab" class="tab-content"><div id="all-bookings-container"></div></div>
+        <div id="parking-tab" class="tab-content"><div id="all-parking-container"></div></div>
+        <div id="overtime-tab" class="tab-content"><div id="all-overtime-container"></div></div>
+        <div id="matrix-tab" class="tab-content"></div>
+        <div id="users-tab" class="tab-content">
+          <div id="all-users-container"></div>
+          <div id="users-message"></div>
+          <form id="user-creation-form">
+            <input type="text" id="newProvisionName" value="Jane Doe">
+            <input type="email" id="newEmail" value="jane@example.com">
+            <input type="checkbox" id="newIsAdmin">
+            <select id="newRole">
+              <option value="user" selected>User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </form>
+          <button id="createUserBtn">Create User</button>
+          <div id="create-user-message"></div>
+        </div>
+        <div id="password-tab" class="tab-content">
+          <input type="password" id="currentPassword" />
+          <input type="password" id="newPasswordChange" />
+          <input type="password" id="confirmPassword" />
+          <button id="changePasswordBtn">Change Password</button>
+          <div id="change-password-message"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  it('should POST name and email only (no password or office) for a standard user', async () => {
+    loadAdminDashboard();
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    global.apiRequest.mockClear();
+    global.apiRequest.mockImplementation((url, opts) => {
+      if (url === '/api/auth/users' && opts && opts.method === 'POST') {
+        return Promise.resolve({
+          id: 1,
+          email: 'jane@example.com',
+          profileSetupUrl: '/pages/complete-profile.html?token=abc',
+        });
+      }
+      return Promise.resolve([]);
+    });
+
+    document.getElementById('createUserBtn').click();
+
+    await new Promise((r) => setTimeout(r, 100));
+
+    expect(global.apiRequest).toHaveBeenCalledWith('/api/auth/users', {
+      method: 'POST',
+      body: {
+        name: 'Jane Doe',
+        email: 'jane@example.com',
         role: 'user',
-      });
-
-      document.body.innerHTML = `
-        <form id="user-creation-form">
-          <input type="text" id="newUsername" value="newuser">
-          <input type="text" id="newFirstName" value="John">
-          <input type="text" id="newLastName" value="Doe">
-          <input type="email" id="newEmail" value="newuser@example.com">
-          <select id="newOfficeLocation">
-            <option value="">Select location...</option>
-            <option value="London" selected>London</option>
-            <option value="Prague">Prague</option>
-          </select>
-          <input type="password" id="newPassword" value="password123">
-          <input type="checkbox" id="newIsAdmin">
-          <select id="newRole">
-            <option value="user" selected>User</option>
-            <option value="admin">Admin</option>
-          </select>
-          <div id="create-user-message"></div>
-        </form>
-        <button id="createUserBtn">Create User</button>
-      `;
-
-      // Mock admin.js functions
-      global.isAdmin = jest.fn(() => true);
-      global.apiRequest = jest.fn().mockResolvedValue({
-        id: 1,
-        username: 'newuser',
-        email: 'newuser@example.com',
-        firstName: 'John',
-        lastName: 'Doe',
-        officeLocation: 'London',
-        isAdmin: false,
-        role: 'user',
-      });
-
-      // Load admin.js
-      require('../js/admin.js');
-
-      const createButton = document.getElementById('createUserBtn');
-      createButton.click();
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      expect(global.apiRequest).toHaveBeenCalledWith('/api/auth/users', {
-        method: 'POST',
-        body: expect.objectContaining({
-          username: 'newuser',
-          email: 'newuser@example.com',
-          first_name: 'John',
-          last_name: 'Doe',
-          office_location: 'London',
-          password: 'password123',
-          role: 'user',
-        }),
-      });
-    });
-
-    it('should include is_admin flag when admin checkbox is checked', async () => {
-      global.apiRequest.mockResolvedValueOnce({
-        id: 1,
-        username: 'adminuser',
-        email: 'admin@example.com',
-        isAdmin: true,
-        role: 'admin',
-      });
-
-      document.body.innerHTML = `
-        <form id="user-creation-form">
-          <input type="text" id="newUsername" value="adminuser">
-          <input type="text" id="newFirstName" value="">
-          <input type="text" id="newLastName" value="">
-          <input type="email" id="newEmail" value="admin@example.com">
-          <select id="newOfficeLocation">
-            <option value="">Select location...</option>
-            <option value="London">London</option>
-            <option value="Prague">Prague</option>
-          </select>
-          <input type="password" id="newPassword" value="password123">
-          <input type="checkbox" id="newIsAdmin" checked>
-          <select id="newRole">
-            <option value="user">User</option>
-            <option value="admin" selected>Admin</option>
-          </select>
-          <div id="create-user-message"></div>
-        </form>
-        <button id="createUserBtn">Create User</button>
-      `;
-
-      global.isAdmin = jest.fn(() => true);
-      global.apiRequest = jest.fn().mockResolvedValue({
-        id: 1,
-        username: 'adminuser',
-        email: 'admin@example.com',
-        isAdmin: true,
-        role: 'admin',
-      });
-
-      require('../js/admin.js');
-
-      const createButton = document.getElementById('createUserBtn');
-      createButton.click();
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      expect(global.apiRequest).toHaveBeenCalledWith('/api/auth/users', {
-        method: 'POST',
-        body: expect.objectContaining({
-          username: 'adminuser',
-          email: 'admin@example.com',
-          is_admin: true,
-          role: 'admin',
-        }),
-      });
-    });
-
-    it('should validate required fields (username, email, password)', async () => {
-      document.body.innerHTML = `
-        <form id="user-creation-form">
-          <input type="text" id="newUsername" value="">
-          <input type="email" id="newEmail" value="">
-          <input type="password" id="newPassword" value="">
-          <div id="create-user-message"></div>
-        </form>
-        <button id="createUserBtn">Create User</button>
-      `;
-
-      global.isAdmin = jest.fn(() => true);
-      require('../js/admin.js');
-
-      const createButton = document.getElementById('createUserBtn');
-      createButton.click();
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const messageDiv = document.getElementById('create-user-message');
-      expect(messageDiv.innerHTML).toContain('Please fill in all required fields');
-      expect(global.apiRequest).not.toHaveBeenCalled();
-    });
-
-    it('should clear form fields after successful user creation', async () => {
-      global.apiRequest.mockResolvedValueOnce({
-        id: 1,
-        username: 'newuser',
-        email: 'newuser@example.com',
-      });
-
-      document.body.innerHTML = `
-        <form id="user-creation-form">
-          <input type="text" id="newUsername" value="newuser">
-          <input type="text" id="newFirstName" value="John">
-          <input type="text" id="newLastName" value="Doe">
-          <input type="email" id="newEmail" value="newuser@example.com">
-          <select id="newOfficeLocation">
-            <option value="">Select location...</option>
-            <option value="London" selected>London</option>
-            <option value="Prague">Prague</option>
-          </select>
-          <input type="password" id="newPassword" value="password123">
-          <input type="checkbox" id="newIsAdmin">
-          <select id="newRole">
-            <option value="user" selected>User</option>
-            <option value="admin">Admin</option>
-          </select>
-          <div id="create-user-message"></div>
-        </form>
-        <button id="createUserBtn">Create User</button>
-      `;
-
-      global.isAdmin = jest.fn(() => true);
-      global.apiRequest = jest.fn().mockResolvedValue({
-        id: 1,
-        username: 'newuser',
-        email: 'newuser@example.com',
-      });
-
-      require('../js/admin.js');
-
-      const createButton = document.getElementById('createUserBtn');
-      createButton.click();
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      expect(document.getElementById('newUsername').value).toBe('');
-      expect(document.getElementById('newFirstName').value).toBe('');
-      expect(document.getElementById('newLastName').value).toBe('');
-      expect(document.getElementById('newEmail').value).toBe('');
-      expect(document.getElementById('newOfficeLocation').value).toBe('');
-      expect(document.getElementById('newPassword').value).toBe('');
-    });
-
-    it('should display success message after successful creation', async () => {
-      global.apiRequest.mockResolvedValueOnce({
-        id: 1,
-        username: 'newuser',
-        email: 'newuser@example.com',
-      });
-
-      document.body.innerHTML = `
-        <form id="user-creation-form">
-          <input type="text" id="newUsername" value="newuser">
-          <input type="email" id="newEmail" value="newuser@example.com">
-          <input type="password" id="newPassword" value="password123">
-          <div id="create-user-message"></div>
-        </form>
-        <button id="createUserBtn">Create User</button>
-      `;
-
-      global.isAdmin = jest.fn(() => true);
-      global.apiRequest = jest.fn().mockResolvedValue({
-        id: 1,
-        username: 'newuser',
-        email: 'newuser@example.com',
-      });
-
-      require('../js/admin.js');
-
-      const createButton = document.getElementById('createUserBtn');
-      createButton.click();
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const messageDiv = document.getElementById('create-user-message');
-      expect(messageDiv.innerHTML).toContain('User created successfully');
+      },
     });
   });
 
-  describe('Office Location Dropdown', () => {
-    it('should have London and Prague as options', () => {
-      document.body.innerHTML = `
-        <select id="newOfficeLocation">
-          <option value="">Select location...</option>
-          <option value="London">London</option>
-          <option value="Prague">Prague</option>
-        </select>
-      `;
+  it('should send is_admin and admin role when admin checkbox is checked', async () => {
+    loadAdminDashboard();
+    await new Promise((r) => setTimeout(r, 50));
 
-      const dropdown = document.getElementById('newOfficeLocation');
-      const options = Array.from(dropdown.options).map(opt => ({
-        value: opt.value,
-        text: opt.text,
-      }));
+    document.getElementById('newIsAdmin').checked = true;
 
-      expect(options).toContainEqual({ value: '', text: 'Select location...' });
-      expect(options).toContainEqual({ value: 'London', text: 'London' });
-      expect(options).toContainEqual({ value: 'Prague', text: 'Prague' });
+    global.apiRequest.mockClear();
+    global.apiRequest.mockImplementation((url, opts) => {
+      if (url === '/api/auth/users' && opts && opts.method === 'POST') {
+        return Promise.resolve({ id: 2, profileSetupUrl: '/x' });
+      }
+      return Promise.resolve([]);
     });
 
-    it('should allow selecting London', () => {
-      document.body.innerHTML = `
-        <select id="newOfficeLocation">
-          <option value="">Select location...</option>
-          <option value="London">London</option>
-          <option value="Prague">Prague</option>
-        </select>
-      `;
+    document.getElementById('createUserBtn').click();
 
-      const dropdown = document.getElementById('newOfficeLocation');
-      dropdown.value = 'London';
+    await new Promise((r) => setTimeout(r, 100));
 
-      expect(dropdown.value).toBe('London');
+    expect(global.apiRequest).toHaveBeenCalledWith('/api/auth/users', {
+      method: 'POST',
+      body: {
+        name: 'Jane Doe',
+        email: 'jane@example.com',
+        role: 'admin',
+        is_admin: true,
+      },
+    });
+  });
+
+  it('should require email and name', async () => {
+    document.getElementById('newProvisionName').value = '';
+    document.getElementById('newEmail').value = '';
+
+    loadAdminDashboard();
+    await new Promise((r) => setTimeout(r, 50));
+
+    global.apiRequest.mockClear();
+
+    document.getElementById('createUserBtn').click();
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    const messageDiv = document.getElementById('create-user-message');
+    expect(messageDiv.innerHTML).toContain('Email and full name are required');
+    expect(global.apiRequest).not.toHaveBeenCalled();
+  });
+
+  it('should show profile setup link when API returns profileSetupUrl', async () => {
+    delete window.location;
+    window.location = {
+      origin: 'https://app.example',
+      href: 'https://app.example/',
+      assign: jest.fn(),
+      replace: jest.fn(),
+    };
+
+    loadAdminDashboard();
+    await new Promise((r) => setTimeout(r, 50));
+
+    global.apiRequest.mockClear();
+    global.apiRequest.mockImplementation((url, opts) => {
+      if (url === '/api/auth/users' && opts && opts.method === 'POST') {
+        return Promise.resolve({
+          profileSetupUrl: '/pages/complete-profile.html?token=tok1',
+        });
+      }
+      return Promise.resolve([]);
     });
 
-    it('should allow selecting Prague', () => {
-      document.body.innerHTML = `
-        <select id="newOfficeLocation">
-          <option value="">Select location...</option>
-          <option value="London">London</option>
-          <option value="Prague">Prague</option>
-        </select>
-      `;
+    document.getElementById('createUserBtn').click();
 
-      const dropdown = document.getElementById('newOfficeLocation');
-      dropdown.value = 'Prague';
+    await new Promise((r) => setTimeout(r, 250));
 
-      expect(dropdown.value).toBe('Prague');
+    const messageDiv = document.getElementById('create-user-message');
+    expect(messageDiv).toBeTruthy();
+    expect(messageDiv.innerHTML).toContain('Profile setup link');
+    expect(messageDiv.innerHTML).toContain(
+      'https://app.example/pages/complete-profile.html?token=tok1',
+    );
+  });
+
+  it('should clear name and email after successful provision', async () => {
+    loadAdminDashboard();
+    await new Promise((r) => setTimeout(r, 50));
+
+    global.apiRequest.mockClear();
+    global.apiRequest.mockImplementation((url, opts) => {
+      if (url === '/api/auth/users' && opts && opts.method === 'POST') {
+        return Promise.resolve({ id: 1 });
+      }
+      return Promise.resolve([]);
     });
 
-    it('should allow empty selection (no office location)', () => {
-      document.body.innerHTML = `
-        <select id="newOfficeLocation">
-          <option value="" selected>Select location...</option>
-          <option value="London">London</option>
-          <option value="Prague">Prague</option>
-        </select>
-      `;
+    document.getElementById('createUserBtn').click();
 
-      const dropdown = document.getElementById('newOfficeLocation');
-      expect(dropdown.value).toBe('');
-    });
+    await new Promise((r) => setTimeout(r, 100));
 
-    it('should include office_location in API request when selected', async () => {
-      global.apiRequest.mockResolvedValueOnce({
-        id: 1,
-        username: 'newuser',
-        email: 'newuser@example.com',
-        officeLocation: 'Prague',
-      });
-
-      document.body.innerHTML = `
-        <form id="user-creation-form">
-          <input type="text" id="newUsername" value="newuser">
-          <input type="email" id="newEmail" value="newuser@example.com">
-          <select id="newOfficeLocation">
-            <option value="">Select location...</option>
-            <option value="London">London</option>
-            <option value="Prague" selected>Prague</option>
-          </select>
-          <input type="password" id="newPassword" value="password123">
-          <div id="create-user-message"></div>
-        </form>
-        <button id="createUserBtn">Create User</button>
-      `;
-
-      global.isAdmin = jest.fn(() => true);
-      global.apiRequest = jest.fn().mockResolvedValue({
-        id: 1,
-        username: 'newuser',
-        email: 'newuser@example.com',
-        officeLocation: 'Prague',
-      });
-
-      require('../js/admin.js');
-
-      const createButton = document.getElementById('createUserBtn');
-      createButton.click();
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      expect(global.apiRequest).toHaveBeenCalledWith('/api/auth/users', {
-        method: 'POST',
-        body: expect.objectContaining({
-          office_location: 'Prague',
-        }),
-      });
-    });
-
-    it('should not include office_location in API request when not selected', async () => {
-      global.apiRequest.mockResolvedValueOnce({
-        id: 1,
-        username: 'newuser',
-        email: 'newuser@example.com',
-      });
-
-      document.body.innerHTML = `
-        <form id="user-creation-form">
-          <input type="text" id="newUsername" value="newuser">
-          <input type="email" id="newEmail" value="newuser@example.com">
-          <select id="newOfficeLocation">
-            <option value="" selected>Select location...</option>
-            <option value="London">London</option>
-            <option value="Prague">Prague</option>
-          </select>
-          <input type="password" id="newPassword" value="password123">
-          <div id="create-user-message"></div>
-        </form>
-        <button id="createUserBtn">Create User</button>
-      `;
-
-      global.isAdmin = jest.fn(() => true);
-      global.apiRequest = jest.fn().mockResolvedValue({
-        id: 1,
-        username: 'newuser',
-        email: 'newuser@example.com',
-      });
-
-      require('../js/admin.js');
-
-      const createButton = document.getElementById('createUserBtn');
-      createButton.click();
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const callArgs = global.apiRequest.mock.calls[0];
-      const body = callArgs[1].body;
-      expect(body).not.toHaveProperty('office_location');
-    });
+    expect(document.getElementById('newProvisionName').value).toBe('');
+    expect(document.getElementById('newEmail').value).toBe('');
+    expect(document.getElementById('newIsAdmin').checked).toBe(false);
   });
 });

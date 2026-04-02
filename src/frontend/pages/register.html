@@ -21,11 +21,11 @@
         }
         .info-message {
             background-color: #e3f2fd;
-            border-left: 4px solid #2196F3;
+            border-left: 4px solid #1565c0;
             padding: 1rem;
             margin-bottom: 1.5rem;
             border-radius: 4px;
-            color: #1976d2;
+            color: #0d47a1;
             font-size: 0.9rem;
         }
         .info-message strong {
@@ -54,7 +54,7 @@
         .form-group input:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #4CAF50;
+            border-color: #1565c0;
         }
         .password-wrapper {
             position: relative;
@@ -107,20 +107,24 @@
         }
     </style>
 </head>
-<body>
-    <header>
-        <nav>
-            <div class="nav-container">
-                <h1>Office Manager</h1>
-                <ul class="nav-menu">
-                    <li><a href="/">Home</a></li>
-                    <li><a href="/pages/login.html">Login</a></li>
-                </ul>
-            </div>
-        </nav>
+<body class="app-shell">
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation menu" aria-expanded="true" aria-controls="site-sidebar">&#9776;</button>
+        <a href="/" class="app-brand">Office Manager</a>
+        <div class="app-topbar-spacer"></div>
+        <div id="account-menu-anchor" class="account-menu-anchor"></div>
     </header>
-
-    <main>
+    <div class="app-body">
+        <aside id="site-sidebar" class="site-sidebar" aria-label="Main navigation">
+            <nav class="site-sidebar-inner">
+                <ul class="sidebar-nav">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/pages/login.html">Log in</a></li>
+                </ul>
+            </nav>
+        </aside>
+        <div class="app-content-wrap">
+            <main class="app-main app-main--auth">
         <div class="register-container">
             <h2>Create Administrator Account</h2>
             <div class="info-message">
@@ -171,10 +175,13 @@
                 <button type="submit" class="btn-register" id="register-button">Create Administrator Account</button>
             </form>
         </div>
-    </main>
+            </main>
+        </div>
+    </div>
 
-    <footer>
+    <footer class="app-footer">
         <p>&copy; 2025 Office Manager. All rights reserved.</p>
+        <p id="app-version" style="font-size: 0.85rem; opacity: 0.85; margin-top: 0.5rem;">Version: <span id="version-number">-</span></p>
     </footer>
 
     <script src="/js/main.js"></script>

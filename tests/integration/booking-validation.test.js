@@ -2,6 +2,8 @@ const request = require('supertest');
 const app = require('../../src/backend/server');
 const UserService = require('../../src/backend/services/UserService');
 const AdminService = require('../../src/backend/services/AdminService');
+const { generateToken } = require('../../src/backend/utils/token');
+const { createProvisionedUserWithPassword } = require('../helpers/provisionUser');
 
 describe('Booking Validation Rules - Phase 10', () => {
   let user1Token, user2Token;
@@ -10,18 +12,25 @@ describe('Booking Validation Rules - Phase 10', () => {
   let testParkingSpace1Id, testParkingSpace2Id;
 
   beforeAll(async () => {
-    // Create test users
     const userService = new UserService();
-    const user1 = await userService.createUser('testuser1', 'user1@test.com', 'password123', 'user');
-    const user2 = await userService.createUser('testuser2', 'user2@test.com', 'password123', 'user');
+    const admin = await userService.getUserByUsername('admin');
+    const user1 = await createProvisionedUserWithPassword(admin.id, {
+      email: 'user1@test.com',
+      name: 'User One',
+      password: 'password123',
+    });
+    const user2 = await createProvisionedUserWithPassword(admin.id, {
+      email: 'user2@test.com',
+      name: 'User Two',
+      password: 'password123',
+    });
     user1Id = user1.id;
     user2Id = user2.id;
 
-    // Login users to get tokens
-    const login1 = await userService.authenticate('testuser1', 'password123');
-    const login2 = await userService.authenticate('testuser2', 'password123');
-    user1Token = login1.token;
-    user2Token = login2.token;
+    await userService.authenticate('user1@test.com', 'password123');
+    await userService.authenticate('user2@test.com', 'password123');
+    user1Token = generateToken(user1);
+    user2Token = generateToken(user2);
 
     // Create test desks
     const adminService = new AdminService();

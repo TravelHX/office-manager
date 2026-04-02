@@ -1,5 +1,23 @@
 /* Office Manager Base Styles */
 
+:root {
+    --color-primary: #1565c0;
+    --color-primary-hover: #0d47a1;
+    --color-primary-soft: #e3f2fd;
+    --color-primary-muted: #5c92d6;
+    --color-accent: #00838f;
+    --color-accent-soft: #e0f7fa;
+    --color-surface: #ffffff;
+    --color-bg: #eef2f7;
+    --color-text: #1e293b;
+    --color-text-muted: #64748b;
+    --color-border: #cbd5e1;
+    --topbar-height: 3.25rem;
+    --sidebar-width: 260px;
+    --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+    --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -9,15 +27,296 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     line-height: 1.6;
-    color: #333;
-    background-color: #f5f5f5;
+    color: var(--color-text);
+    background-color: var(--color-bg);
 }
 
-header {
-    background-color: #2c3e50;
+body.app-shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-topbar {
+    height: var(--topbar-height);
+    min-height: var(--topbar-height);
+    background: linear-gradient(135deg, var(--color-primary) 0%, #0d47a1 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem 0 0.5rem;
+    gap: 0.5rem;
+    box-shadow: var(--shadow-md);
+    position: sticky;
+    top: 0;
+    z-index: 200;
+}
+
+.sidebar-toggle {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: none;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.25rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.sidebar-toggle:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.app-brand {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.15rem;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.app-brand:hover {
+    color: #e3f2fd;
+}
+
+.app-topbar-spacer {
+    flex: 1;
+}
+
+.account-menu-anchor {
+    flex-shrink: 0;
+    position: relative;
+}
+
+.account-menu {
+    position: relative;
+}
+
+.account-menu-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.85rem;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    max-width: 220px;
+}
+
+.account-menu-trigger:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.account-trigger-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.account-chevron {
+    font-size: 0.65rem;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.account-menu-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    min-width: 220px;
+    max-width: 320px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
+    padding: 0.75rem 0;
+    z-index: 300;
+    display: none;
+}
+
+.account-menu-panel.is-open {
+    display: block;
+}
+
+.account-panel-section {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.account-panel-section:last-of-type {
+    border-bottom: none;
+}
+
+.account-panel-name {
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.account-panel-meta {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-top: 0.35rem;
+    word-break: break-word;
+}
+
+.account-panel-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.35rem 0;
+}
+
+.account-panel-link {
+    display: block;
+    padding: 0.5rem 1rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.account-panel-link:hover {
+    background: var(--color-primary-soft);
+}
+
+.account-logout-link {
+    color: #c62828;
+}
+
+.account-logout-link:hover {
+    background: #ffebee;
+}
+
+.app-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
+}
+
+.site-sidebar {
+    width: var(--sidebar-width);
+    flex-shrink: 0;
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+    transition: width 0.22s ease, min-width 0.22s ease, opacity 0.2s ease;
+    overflow: hidden;
+}
+
+.site-sidebar-inner {
+    padding: 1rem 0;
+    width: var(--sidebar-width);
+}
+
+.sidebar-nav {
+    list-style: none;
+}
+
+.sidebar-nav a,
+.sidebar-nav .sidebar-tab-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.65rem 1.25rem;
+    color: var(--color-text);
+    text-decoration: none;
+    font-size: 0.95rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    border-left: 3px solid transparent;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.sidebar-nav a:hover,
+.sidebar-nav .sidebar-tab-btn:hover {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+.sidebar-nav a.active,
+.sidebar-nav .sidebar-tab-btn.active {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    border-left-color: var(--color-primary);
+    font-weight: 600;
+}
+
+.sidebar-back-link {
+    display: block;
+    padding: 0.5rem 1.25rem 1rem;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 0.5rem;
+}
+
+.sidebar-back-link:hover {
+    color: var(--color-primary);
+}
+
+body.sidebar-collapsed .site-sidebar {
+    width: 0;
+    min-width: 0;
+    border-right: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.sidebar-collapsed .site-sidebar-inner {
+    opacity: 0;
+}
+
+.app-content-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-main {
+    flex: 1;
+    padding: 1.5rem 0 2rem;
+}
+
+.app-main--auth {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 2rem;
+}
+
+.app-footer {
+    background: linear-gradient(135deg, #0d47a1 0%, var(--color-primary) 100%);
+    color: #e3f2fd;
+    text-align: center;
+    padding: 1.25rem 1rem;
+    margin-top: auto;
+}
+
+.app-footer a {
+    color: #fff;
+}
+
+header:not(.app-topbar) {
+    background-color: var(--color-primary);
     color: white;
     padding: 1rem 0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-sm);
 }
 
 .nav-container {
@@ -49,7 +348,7 @@ header {
     opacity: 0.8;
 }
 
-main {
+main:not(.app-main) {
     min-height: calc(100vh - 200px);
     padding: 2rem 0;
 }
@@ -57,7 +356,7 @@ main {
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 2rem;
+    padding: 0 1.5rem;
 }
 
 .feature-cards {
@@ -82,7 +381,7 @@ main {
 
 .card h3 {
     margin-bottom: 1rem;
-    color: #2c3e50;
+    color: var(--color-primary);
 }
 
 .card p {
@@ -91,22 +390,22 @@ main {
 }
 
 button {
-    background-color: #3498db;
+    background-color: var(--color-primary);
     color: white;
     border: none;
     padding: 0.75rem 1.5rem;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 1rem;
-    transition: background-color 0.3s;
+    transition: background-color 0.2s;
 }
 
 button:hover {
-    background-color: #2980b9;
+    background-color: var(--color-primary-hover);
 }
 
-footer {
-    background-color: #2c3e50;
+footer:not(.app-footer) {
+    background-color: var(--color-primary);
     color: white;
     text-align: center;
     padding: 1.5rem 0;
@@ -138,7 +437,7 @@ footer {
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #3498db;
+    border-color: var(--color-primary);
 }
 
 /* Table styles */
@@ -158,7 +457,7 @@ th, td {
 }
 
 th {
-    background-color: #2c3e50;
+    background-color: var(--color-primary);
     color: white;
     font-weight: 600;
 }
@@ -194,19 +493,19 @@ tr:hover {
 }
 
 .availability-counter {
-    background-color: #e8f4f8;
-    color: #2c3e50;
+    background-color: var(--color-primary-soft);
+    color: var(--color-primary);
     padding: 1rem 1.5rem;
     border-radius: 6px;
     margin: 1rem 0;
-    border-left: 4px solid #3498db;
+    border-left: 4px solid var(--color-primary);
     font-size: 1.1rem;
     text-align: center;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .availability-counter strong {
-    color: #2980b9;
+    color: var(--color-primary-hover);
     font-size: 1.2rem;
 }
 
@@ -224,19 +523,19 @@ tr:hover {
 }
 
 .btn-primary {
-    background-color: #3498db;
+    background-color: var(--color-primary);
     color: white;
     border: none;
     padding: 0.75rem 1.5rem;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 1rem;
-    transition: background-color 0.3s;
+    transition: background-color 0.2s;
     height: fit-content;
 }
 
 .btn-primary:hover {
-    background-color: #2980b9;
+    background-color: var(--color-primary-hover);
 }
 
 .btn-danger {
@@ -277,7 +576,7 @@ tr:hover {
 
 .desk-card h4 {
     margin-bottom: 0.5rem;
-    color: #2c3e50;
+    color: var(--color-primary);
 }
 
 .desk-card p {
@@ -292,12 +591,12 @@ tr:hover {
 }
 
 .desk-card.selected {
-    border: 2px solid #3498db;
-    background-color: #e8f4f8;
+    border: 2px solid var(--color-primary);
+    background-color: var(--color-primary-soft);
 }
 
 .desk-card .selection-indicator {
-    background-color: #3498db;
+    background-color: var(--color-primary);
     color: white;
     padding: 0.25rem 0.75rem;
     border-radius: 4px;
@@ -368,7 +667,7 @@ tr:hover {
 
 .selection-info #selection-count {
     font-weight: 600;
-    color: #2c3e50;
+    color: var(--color-primary);
     font-size: 1.1rem;
 }
 
@@ -425,16 +724,12 @@ tr:hover {
 
 .last-admin-user td {
     font-weight: 500;
-}
     font-style: italic;
 }
 
-/* Admin tabs */
+/* Admin tabs (horizontal fallback; primary UI uses .sidebar-tab-btn in left nav) */
 #admin-tabs {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    border-bottom: 2px solid #ddd;
+    display: none;
 }
 
 .tab-btn {
@@ -443,20 +738,24 @@ tr:hover {
     padding: 1rem 1.5rem;
     cursor: pointer;
     font-size: 1rem;
-    color: #666;
+    color: var(--color-text-muted);
     border-bottom: 3px solid transparent;
-    transition: all 0.3s;
+    transition: all 0.2s;
 }
 
 .tab-btn:hover {
-    color: #2c3e50;
-    background-color: #f5f5f5;
+    color: var(--color-primary);
+    background-color: var(--color-primary-soft);
 }
 
 .tab-btn.active {
-    color: #3498db;
-    border-bottom-color: #3498db;
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
     font-weight: 600;
+}
+
+.sidebar-nav .sidebar-tab-btn.active {
+    border-bottom: none;
 }
 
 .tab-content {
@@ -500,7 +799,7 @@ tr:hover {
 .summary-number {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #3498db;
+    color: var(--color-accent);
     margin: 0.5rem 0;
 }
 
@@ -520,7 +819,7 @@ tr:hover {
 
 .upcoming-items h3 {
     margin-bottom: 1.5rem;
-    color: #2c3e50;
+    color: var(--color-primary);
 }
 
 .upcoming-list {
@@ -548,7 +847,7 @@ tr:hover {
 .upcoming-date {
     min-width: 100px;
     font-weight: 600;
-    color: #3498db;
+    color: var(--color-primary);
     margin-right: 1.5rem;
 }
 
@@ -560,7 +859,7 @@ tr:hover {
 }
 
 .upcoming-details strong {
-    color: #2c3e50;
+    color: var(--color-primary);
 }
 
 .upcoming-location {
@@ -611,13 +910,13 @@ tr:hover {
 .search-input:focus,
 .filter-select:focus {
     outline: none;
-    border-color: #3498db;
+    border-color: var(--color-primary);
 }
 
 /* Notification styles */
 .notification-container {
     position: fixed;
-    top: 80px;
+    top: calc(var(--topbar-height) + 12px);
     right: 20px;
     z-index: 1000;
     max-width: 400px;
@@ -666,7 +965,7 @@ tr:hover {
 }
 
 .notification.info {
-    border-left: 4px solid #3498db;
+    border-left: 4px solid var(--color-primary);
 }
 
 .notification.warning {

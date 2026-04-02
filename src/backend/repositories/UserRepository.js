@@ -29,6 +29,12 @@ class UserRepository extends BaseRepository {
     return results.length > 0 ? new User(results[0]) : null;
   }
 
+  async findByInvitationToken(token) {
+    const query = 'SELECT * FROM users WHERE invitation_token = ?';
+    const results = await this.executeRawQuery(query, [token]);
+    return results.length > 0 ? new User(results[0]) : null;
+  }
+
   async create(user) {
     const data = user instanceof User ? user.toDatabaseFormat() : user;
     const id = await super.create(data);

@@ -6,40 +6,38 @@
     <title>Admin - Office Manager</title>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
-<body>
-    <header>
-        <nav>
-            <div class="nav-container">
-                <h1>Office Manager</h1>
-                <ul class="nav-menu">
-                    <li><a href="/">Home</a></li>
-                    <li><a href="/pages/desk-booking.html">Desk Booking</a></li>
-                    <li><a href="/pages/parking.html">Parking</a></li>
-                    <li><a href="/pages/overtime.html">Overtime</a></li>
-                    <li><a href="/pages/bookings.html">My Bookings</a></li>
-                    <li><a href="/pages/admin.html">Admin</a></li>
-                </ul>
-            </div>
-        </nav>
+<body class="app-shell">
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation menu" aria-expanded="true" aria-controls="site-sidebar">&#9776;</button>
+        <a href="/" class="app-brand">Office Manager</a>
+        <div class="app-topbar-spacer"></div>
+        <div id="account-menu-anchor" class="account-menu-anchor"></div>
     </header>
-
-    <main>
-        <div class="container">
+    <div class="app-body">
+        <aside id="site-sidebar" class="site-sidebar" aria-label="Admin sections">
+            <nav class="site-sidebar-inner">
+                <a href="/" class="sidebar-back-link">Main site</a>
+                <ul class="sidebar-nav">
+                    <li><button type="button" class="tab-btn sidebar-tab-btn active" data-tab="configuration">Resource Configuration</button></li>
+                    <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="desks">Desks</button></li>
+                    <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="parking-spaces">Parking Spaces</button></li>
+                    <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="bookings">All Bookings</button></li>
+                    <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="parking">All Parking Reservations</button></li>
+                    <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="overtime">All Overtime Records</button></li>
+                    <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="matrix">Booking Matrix</button></li>
+                    <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="users" id="users-tab-btn" style="display: none;">User Management</button></li>
+                    <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="password">Change Password</button></li>
+                </ul>
+            </nav>
+        </aside>
+        <div class="app-content-wrap">
+            <main class="app-main">
+                <div class="container">
             <h2>Admin Dashboard</h2>
             <p>Manage office resources and view all bookings.</p>
             
             <div id="admin-container">
-                <div id="admin-tabs">
-                    <button class="tab-btn active" data-tab="configuration">Resource Configuration</button>
-                    <button class="tab-btn" data-tab="desks">Desks</button>
-                    <button class="tab-btn" data-tab="parking-spaces">Parking Spaces</button>
-                    <button class="tab-btn" data-tab="bookings">All Bookings</button>
-                    <button class="tab-btn" data-tab="parking">All Parking Reservations</button>
-                    <button class="tab-btn" data-tab="overtime">All Overtime Records</button>
-                    <button class="tab-btn" data-tab="matrix">Booking Matrix</button>
-                    <button class="tab-btn" data-tab="users" id="users-tab-btn" style="display: none;">User Management</button>
-                    <button class="tab-btn" data-tab="password">Change Password</button>
-                </div>
+                <div id="admin-tabs" aria-hidden="true"></div>
                 
                 <div id="configuration-tab" class="tab-content active">
                     <h3>Office Resource Configuration</h3>
@@ -141,33 +139,16 @@
                     
                     <div class="card">
                         <h4>Create New User</h4>
+                        <p class="help-text" style="color: #555; margin-bottom: 1rem;">
+                            Enter email and full name only. The user will set password and office location using the setup link shown after creation.
+                        </p>
                         <div class="form-group">
-                            <label for="newUsername">Username:</label>
-                            <input type="text" id="newUsername" required>
+                            <label for="newProvisionName">Full name:</label>
+                            <input type="text" id="newProvisionName" required placeholder="e.g. Jane Smith">
                         </div>
                         <div class="form-group">
-                            <label for="newFirstName">First Name:</label>
-                            <input type="text" id="newFirstName">
-                        </div>
-                        <div class="form-group">
-                            <label for="newLastName">Last Name:</label>
-                            <input type="text" id="newLastName">
-                        </div>
-                        <div class="form-group">
-                            <label for="newEmail">Email:</label>
+                            <label for="newEmail">Email (also used as login username):</label>
                             <input type="email" id="newEmail" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="newOfficeLocation">Office Location:</label>
-                            <select id="newOfficeLocation">
-                                <option value="">Select location...</option>
-                                <option value="London">London</option>
-                                <option value="Prague">Prague</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="newPassword">Password:</label>
-                            <input type="password" id="newPassword" required>
                         </div>
                         <div class="form-group">
                             <label>
@@ -207,12 +188,14 @@
                     </div>
                 </div>
             </div>
+                </div>
+            </main>
         </div>
-    </main>
+    </div>
 
-    <footer>
+    <footer class="app-footer">
         <p>&copy; 2025 Office Manager. All rights reserved.</p>
-        <p id="app-version" style="font-size: 0.85rem; color: #999; margin-top: 0.5rem;">Version: <span id="version-number">-</span></p>
+        <p id="app-version" style="font-size: 0.85rem; opacity: 0.85; margin-top: 0.5rem;">Version: <span id="version-number">-</span></p>
     </footer>
 
     <script src="/js/main.js"></script>

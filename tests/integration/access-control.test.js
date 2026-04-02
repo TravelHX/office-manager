@@ -2,6 +2,7 @@ const request = require('supertest');
 const app = require('../../src/backend/server');
 const UserService = require('../../src/backend/services/UserService');
 const { generateToken } = require('../../src/backend/utils/token');
+const { createProvisionedUserWithPassword } = require('../helpers/provisionUser');
 
 describe('Access Control', () => {
   let userService;
@@ -29,22 +30,19 @@ describe('Access Control', () => {
         email: 'admin@test.com',
         password_hash: hash,
         role: 'admin',
+        profile_complete: true,
       });
       adminUser = await userRepo.createWithId(adminUser);
     }
 
     try {
-      regularUser = await userService.getUserByUsername('testuser');
+      regularUser = await userService.getUserByUsername('testuser@test.com');
     } catch (error) {
-      regularUser = await userService.createUser(
-        {
-          username: 'testuser',
-          email: 'testuser@test.com',
-          password: 'testpass123',
-          role: 'user',
-        },
-        adminUser.id
-      );
+      regularUser = await createProvisionedUserWithPassword(adminUser.id, {
+        email: 'testuser@test.com',
+        name: 'Access Test User',
+        password: 'testpass123',
+      });
     }
 
     adminToken = generateToken(adminUser);

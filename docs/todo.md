@@ -753,17 +753,17 @@ This document contains all tasks organized by phases with clear dependencies and
 - [x] 17.21 Write integration tests for user deletion API endpoint
 - [x] 17.22 Write integration tests for preventing deletion of last admin user
 - [x] 17.23 Write integration tests for cascade handling of bookings/reservations/overtime
-- [ ] 17.24 Write JavaScript tests for delete button functionality
-- [ ] 17.25 Write JavaScript tests for deletion confirmation dialog
-- [ ] 17.26 Write JavaScript tests for error message display
-- [ ] 17.27 Write end-to-end test for admin deleting a regular user
-- [ ] 17.28 Write end-to-end test for admin deleting another admin (when multiple admins exist)
-- [ ] 17.29 Write end-to-end test for preventing deletion of last admin user
-- [ ] 17.30 Validate that regular users can be deleted successfully
-- [ ] 17.31 Validate that admin users can be deleted when multiple admins exist
-- [ ] 17.32 Validate that last admin user cannot be deleted
-- [ ] 17.33 Validate that appropriate error message is shown when attempting to delete last admin
-- [ ] 17.34 Validate that user's associated data is handled correctly upon deletion
+- [x] 17.24 Write JavaScript tests for delete button functionality
+- [x] 17.25 Write JavaScript tests for deletion confirmation dialog
+- [x] 17.26 Write JavaScript tests for error message display
+- [x] 17.27 Write end-to-end test for admin deleting a regular user
+- [x] 17.28 Write end-to-end test for admin deleting another admin (when multiple admins exist)
+- [x] 17.29 Write end-to-end test for preventing deletion of last admin user
+- [x] 17.30 Validate that regular users can be deleted successfully
+- [x] 17.31 Validate that admin users can be deleted when multiple admins exist
+- [x] 17.32 Validate that last admin user cannot be deleted
+- [x] 17.33 Validate that appropriate error message is shown when attempting to delete last admin
+- [x] 17.34 Validate that user's associated data is handled correctly upon deletion
 
 ---
 
@@ -811,3 +811,62 @@ This document contains all tasks organized by phases with clear dependencies and
 - [ ] 18.30 Validate that error is displayed if version update fails
 - [ ] 18.31 Validate that version is stored in client config
 - [ ] 18.32 Validate that version follows semantic versioning format
+
+---
+
+## Phase 19: Minimal Admin Provisioning and First-Login Profile Completion
+
+**Objective:** When an admin creates a user, only **email** and **name** are required. The user completes **password**, **office location**, and any other required profile fields on **first login** (or first authenticated session), with restricted access until profile completion.
+
+**Dependencies:** Phase 8 (User Authentication and Management), Phase 12 (Enhanced User Management) as applicable to the current user model and admin UI.
+
+**Priority:** High
+
+**Estimated Effort:** 4-6 days
+
+### Tasks
+
+- [x] 19.1 Design user lifecycle states (e.g. provisioned / profile incomplete / active) and validation rules for admin create vs profile completion
+- [x] 19.2 Design secure first-access path (e.g. invitation email with time-limited token, or login flow that detects incomplete profile and forces completion) and document chosen approach in technical notes
+- [x] 19.3 Implement database schema changes if needed (e.g. profile completion flag, nullable password hash, invitation token fields) with migration scripts
+- [x] 19.4 Update User model and DTOs to reflect provisional vs complete users
+- [x] 19.5 Change admin-only user creation API to accept **only** email and name (remove password and office location from create payload); validate and reject extra required fields from admin
+- [x] 19.6 Update admin user creation UI to collect **only** email and name
+- [x] 19.7 Implement API for profile completion (password, office location, and other required fields) usable only in the appropriate incomplete-profile context
+- [x] 19.8 Implement server-side enforcement: incomplete-profile users cannot perform protected actions (bookings, reservations, overtime, etc.) until completion
+- [x] 19.9 Implement client flow after authentication: detect incomplete profile and redirect to onboarding / profile completion screens
+- [x] 19.10 Build profile completion UI (password, office location, optional name confirmation per spec)
+- [x] 19.11 Define migration behavior for existing users (default to profile complete) and test upgrade path
+- [x] 19.12 Write unit tests for admin create validation, profile state transitions, and completion rules
+- [x] 19.13 Write integration tests for admin create user (email + name only), profile completion API, and access restrictions
+- [x] 19.14 Write JavaScript tests for admin form and profile completion UI where applicable
+- [ ] 19.15 Write Playwright end-to-end test: admin provisions user with email and name; user completes profile on first login and gains full access (deferred: no Playwright in CI image yet; flow covered by `tests/integration/provisioning-phase19.test.js` and frontend Jest tests)
+- [x] 19.16 Update `docs/usecases.md` with the admin provisioning and first-login completion flows
+- [x] 19.17 Update root `README.md` User Guide (admin and end-user sections) after implementation
+
+---
+
+## Phase 20: Global Application Shell and Blue Theme
+
+**Objective:** Apply a consistent **app shell** with **collapsible left navigation**, **collapsible top-right account menu** (Log in when anonymous; user details and Log out when authenticated), **admin vertical tabs on the left**, and a **blue-led colour scheme** across all pages.
+
+**Dependencies:** None (frontend layout and styles).
+
+**Priority:** Medium
+
+**Estimated Effort:** 3-5 days
+
+### Tasks
+
+- [ ] 20.1 Add specification text for shell and theme (see `docs/spec.md` section 14)
+- [ ] 20.2 Define CSS variables for primary blue and complementary palette; update global styles (surfaces, buttons, tables, header/footer)
+- [ ] 20.3 Implement app layout: top bar with brand, sidebar toggle, and account menu anchor
+- [ ] 20.4 Implement collapsible left sidebar for standard pages with shared navigation links and active-state highlighting
+- [ ] 20.5 Move Admin dashboard section tabs to a **left vertical** sidebar; remove horizontal tab bar; preserve tab behaviour and tests
+- [ ] 20.6 Implement collapsible account dropdown (guest: Log in / Register; authenticated: user info + Log out)
+- [ ] 20.7 Apply shell to all HTML pages (index, feature pages, auth pages, complete-profile, matrix) with appropriate sidebar variants
+- [ ] 20.8 Respect existing behaviour (e.g. show Overtime link only when authenticated); update `main.js` and any page scripts
+- [ ] 20.9 Add or update frontend tests for account menu and shell markers (`#account-menu-anchor`, sidebar toggle)
+- [ ] 20.10 Adjust admin frontend tests if selectors changed; run full frontend test suite
+- [ ] 20.11 Update root `README.md` User Guide navigation description after release
+- [ ] 20.12 Update `docs/usecases.md` if navigation paths change materially

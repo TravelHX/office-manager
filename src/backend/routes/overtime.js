@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const OvertimeService = require('../services/OvertimeService');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, authorize, requireCompleteProfile } = require('../middleware/auth');
 
 const overtimeService = new OvertimeService();
 
-router.get('/my-overtime', authenticate, async (req, res, next) => {
+router.get('/my-overtime', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const userId = req.user.id;
     const records = await overtimeService.getUserOvertimeRecords(userId);
@@ -15,7 +15,7 @@ router.get('/my-overtime', authenticate, async (req, res, next) => {
   }
 });
 
-router.get('/history', authenticate, async (req, res, next) => {
+router.get('/history', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { startDate, endDate } = req.query;
@@ -44,7 +44,7 @@ router.get('/history', authenticate, async (req, res, next) => {
   }
 });
 
-router.get('/report', authenticate, async (req, res, next) => {
+router.get('/report', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { startDate, endDate } = req.query;
@@ -73,7 +73,7 @@ router.get('/report', authenticate, async (req, res, next) => {
   }
 });
 
-router.get('/pending', authenticate, authorize(['admin']), async (req, res, next) => {
+router.get('/pending', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const records = await overtimeService.getOvertimeRecordsByStatus('pending');
     res.json(records);
@@ -90,7 +90,7 @@ router.get('/pending', authenticate, authorize(['admin']), async (req, res, next
   }
 });
 
-router.get('/:id', authenticate, async (req, res, next) => {
+router.get('/:id', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const record = await overtimeService.getOvertimeRecordById(parseInt(req.params.id));
     res.json(record.toJSON());
@@ -107,7 +107,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
   }
 });
 
-router.post('/', authenticate, async (req, res, next) => {
+router.post('/', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { recordDate, startTime, endTime, description } = req.body;
@@ -143,7 +143,7 @@ router.post('/', authenticate, async (req, res, next) => {
   }
 });
 
-router.put('/:id', authenticate, async (req, res, next) => {
+router.put('/:id', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { recordDate, startTime, endTime, description } = req.body;
@@ -204,7 +204,7 @@ router.put('/:id', authenticate, async (req, res, next) => {
   }
 });
 
-router.delete('/:id', authenticate, async (req, res, next) => {
+router.delete('/:id', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const userId = req.user.id;
     await overtimeService.deleteOvertimeRecord(parseInt(req.params.id), userId);
@@ -238,7 +238,7 @@ router.delete('/:id', authenticate, async (req, res, next) => {
   }
 });
 
-router.post('/:id/approve', authenticate, authorize(['admin']), async (req, res, next) => {
+router.post('/:id/approve', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const approvedBy = req.user.id;
     const record = await overtimeService.approveOvertimeRecord(parseInt(req.params.id), approvedBy);
@@ -264,7 +264,7 @@ router.post('/:id/approve', authenticate, authorize(['admin']), async (req, res,
   }
 });
 
-router.post('/:id/reject', authenticate, authorize(['admin']), async (req, res, next) => {
+router.post('/:id/reject', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const approvedBy = req.user.id;
     const record = await overtimeService.rejectOvertimeRecord(parseInt(req.params.id), approvedBy);

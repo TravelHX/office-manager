@@ -42,7 +42,7 @@ async function executeQuery(query, params = [], retries = 3, delay = 1000) {
     } catch (error) {
       lastError = error;
       // Retry on DNS resolution errors (EAI_AGAIN) or connection errors
-      if ((error.code === 'EAI_AGAIN' || error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') && attempt < retries) {
+      if ((error.code === 'EAI_AGAIN' || error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') && attempt < retries) {
         console.error(`Database query error (attempt ${attempt + 1}/${retries + 1}):`, error.message);
         await new Promise(resolve => setTimeout(resolve, delay * (attempt + 1)));
         continue;
@@ -85,7 +85,7 @@ async function executeTransaction(queries, retries = 3, delay = 1000) {
       }
       lastError = error;
       // Retry on DNS resolution errors (EAI_AGAIN) or connection errors
-      if ((error.code === 'EAI_AGAIN' || error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') && attempt < retries) {
+      if ((error.code === 'EAI_AGAIN' || error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') && attempt < retries) {
         console.error(`Transaction error (attempt ${attempt + 1}/${retries + 1}):`, error.message);
         await new Promise(resolve => setTimeout(resolve, delay * (attempt + 1)));
         continue;

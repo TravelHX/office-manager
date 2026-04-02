@@ -49,6 +49,7 @@ async function authenticate(req, res, next) {
       role: user.role || 'user',
       isAdmin: user.isAdmin || false,
       token: token,
+      profileComplete: user.profileComplete !== false,
     };
 
     next();
@@ -92,6 +93,7 @@ async function authenticate(req, res, next) {
           role: user.role || (isAdmin ? 'admin' : 'user'),
           isAdmin: user.isAdmin || isAdmin || false,
           token: token,
+          profileComplete: user.profileComplete !== false,
         };
         return next();
       }
@@ -140,6 +142,7 @@ async function optionalAuthenticate(req, res, next) {
         role: user.role || 'user',
         isAdmin: user.isAdmin || false,
         token: token,
+        profileComplete: user.profileComplete !== false,
       };
     } else {
       req.user = null;
@@ -150,6 +153,44 @@ async function optionalAuthenticate(req, res, next) {
   }
 
   next();
+}
+
+/**
+ * Block authenticated users whose profile is not complete (Phase 19).
+ */
+async function requireCompleteProfile(req, res, next) {
+  try {
+    const user = await userRepository.findById(req.user.id);
+    if (!user) {
+      return res.status(401).json({
+        error: {
+          message: 'User not found',
+          code: 'USER_NOT_FOUND',
+        },
+      });
+    }
+    if (user.profileComplete === false) {
+      return res.status(403).json({
+        error: {
+          message: 'Complete your profile before using this feature. Open your profile setup link or visit the profile completion page.',
+          code: 'PROFILE_INCOMPLETE',
+        },
+      });
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * If optional auth set a user, require complete profile; anonymous requests pass.
+ */
+async function optionalRequireCompleteProfile(req, res, next) {
+  if (!req.user) {
+    return next();
+  }
+  return requireCompleteProfile(req, res, next);
 }
 
 function authorize(roles = []) {
@@ -187,4 +228,6 @@ module.exports = {
   authenticate,
   optionalAuthenticate,
   authorize,
+  requireCompleteProfile,
+  optionalRequireCompleteProfile,
 };

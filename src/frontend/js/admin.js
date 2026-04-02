@@ -560,38 +560,24 @@ function showSuccess(message, containerId = 'admin-container') {
 }
 
 async function createUser() {
-    const username = document.getElementById('newUsername').value.trim();
-    const firstName = document.getElementById('newFirstName').value.trim();
-    const lastName = document.getElementById('newLastName').value.trim();
+    const name = document.getElementById('newProvisionName').value.trim();
     const email = document.getElementById('newEmail').value.trim();
-    const officeLocation = document.getElementById('newOfficeLocation').value;
-    const password = document.getElementById('newPassword').value;
     const isAdmin = document.getElementById('newIsAdmin').checked;
     const role = document.getElementById('newRole').value;
     const messageDiv = document.getElementById('create-user-message');
     
-    if (!username || !email || !password) {
-        messageDiv.innerHTML = '<div class="error">Please fill in all required fields (Username, Email, Password)</div>';
+    if (!email || !name) {
+        messageDiv.innerHTML = '<div class="error">Email and full name are required</div>';
         return;
     }
     
     try {
         const body = {
-            username,
+            name,
             email,
-            password,
             role: isAdmin ? 'admin' : role,
         };
 
-        if (firstName) {
-            body.first_name = firstName;
-        }
-        if (lastName) {
-            body.last_name = lastName;
-        }
-        if (officeLocation) {
-            body.office_location = officeLocation;
-        }
         if (isAdmin) {
             body.is_admin = true;
         }
@@ -601,18 +587,15 @@ async function createUser() {
             body: body,
         });
         
-        messageDiv.innerHTML = '<div class="success">User created successfully!</div>';
+        const setupHint = response.profileSetupUrl
+            ? `<p><strong>Profile setup link</strong> (share with the user):<br><code style="word-break: break-all;">${window.location.origin}${response.profileSetupUrl}</code></p>`
+            : '';
+        messageDiv.innerHTML = `<div class="success">User provisioned. They must open the setup link to choose password and office.</div>${setupHint}`;
         
-        // Reload user list
         loadAllUsers();
         
-        // Clear form
-        document.getElementById('newUsername').value = '';
-        document.getElementById('newFirstName').value = '';
-        document.getElementById('newLastName').value = '';
+        document.getElementById('newProvisionName').value = '';
         document.getElementById('newEmail').value = '';
-        document.getElementById('newOfficeLocation').value = '';
-        document.getElementById('newPassword').value = '';
         document.getElementById('newIsAdmin').checked = false;
         document.getElementById('newRole').value = 'user';
     } catch (error) {
@@ -690,6 +673,7 @@ async function displayAllUsers(users) {
                     <th>Name</th>
                     <th>Email</th>
                     <th>Office Location</th>
+                    <th>Profile</th>
                     <th>Role</th>
                     <th>Admin</th>
                     <th>Actions</th>
@@ -708,6 +692,11 @@ async function displayAllUsers(users) {
                         <td>${displayName}</td>
                         <td>${user.email}</td>
                         <td>${user.officeLocation || 'N/A'}</td>
+                        <td>
+                            ${user.profileComplete === false
+                                ? '<span class="status-badge status-pending" title="User has not completed profile setup">Pending setup</span>'
+                                : '<span class="status-badge status-active">Active</span>'}
+                        </td>
                         <td>
                             <span class="status-badge ${user.role === 'admin' ? 'status-approved' : 'status-active'}">
                                 ${user.role}

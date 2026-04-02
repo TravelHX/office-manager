@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const VersionService = require('../services/VersionService');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, authorize, requireCompleteProfile } = require('../middleware/auth');
 
 const versionService = new VersionService();
 
@@ -16,7 +16,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // Update version endpoint (admin only - for internal use)
-router.post('/', authenticate, authorize(['admin']), async (req, res, next) => {
+router.post('/', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const { versionNumber, deploymentInfo } = req.body;
     
@@ -45,7 +45,7 @@ router.post('/', authenticate, authorize(['admin']), async (req, res, next) => {
 });
 
 // Increment version endpoint (admin only - for internal use)
-router.post('/increment', authenticate, authorize(['admin']), async (req, res, next) => {
+router.post('/increment', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const { incrementType = 'patch', deploymentInfo } = req.body;
     

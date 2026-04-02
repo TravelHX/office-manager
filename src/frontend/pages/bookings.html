@@ -6,25 +6,30 @@
     <title>My Bookings - Office Manager</title>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
-<body>
-    <header>
-        <nav>
-            <div class="nav-container">
-                <h1>Office Manager</h1>
-                <ul class="nav-menu">
+<body class="app-shell">
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation menu" aria-expanded="true" aria-controls="site-sidebar">&#9776;</button>
+        <a href="/" class="app-brand">Office Manager</a>
+        <div class="app-topbar-spacer"></div>
+        <div id="account-menu-anchor" class="account-menu-anchor"></div>
+    </header>
+    <div class="app-body">
+        <aside id="site-sidebar" class="site-sidebar" aria-label="Main navigation">
+            <nav class="site-sidebar-inner">
+                <ul class="sidebar-nav">
                     <li><a href="/">Home</a></li>
                     <li><a href="/pages/desk-booking.html">Desk Booking</a></li>
                     <li><a href="/pages/parking.html">Parking</a></li>
-                    <li><a href="/pages/overtime.html">Overtime</a></li>
+                    <li id="overtime-sidebar-item" style="display: none;"><a href="/pages/overtime.html">Overtime</a></li>
                     <li><a href="/pages/bookings.html">My Bookings</a></li>
+                    <li><a href="/pages/matrix.html">Booking Matrix</a></li>
                     <li><a href="/pages/admin.html">Admin</a></li>
                 </ul>
-            </div>
-        </nav>
-    </header>
-
-    <main>
-        <div class="container">
+            </nav>
+        </aside>
+        <div class="app-content-wrap">
+            <main class="app-main">
+                <div class="container">
             <h2>My Bookings</h2>
             <p>View and manage your desk bookings, parking reservations, and overtime records.</p>
             
@@ -50,11 +55,14 @@
             <div id="bookings-container">
                 <p>Loading bookings...</p>
             </div>
+                </div>
+            </main>
         </div>
-    </main>
+    </div>
 
-    <footer>
+    <footer class="app-footer">
         <p>&copy; 2025 Office Manager. All rights reserved.</p>
+        <p id="app-version" style="font-size: 0.85rem; opacity: 0.85; margin-top: 0.5rem;">Version: <span id="version-number">-</span></p>
     </footer>
 
     <script src="/js/main.js"></script>

@@ -249,3 +249,33 @@ This document contains all manual paths through features and user interaction fl
 17. Verify overtime can be viewed in reports (if report feature is available)
 
 ---
+
+## Use Case 8: Admin Provisions User and User Completes Profile
+
+**Description:** An administrator adds a new colleague using only email and name. The colleague opens a setup link, sets a password and office location, then logs in and can use desk booking and other protected features.
+
+**Steps:**
+1. Admin logs in and opens the Admin dashboard
+2. Admin opens the User Management tab
+3. Admin enters the new user's full name and email (and optional admin/role options)
+4. Admin creates the user and copies the profile setup link from the success message
+5. Admin shares the link with the new user through a secure channel
+6. New user opens the link; the application validates the token and shows the completion form
+7. New user selects office location, enters and confirms password, and submits
+8. System stores password and office, marks profile complete, and clears the invitation token
+9. New user logs in with email and password
+10. New user can access desk booking, parking, overtime, and other protected features as allowed by role
+
+**Expected Result:** The new user is active with a complete profile. Users who have not completed setup cannot perform protected actions until they finish the flow.
+
+**Manual Testing Path:**
+1. Log in as an administrator
+2. Go to Admin, then User Management
+3. Create a user with a test email and name; confirm a setup link appears in the success message
+4. Open the setup link in a private or separate browser session (or after logging out)
+5. Confirm email is shown, enter office location and password, submit
+6. Log in as that user with the email and new password
+7. Confirm a protected action (e.g. desk booking availability or booking) works
+8. Optional: create a second provisioned user, do not complete setup, confirm protected APIs or UI block access until setup is done
+
+---

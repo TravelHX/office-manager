@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const UserService = require('../services/UserService');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, authorize, requireCompleteProfile } = require('../middleware/auth');
 const { generateToken } = require('../utils/token');
 
 const userService = new UserService();
@@ -14,6 +14,45 @@ router.get('/check-users', async (req, res, next) => {
       hasUsers: hasUsers,
     });
   } catch (error) {
+    next(error);
+  }
+});
+
+// Validate invitation token for profile completion (public)
+router.get('/provision/validate', async (req, res, next) => {
+  try {
+    const token = typeof req.query.token === 'string' ? req.query.token : '';
+    const result = await userService.validateInvitationToken(token);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Complete provisioned profile: password + office location (public, token required)
+router.post('/complete-profile', async (req, res, next) => {
+  try {
+    const { token, password, office_location } = req.body || {};
+    const user = await userService.completeProfileByInvitationToken(token, password, office_location);
+    res.json({
+      message: 'Profile complete. You can sign in with your email and password.',
+      user: user.toJSON(),
+    });
+  } catch (error) {
+    if (
+      error.message.includes('required')
+      || error.message.includes('Invalid')
+      || error.message.includes('expired')
+      || error.message.includes('already complete')
+      || error.message.includes('office location')
+    ) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'PROFILE_COMPLETION_FAILED',
+        },
+      });
+    }
     next(error);
   }
 });
@@ -139,26 +178,42 @@ router.get('/me', authenticate, async (req, res, next) => {
   }
 });
 
-// Create user endpoint (admin only)
-router.post('/users', authenticate, authorize(['admin']), async (req, res, next) => {
+// Create user endpoint (admin only) — email + name only; user completes profile via invitation link
+router.post('/users', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
-    const { username, email, password, first_name, last_name, office_location, is_admin, role } = req.body;
+    const { name, email, first_name, last_name, is_admin, role } = req.body || {};
 
-    if (!username || !email || !password) {
+    if (!email || typeof email !== 'string' || !email.trim()) {
       return res.status(400).json({
         error: {
-          message: 'Username, email, and password are required',
+          message: 'Email and name are required',
           code: 'MISSING_FIELDS',
         },
       });
     }
 
-    const user = await userService.createUser(
-      { username, email, password, first_name, last_name, office_location, is_admin, role },
+    const hasName = name !== undefined && name !== null && String(name).trim() !== '';
+    const hasSplitName = (first_name && String(first_name).trim()) || (last_name && String(last_name).trim());
+    if (!hasName && !hasSplitName) {
+      return res.status(400).json({
+        error: {
+          message: 'Email and name are required',
+          code: 'MISSING_FIELDS',
+        },
+      });
+    }
+
+    const { user, invitationToken } = await userService.createUser(
+      { name, email, first_name, last_name, is_admin, role },
       req.user.id
     );
 
-    res.status(201).json(user.toJSON());
+    const tokenEnc = encodeURIComponent(invitationToken);
+    res.status(201).json({
+      ...user.toJSON(),
+      invitationToken,
+      profileSetupUrl: `/pages/complete-profile.html?token=${tokenEnc}`,
+    });
   } catch (error) {
     if (error.message.includes('already exists')) {
       return res.status(409).json({
@@ -176,7 +231,15 @@ router.post('/users', authenticate, authorize(['admin']), async (req, res, next)
         },
       });
     }
-    if (error.message.includes('Invalid email') || error.message.includes('Invalid office location')) {
+    if (error.message.includes('Admin user creation accepts only')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'INVALID_CREATE_PAYLOAD',
+        },
+      });
+    }
+    if (error.message.includes('Invalid email') || error.message.includes('Invalid office location') || error.message.includes('Name is required')) {
       return res.status(400).json({
         error: {
           message: error.message,
@@ -234,7 +297,7 @@ router.put('/users/:id', authenticate, async (req, res, next) => {
 });
 
 // Get all users endpoint (admin only)
-router.get('/users', authenticate, authorize(['admin']), async (req, res, next) => {
+router.get('/users', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const users = await userService.getAllUsers();
     res.json(users.map(u => u.toJSON()));
@@ -280,7 +343,7 @@ router.put('/users/password', authenticate, async (req, res, next) => {
 });
 
 // Delete user endpoint (admin only)
-router.delete('/users/:id', authenticate, authorize(['admin']), async (req, res, next) => {
+router.delete('/users/:id', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const userId = parseInt(req.params.id);
     const deletedBy = req.user.id;

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete profile - Office Manager</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <h1>Office Manager</h1>
+                <ul class="nav-menu">
+                    <li><a href="/pages/login.html">Login</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container login-container" style="max-width: 420px; margin: 2rem auto;">
+            <h2>Complete your profile</h2>
+            <p id="provision-intro">Set your password and office location to finish account setup.</p>
+            <p id="provision-email" class="mt-2" style="color: #555;"></p>
+
+            <div id="token-error" class="error" style="display: none;"></div>
+
+            <form id="complete-profile-form" style="display: none;">
+                <div class="form-group">
+                    <label for="officeLocation">Office location:</label>
+                    <select id="officeLocation" required>
+                        <option value="">Select location...</option>
+                        <option value="London">London</option>
+                        <option value="Prague">Prague</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">Password:</label>
+                    <input type="password" id="newPassword" required autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm password:</label>
+                    <input type="password" id="confirmPassword" required autocomplete="new-password">
+                </div>
+                <button type="submit" class="btn-primary" id="submitBtn">Complete setup</button>
+            </form>
+            <div id="complete-message" class="mt-2"></div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Office Manager. All rights reserved.</p>
+    </footer>
+
+    <script src="/js/complete-profile.js"></script>
+</body>
+</html>

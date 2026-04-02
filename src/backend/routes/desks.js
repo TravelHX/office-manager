@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const DeskService = require('../services/DeskService');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireCompleteProfile } = require('../middleware/auth');
 
 const deskService = new DeskService();
 
-router.get('/', authenticate, async (req, res, next) => {
+router.get('/', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const desks = await deskService.getAllDesks();
     res.json(desks.map(d => d.toJSON()));
@@ -39,7 +39,7 @@ router.get('/available', authenticate, async (req, res, next) => {
   }
 });
 
-router.get('/:id', authenticate, async (req, res, next) => {
+router.get('/:id', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const desk = await deskService.getDeskById(parseInt(req.params.id));
     res.json(desk.toJSON());
@@ -56,7 +56,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
   }
 });
 
-router.post('/', authenticate, async (req, res, next) => {
+router.post('/', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const { deskNumber, location, description, isActive } = req.body;
     
@@ -115,7 +115,7 @@ router.put('/:id', authenticate, async (req, res, next) => {
   }
 });
 
-router.delete('/:id', authenticate, async (req, res, next) => {
+router.delete('/:id', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     await deskService.deleteDesk(parseInt(req.params.id));
     res.status(204).send();

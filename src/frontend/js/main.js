@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         '/pages/register.html',
         '/pages/forgot-password.html',
         '/pages/reset-password.html',
+        '/pages/complete-profile.html',
     ];
 
     const currentPath = window.location.pathname;
@@ -78,9 +79,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         '/pages/overtime.html',
         '/pages/bookings.html',
         '/pages/admin.html',
+        '/pages/matrix.html',
     ];
 
     const isProtectedPage = protectedPages.some(page => currentPath.includes(page));
+
+    if (isProtectedPage && isAuthenticated()) {
+        const u = getCurrentUser();
+        if (u && u.profileComplete === false) {
+            window.location.href = '/pages/complete-profile.html';
+            return;
+        }
+    }
 
     if (isProtectedPage && !isAuthenticated()) {
         // Don't redirect from login/register pages
@@ -91,10 +101,100 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Update user indicator if authenticated
     updateUserIndicator();
-    
+    initSidebarToggle();
+    initSidebarActiveNav();
+    updateOvertimeSidebarVisibility();
+
     // Load and display application version
     loadApplicationVersion();
 });
+
+function escapeHtml(text) {
+    if (text == null) return '';
+    const s = String(text);
+    return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function initSidebarToggle() {
+    const btn = document.getElementById('sidebar-toggle');
+    const sidebar = document.getElementById('site-sidebar');
+    if (!btn || !sidebar) return;
+
+    const collapsed = localStorage.getItem('sidebarCollapsed') === '1';
+    if (collapsed) {
+        document.body.classList.add('sidebar-collapsed');
+        btn.setAttribute('aria-expanded', 'false');
+    } else {
+        btn.setAttribute('aria-expanded', 'true');
+    }
+
+    btn.addEventListener('click', () => {
+        document.body.classList.toggle('sidebar-collapsed');
+        const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarCollapsed', isCollapsed ? '1' : '0');
+        btn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+    });
+}
+
+function initSidebarActiveNav() {
+    const path = window.location.pathname.replace(/\/$/, '') || '/';
+    document.querySelectorAll('.sidebar-nav a[href]').forEach((a) => {
+        try {
+            const u = new URL(a.getAttribute('href'), window.location.origin);
+            let p = u.pathname.replace(/\/$/, '') || '/';
+            if (p === path) {
+                a.classList.add('active');
+            }
+        } catch {
+            /* ignore */
+        }
+    });
+}
+
+function updateOvertimeSidebarVisibility() {
+    const item = document.getElementById('overtime-sidebar-item');
+    if (!item) return;
+    if (typeof isAuthenticated !== 'undefined' && isAuthenticated()) {
+        item.style.display = '';
+    } else {
+        item.style.display = 'none';
+    }
+}
+
+function bindAccountDropdown(trigger, panel) {
+    function closePanel() {
+        panel.classList.remove('is-open');
+        trigger.setAttribute('aria-expanded', 'false');
+    }
+    function openPanel() {
+        panel.classList.add('is-open');
+        trigger.setAttribute('aria-expanded', 'true');
+    }
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (panel.classList.contains('is-open')) {
+            closePanel();
+        } else {
+            openPanel();
+        }
+    });
+
+    document.addEventListener('click', (ev) => {
+        if (!panel.classList.contains('is-open')) return;
+        if (!trigger.contains(ev.target) && !panel.contains(ev.target)) {
+            closePanel();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closePanel();
+    });
+}
 
 // Load application version
 async function loadApplicationVersion() {
@@ -250,21 +350,99 @@ function showSuccess(message) {
     }
 }
 
-// Update user indicator in navigation
+// Account menu in app top bar (#account-menu-anchor); legacy .nav-menu fallback for pages without shell
 function updateUserIndicator() {
+    const anchor = document.getElementById('account-menu-anchor');
     const user = getCurrentUser();
+
+    if (anchor) {
+        anchor.innerHTML = '';
+
+        const wrap = document.createElement('div');
+        wrap.className = 'account-menu';
+
+        const trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'account-menu-trigger';
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.setAttribute('aria-haspopup', 'true');
+        trigger.id = 'account-menu-trigger';
+
+        const panel = document.createElement('div');
+        panel.className = 'account-menu-panel';
+        panel.id = 'account-menu-panel';
+        panel.setAttribute('role', 'region');
+        panel.setAttribute('aria-label', 'Account');
+
+        if (user) {
+            let displayName = user.username || '';
+            if (user.firstName && user.lastName) {
+                displayName = `${user.firstName} ${user.lastName}`;
+            } else if (user.firstName) {
+                displayName = user.firstName;
+            } else if (user.email) {
+                displayName = user.email;
+            }
+
+            const adminLabel = (user.isAdmin || user.role === 'admin') ? '<div class="account-panel-meta">Administrator</div>' : '';
+            const emailLine = user.email ? `<div class="account-panel-meta">${escapeHtml(user.email)}</div>` : '';
+            const officeLine = user.officeLocation
+                ? `<div class="account-panel-meta">Office: ${escapeHtml(user.officeLocation)}</div>`
+                : '';
+
+            trigger.innerHTML = `<span class="account-trigger-label">${escapeHtml(displayName)}</span><span class="account-chevron" aria-hidden="true">&#9662;</span>`;
+
+            const section = document.createElement('div');
+            section.className = 'account-panel-section account-panel-user';
+            section.innerHTML = `
+                <div class="account-panel-name">${escapeHtml(displayName)}</div>
+                ${adminLabel}
+                ${emailLine}
+                ${officeLine}
+            `;
+
+            const actions = document.createElement('div');
+            actions.className = 'account-panel-actions';
+            const logoutLink = document.createElement('a');
+            logoutLink.href = '#';
+            logoutLink.className = 'account-panel-link account-logout-link';
+            logoutLink.textContent = 'Log out';
+            logoutLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                logout();
+            });
+            actions.appendChild(logoutLink);
+
+            panel.appendChild(section);
+            panel.appendChild(actions);
+        } else {
+            trigger.innerHTML = '<span class="account-trigger-label">Account</span><span class="account-chevron" aria-hidden="true">&#9662;</span>';
+            const ret = encodeURIComponent(window.location.pathname + window.location.search);
+            const actions = document.createElement('div');
+            actions.className = 'account-panel-actions';
+            actions.innerHTML = `
+                <a href="/pages/login.html?return=${ret}" class="account-panel-link">Log in</a>
+                <a href="/pages/register.html" class="account-panel-link">Register</a>
+            `;
+            panel.appendChild(actions);
+        }
+
+        wrap.appendChild(trigger);
+        wrap.appendChild(panel);
+        anchor.appendChild(wrap);
+        bindAccountDropdown(trigger, panel);
+        return;
+    }
+
     const navMenu = document.querySelector('.nav-menu');
-    
     if (!navMenu) return;
 
-    // Remove existing user indicator
     const existingIndicator = document.querySelector('.user-indicator');
     if (existingIndicator) {
         existingIndicator.remove();
     }
 
     if (user) {
-        // Get display name (first name + last name, or email, or username)
         let displayName = user.username;
         if (user.firstName && user.lastName) {
             displayName = `${user.firstName} ${user.lastName}`;
@@ -274,18 +452,16 @@ function updateUserIndicator() {
             displayName = user.email;
         }
 
-        // Add user indicator
         const userIndicator = document.createElement('li');
         userIndicator.className = 'user-indicator';
         userIndicator.innerHTML = `
-            <span style="color: #4CAF50; font-weight: 500;">
-                ${displayName} ${(user.isAdmin || user.role === 'admin') ? '(Admin)' : ''}
+            <span style="font-weight: 500;">
+                ${escapeHtml(displayName)} ${(user.isAdmin || user.role === 'admin') ? '(Admin)' : ''}
             </span>
-            <a href="#" onclick="logout(); return false;" style="margin-left: 10px; color: #d32f2f;">Logout</a>
+            <a href="#" onclick="logout(); return false;" style="margin-left: 10px;">Logout</a>
         `;
         navMenu.appendChild(userIndicator);
     } else {
-        // Add login link
         const loginLink = document.createElement('li');
         loginLink.innerHTML = '<a href="/pages/login.html">Login</a>';
         navMenu.appendChild(loginLink);

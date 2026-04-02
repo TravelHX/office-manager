@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const MatrixService = require('../services/MatrixService');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, authorize, requireCompleteProfile } = require('../middleware/auth');
 
 const matrixService = new MatrixService();
 
 // Get matrix data endpoint (admin only)
-router.get('/bookings', authenticate, authorize(['admin']), async (req, res, next) => {
+router.get('/bookings', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const { startDate, endDate, userIds, deskIds, parkingSpaceIds, type } = req.query;
 

@@ -7,71 +7,177 @@ const { generateResetToken, calculateTokenExpiry, isTokenExpired } = require('..
 const fs = require('fs');
 const path = require('path');
 
+const ADMIN_CREATE_FORBIDDEN_KEYS = new Set([
+  'password',
+  'office_location',
+  'officeLocation',
+  'username',
+]);
+
+const INVITATION_TOKEN_HOURS = 168;
+
+/**
+ * Split a display name into first and last name (first word / remainder).
+ * @param {string} name
+ * @returns {{ firstName: string, lastName: string|null }}
+ */
+function splitDisplayName(name) {
+  const trimmed = (name || '').trim();
+  if (!trimmed) {
+    throw new Error('Name is required');
+  }
+  const parts = trimmed.split(/\s+/);
+  const firstName = parts[0];
+  const lastName = parts.length > 1 ? parts.slice(1).join(' ') : null;
+  return { firstName, lastName };
+}
+
 class UserService {
   constructor() {
     this.userRepository = new UserRepository();
   }
 
   /**
-   * Create a new user (admin only)
-   * @param {Object} userData - User data (username, email, password, first_name, last_name, office_location, is_admin, role)
+   * Create a new user (admin only) — minimal provisioning: email and name only.
+   * User sets password and office location via invitation link (Phase 19).
+   * @param {Object} userData - email, name (or first_name / last_name), optional is_admin, role
    * @param {number} createdBy - ID of user creating this user (must be admin)
-   * @returns {Promise<User>} Created user
+   * @returns {Promise<{ user: User, invitationToken: string }>}
    */
   async createUser(userData, createdBy) {
-    // Validate required fields
-    if (!userData.username || !userData.email || !userData.password) {
-      throw new Error('Username, email, and password are required');
+    if (!userData || typeof userData !== 'object') {
+      throw new Error('User data is required');
     }
 
-    // Validate email format
-    if (!isValidEmail(userData.email)) {
+    const forbiddenPresent = Object.keys(userData).filter((k) => ADMIN_CREATE_FORBIDDEN_KEYS.has(k));
+    if (forbiddenPresent.length > 0) {
+      throw new Error(
+        `Admin user creation accepts only email, name, and role flags. Remove: ${forbiddenPresent.join(', ')}`
+      );
+    }
+
+    if (!userData.email || typeof userData.email !== 'string' || !userData.email.trim()) {
+      throw new Error('Email and name are required');
+    }
+
+    let firstName;
+    let lastName;
+    if (userData.name !== undefined && userData.name !== null && String(userData.name).trim() !== '') {
+      const split = splitDisplayName(String(userData.name));
+      firstName = split.firstName;
+      lastName = split.lastName;
+    } else {
+      firstName = (userData.first_name || userData.firstName || '').trim() || null;
+      lastName = (userData.last_name || userData.lastName || '').trim() || null;
+      if (!firstName && !lastName) {
+        throw new Error('Email and name are required');
+      }
+    }
+
+    const email = userData.email.trim();
+    const username = email.toLowerCase();
+
+    if (!isValidEmail(email)) {
       throw new Error('Invalid email format');
     }
 
-    // Validate office location if provided
-    if (userData.office_location && !isValidOfficeLocation(userData.office_location)) {
-      throw new Error(`Invalid office location. Must be one of: ${require('../utils/office-location').getAllOfficeLocations().join(', ')}`);
-    }
-
-    // Check if creator is admin
     const creator = await this.userRepository.findById(createdBy);
     if (!creator || !creator.isAdmin) {
       throw new Error('Only admins can create users');
     }
 
-    // Check if username already exists
-    const existingUserByUsername = await this.userRepository.findByUsername(userData.username);
+    const existingUserByUsername = await this.userRepository.findByUsername(username);
     if (existingUserByUsername) {
-      throw new Error('Username already exists');
+      throw new Error('A user with this email already exists');
     }
 
-    // Check if email already exists
-    const existingUserByEmail = await this.userRepository.findByEmail(userData.email);
+    const existingUserByEmail = await this.userRepository.findByEmail(email);
     if (existingUserByEmail) {
       throw new Error('Email already exists');
     }
 
-    // Hash password
-    const passwordHash = await hashPassword(userData.password);
-
-    // Determine role and isAdmin
     const isAdmin = userData.is_admin === true || userData.is_admin === 'true' || userData.role === 'admin';
     const role = userData.role || (isAdmin ? 'admin' : 'user');
 
-    // Create user
+    const invitationToken = generateResetToken();
+    const invitationTokenExpiry = calculateTokenExpiry(INVITATION_TOKEN_HOURS);
+
     const user = new User({
-      username: userData.username,
-      first_name: userData.first_name || userData.firstName || null,
-      last_name: userData.last_name || userData.lastName || null,
-      email: userData.email,
-      office_location: userData.office_location || userData.officeLocation || null,
-      password_hash: passwordHash,
+      username,
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      office_location: null,
+      password_hash: null,
       is_admin: isAdmin,
-      role: role,
+      role,
+      invitation_token: invitationToken,
+      invitation_token_expiry: invitationTokenExpiry,
+      profile_complete: false,
     });
 
-    return await this.userRepository.create(user);
+    const created = await this.userRepository.create(user);
+    return { user: created, invitationToken };
+  }
+
+  /**
+   * Validate invitation token for profile completion (public).
+   * @param {string} token
+   * @returns {Promise<{ valid: boolean, email?: string, reason?: string }>}
+   */
+  async validateInvitationToken(token) {
+    if (!token || typeof token !== 'string' || !token.trim()) {
+      return { valid: false, reason: 'Token is required' };
+    }
+    const user = await this.userRepository.findByInvitationToken(token.trim());
+    if (!user) {
+      return { valid: false, reason: 'Invalid or expired token' };
+    }
+    if (isTokenExpired(user.invitationTokenExpiry)) {
+      return { valid: false, reason: 'Invitation has expired' };
+    }
+    if (user.profileComplete) {
+      return { valid: false, reason: 'Profile is already complete' };
+    }
+    return { valid: true, email: user.email };
+  }
+
+  /**
+   * Complete provisioned user profile (password + office location) using invitation token.
+   * @param {string} token
+   * @param {string} password
+   * @param {string} officeLocation
+   * @returns {Promise<User>}
+   */
+  async completeProfileByInvitationToken(token, password, officeLocation) {
+    if (!token || !password || !officeLocation) {
+      throw new Error('Token, password, and office location are required');
+    }
+    if (!isValidOfficeLocation(officeLocation)) {
+      throw new Error(`Invalid office location. Must be one of: ${require('../utils/office-location').getAllOfficeLocations().join(', ')}`);
+    }
+
+    const user = await this.userRepository.findByInvitationToken(token.trim());
+    if (!user) {
+      throw new Error('Invalid or expired invitation token');
+    }
+    if (isTokenExpired(user.invitationTokenExpiry)) {
+      throw new Error('Invitation has expired');
+    }
+    if (user.profileComplete) {
+      throw new Error('Profile is already complete');
+    }
+
+    const passwordHash = await hashPassword(password);
+
+    await this.userRepository.executeRawQuery(
+      `UPDATE users SET password_hash = ?, office_location = ?, profile_complete = TRUE,
+        invitation_token = NULL, invitation_token_expiry = NULL, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [passwordHash, officeLocation, user.id]
+    );
+
+    return await this.userRepository.findById(user.id);
   }
 
   /**
@@ -196,9 +302,18 @@ class UserService {
     }
 
     logger.info(`Authenticating user: ${username}`);
-    const user = await this.userRepository.findByUsername(username);
+    const key = username.trim().toLowerCase();
+    let user = await this.userRepository.findByUsername(key);
+    if (!user) {
+      user = await this.userRepository.findByEmail(key);
+    }
     if (!user) {
       logger.warn(`User not found: ${username}`);
+      throw new Error('Invalid username or password');
+    }
+
+    if (!user.passwordHash) {
+      logger.warn(`Login blocked for provisioned user without password: ${user.username}`);
       throw new Error('Invalid username or password');
     }
 
@@ -312,6 +427,7 @@ class UserService {
         password_hash: passwordHash,
         is_admin: true,
         role: 'admin',
+        profile_complete: true,
       });
       
       try {
@@ -376,6 +492,7 @@ class UserService {
         password_hash: passwordHash,
         is_admin: true,
         role: 'admin',
+        profile_complete: true,
       });
       adminUser = await this.userRepository.createWithId(adminUser);
     }
@@ -414,6 +531,7 @@ class UserService {
         email: email,
         password_hash: passwordHash,
         role: 'user',
+        profile_complete: true,
       });
       testUser = await this.userRepository.createWithId(testUser);
     }
@@ -638,9 +756,12 @@ class UserService {
       throw new Error('Email and password are required');
     }
     
-    // Use email as username if username not provided
+    const emailNorm = userData.email.trim().toLowerCase();
+    userData.email = emailNorm;
     if (!userData.username) {
-      userData.username = userData.email;
+      userData.username = emailNorm;
+    } else {
+      userData.username = userData.username.trim().toLowerCase();
     }
 
     // Validate email format
@@ -686,6 +807,7 @@ class UserService {
       password_hash: passwordHash,
       is_admin: isAdmin,
       role: role,
+      profile_complete: true,
     });
 
     const createdUser = await this.userRepository.create(user);

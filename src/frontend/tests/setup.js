@@ -23,9 +23,13 @@ window.confirm = jest.fn(() => true);
 
 // Reset mocks before each test
 beforeEach(() => {
+  global.localStorage = localStorageMock;
+  window.localStorage = localStorageMock;
   fetch.mockClear();
-  localStorage.getItem.mockClear();
-  localStorage.setItem.mockClear();
+  localStorageMock.getItem.mockClear();
+  localStorageMock.setItem.mockClear();
+  localStorageMock.removeItem.mockClear();
+  localStorageMock.clear.mockClear();
   window.confirm.mockClear();
   window.location.href = '';
   document.body.innerHTML = '';

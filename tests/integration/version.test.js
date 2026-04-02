@@ -2,30 +2,31 @@ const request = require('supertest');
 const app = require('../../src/backend/server');
 const { executeQuery } = require('../../src/backend/database/connection');
 const UserService = require('../../src/backend/services/UserService');
+const { createProvisionedUserWithPassword } = require('../helpers/provisionUser');
 
 describe('Version API Integration Tests', () => {
   let authToken;
   let adminToken;
 
   beforeAll(async () => {
-    // Create test admin user
     const userService = new UserService();
+    const seedAdmin = await userService.getUserByUsername('admin');
     try {
-      await userService.createUser({
-        username: 'versiontestadmin',
+      await createProvisionedUserWithPassword(seedAdmin.id, {
         email: 'versiontestadmin@test.com',
+        name: 'Version Test Admin',
         password: 'Test123!',
-        isAdmin: true,
+        is_admin: true,
+        role: 'admin',
       });
     } catch (error) {
       // User might already exist
     }
 
-    // Login as admin
     const loginResponse = await request(app)
       .post('/api/auth/login')
       .send({
-        username: 'versiontestadmin',
+        username: 'versiontestadmin@test.com',
         password: 'Test123!',
       });
 
@@ -112,35 +113,26 @@ describe('Version API Integration Tests', () => {
     });
 
     test('should require admin role', async () => {
-      // Create regular user
       const userService = new UserService();
+      const seedAdmin = await userService.getUserByUsername('admin');
       let regularToken;
       try {
-        await userService.createUser({
-          username: 'versiontestuser',
+        await createProvisionedUserWithPassword(seedAdmin.id, {
           email: 'versiontestuser@test.com',
+          name: 'Version Test User',
           password: 'Test123!',
-          isAdmin: false,
         });
-
-        const loginResponse = await request(app)
-          .post('/api/auth/login')
-          .send({
-            username: 'versiontestuser',
-            password: 'Test123!',
-          });
-
-        regularToken = loginResponse.body.token;
       } catch (error) {
         // User might already exist
-        const loginResponse = await request(app)
-          .post('/api/auth/login')
-          .send({
-            username: 'versiontestuser',
-            password: 'Test123!',
-          });
-        regularToken = loginResponse.body.token;
       }
+
+      const loginResponse = await request(app)
+        .post('/api/auth/login')
+        .send({
+          username: 'versiontestuser@test.com',
+          password: 'Test123!',
+        });
+      regularToken = loginResponse.body.token;
 
       await request(app)
         .post('/api/version')

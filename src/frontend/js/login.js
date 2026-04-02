@@ -70,6 +70,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
+      if (data.user && data.user.profileComplete === false) {
+        successDiv.textContent = 'Complete your profile to continue...';
+        successDiv.style.display = 'block';
+        setTimeout(() => {
+          window.location.href = '/pages/complete-profile.html';
+        }, 800);
+        return;
+      }
+
       // Show success message
       successDiv.textContent = 'Login successful! Redirecting...';
       successDiv.style.display = 'block';

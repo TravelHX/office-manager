@@ -2,6 +2,7 @@ const request = require('supertest');
 const app = require('../../src/backend/server');
 const UserService = require('../../src/backend/services/UserService');
 const { generateToken } = require('../../src/backend/utils/token');
+const { createProvisionedUserWithPassword } = require('../helpers/provisionUser');
 
 describe('Authentication Endpoints', () => {
   let userService;
@@ -31,23 +32,19 @@ describe('Authentication Endpoints', () => {
         password_hash: hash,
         is_admin: true,
         role: 'admin',
+        profile_complete: true,
       });
       adminUser = await userRepo.createWithId(adminUser);
     }
 
-    // Create test regular user
     try {
-      regularUser = await userService.getUserByUsername('testuser');
+      regularUser = await userService.getUserByUsername('testuser@test.com');
     } catch (error) {
-      regularUser = await userService.createUser(
-        {
-          username: 'testuser',
-          email: 'testuser@test.com',
-          password: 'testpass123',
-          role: 'user',
-        },
-        adminUser.id
-      );
+      regularUser = await createProvisionedUserWithPassword(adminUser.id, {
+        email: 'testuser@test.com',
+        name: 'Test User',
+        password: 'testpass123',
+      });
     }
 
     adminToken = generateToken(adminUser);
@@ -164,21 +161,23 @@ describe('Authentication Endpoints', () => {
   });
 
   describe('POST /api/auth/users', () => {
-    it('should create user when admin is authenticated', async () => {
+    it('should provision user when admin is authenticated', async () => {
       const response = await request(app)
         .post('/api/auth/users')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          username: 'newuser',
+          name: 'New User',
           email: 'newuser@test.com',
-          password: 'newpass123',
           role: 'user',
         });
 
       expect(response.status).toBe(201);
-      expect(response.body.username).toBe('newuser');
+      expect(response.body.username).toBe('newuser@test.com');
       expect(response.body.email).toBe('newuser@test.com');
       expect(response.body.role).toBe('user');
+      expect(response.body.profileComplete).toBe(false);
+      expect(response.body.invitationToken).toBeDefined();
+      expect(response.body.profileSetupUrl).toContain('complete-profile');
       expect(response.body).not.toHaveProperty('passwordHash');
     });
 
@@ -187,9 +186,8 @@ describe('Authentication Endpoints', () => {
         .post('/api/auth/users')
         .set('Authorization', `Bearer ${userToken}`)
         .send({
-          username: 'anotheruser',
+          name: 'Another',
           email: 'anotheruser@test.com',
-          password: 'pass123',
           role: 'user',
         });
 
@@ -201,36 +199,20 @@ describe('Authentication Endpoints', () => {
       const response = await request(app)
         .post('/api/auth/users')
         .send({
-          username: 'anotheruser',
+          name: 'X',
           email: 'anotheruser@test.com',
-          password: 'pass123',
         });
 
       expect(response.status).toBe(401);
     });
 
-    it('should reject user creation with duplicate username', async () => {
+    it('should reject user creation with duplicate email (username)', async () => {
       const response = await request(app)
         .post('/api/auth/users')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          username: 'admin',
-          email: 'duplicate@test.com',
-          password: 'pass123',
-        });
-
-      expect(response.status).toBe(409);
-      expect(response.body.error.code).toBe('USER_EXISTS');
-    });
-
-    it('should reject user creation with duplicate email', async () => {
-      const response = await request(app)
-        .post('/api/auth/users')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          username: 'uniqueuser',
+          name: 'Dup',
           email: 'admin@test.com',
-          password: 'pass123',
         });
 
       expect(response.status).toBe(409);
@@ -242,11 +224,25 @@ describe('Authentication Endpoints', () => {
         .post('/api/auth/users')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          username: 'incomplete',
+          email: 'onlyemail@test.com',
         });
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('MISSING_FIELDS');
+    });
+
+    it('should reject admin create payload with password', async () => {
+      const response = await request(app)
+        .post('/api/auth/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Bad',
+          email: 'badpayload@test.com',
+          password: 'secret',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('INVALID_CREATE_PAYLOAD');
     });
   });
 
@@ -256,7 +252,7 @@ describe('Authentication Endpoints', () => {
       const loginResponse = await request(app)
         .post('/api/auth/login')
         .send({
-          username: 'testuser',
+          username: 'testuser@test.com',
           password: 'testpass123',
         });
 
@@ -277,7 +273,7 @@ describe('Authentication Endpoints', () => {
       const loginResponse2 = await request(app)
         .post('/api/auth/login')
         .send({
-          username: 'testuser',
+          username: 'testuser@test.com',
           password: 'newtestpass123',
         });
 
@@ -330,27 +326,24 @@ describe('Authentication Endpoints', () => {
     });
   });
 
-  describe('POST /api/auth/users - User creation with profile fields', () => {
-    it('should create user with first name, last name, email, and office location', async () => {
+  describe('POST /api/auth/users - provisioning variants', () => {
+    it('should create user with first_name and last_name instead of name', async () => {
       const response = await request(app)
         .post('/api/auth/users')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          username: 'profileuser',
           first_name: 'John',
           last_name: 'Doe',
           email: 'john.doe@test.com',
-          office_location: 'London',
-          password: 'password123',
           role: 'user',
         });
 
       expect(response.status).toBe(201);
-      expect(response.body.username).toBe('profileuser');
+      expect(response.body.username).toBe('john.doe@test.com');
       expect(response.body.firstName).toBe('John');
       expect(response.body.lastName).toBe('Doe');
       expect(response.body.email).toBe('john.doe@test.com');
-      expect(response.body.officeLocation).toBe('London');
+      expect(response.body.profileComplete).toBe(false);
     });
 
     it('should create admin user with is_admin flag', async () => {
@@ -358,9 +351,8 @@ describe('Authentication Endpoints', () => {
         .post('/api/auth/users')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          username: 'newadmin',
+          name: 'New Admin',
           email: 'newadmin@test.com',
-          password: 'password123',
           is_admin: true,
         });
 
@@ -374,24 +366,8 @@ describe('Authentication Endpoints', () => {
         .post('/api/auth/users')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          username: 'invalidemail',
+          name: 'X',
           email: 'invalid-email',
-          password: 'password123',
-        });
-
-      expect(response.status).toBe(400);
-      expect(response.body.error.code).toBe('VALIDATION_ERROR');
-    });
-
-    it('should reject invalid office location', async () => {
-      const response = await request(app)
-        .post('/api/auth/users')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          username: 'invalidloc',
-          email: 'invalidloc@test.com',
-          office_location: 'New York',
-          password: 'password123',
         });
 
       expect(response.status).toBe(400);
@@ -401,17 +377,23 @@ describe('Authentication Endpoints', () => {
 
   describe('PUT /api/auth/users/:id - User update', () => {
     it('should update user profile fields as admin', async () => {
-      // First create a user to update
       const createResponse = await request(app)
         .post('/api/auth/users')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          username: 'updatetest',
+          name: 'Update Test',
           email: 'updatetest@test.com',
-          password: 'password123',
         });
 
+      expect(createResponse.status).toBe(201);
       const userId = createResponse.body.id;
+      await request(app)
+        .post('/api/auth/complete-profile')
+        .send({
+          token: createResponse.body.invitationToken,
+          password: 'password123',
+          office_location: 'London',
+        });
 
       const response = await request(app)
         .put(`/api/auth/users/${userId}`)
@@ -527,7 +509,7 @@ describe('Authentication Endpoints', () => {
       const loginResponse = await request(app)
         .post('/api/auth/login')
         .send({
-          username: 'testuser',
+          username: 'testuser@test.com',
           password: 'newpassword123',
         });
 
@@ -549,28 +531,34 @@ describe('Authentication Endpoints', () => {
 
   describe('Admin flag functionality', () => {
     it('should check isAdmin flag for admin endpoints', async () => {
-      // Create a non-admin user
       const createResponse = await request(app)
         .post('/api/auth/users')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          username: 'regularuser',
+          name: 'Regular User',
           email: 'regular@test.com',
-          password: 'password123',
           is_admin: false,
         });
 
-      const regularUserId = createResponse.body.id;
-      const regularUserToken = generateToken(createResponse.body);
+      await request(app)
+        .post('/api/auth/complete-profile')
+        .send({
+          token: createResponse.body.invitationToken,
+          password: 'password123',
+          office_location: 'London',
+        });
 
-      // Try to access admin endpoint with non-admin user
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ username: 'regular@test.com', password: 'password123' });
+      const regularUserToken = loginRes.body.token;
+
       const response = await request(app)
         .post('/api/auth/users')
         .set('Authorization', `Bearer ${regularUserToken}`)
         .send({
-          username: 'shouldfail',
+          name: 'Should Fail',
           email: 'shouldfail@test.com',
-          password: 'password123',
         });
 
       expect(response.status).toBe(403);
@@ -728,46 +716,43 @@ describe('Authentication Endpoints', () => {
     });
   });
 
-  describe('End-to-End: User Creation with Profile Fields (Admin)', () => {
-    it('should create user with all profile fields and verify admin access', async () => {
-      // Create user with all profile fields
+  describe('End-to-End: User provisioning and profile completion (Admin)', () => {
+    it('should provision user, complete profile, and verify non-admin access', async () => {
       const createResponse = await request(app)
         .post('/api/auth/users')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          username: 'profileuser',
-          email: 'profileuser@test.com',
-          password: 'password123',
           first_name: 'Profile',
           last_name: 'User',
-          office_location: 'London',
+          email: 'profileuser@test.com',
           is_admin: false,
         });
 
       expect(createResponse.status).toBe(201);
-      expect(createResponse.body).toHaveProperty('id');
-      expect(createResponse.body.firstName).toBe('Profile');
-      expect(createResponse.body.lastName).toBe('User');
-      expect(createResponse.body.email).toBe('profileuser@test.com');
-      expect(createResponse.body.officeLocation).toBe('London');
-      expect(createResponse.body.isAdmin).toBe(false);
+      expect(createResponse.body.profileComplete).toBe(false);
 
-      // Verify user can login
+      await request(app)
+        .post('/api/auth/complete-profile')
+        .send({
+          token: createResponse.body.invitationToken,
+          password: 'password123',
+          office_location: 'London',
+        });
+
       const loginResponse = await request(app)
         .post('/api/auth/login')
         .send({
-          username: 'profileuser',
+          username: 'profileuser@test.com',
           password: 'password123',
         });
 
       expect(loginResponse.status).toBe(200);
-      expect(loginResponse.body.token).toBeDefined();
-      expect(loginResponse.body.user.username).toBe('profileuser');
+      expect(loginResponse.body.user.username).toBe('profileuser@test.com');
       expect(loginResponse.body.user.firstName).toBe('Profile');
       expect(loginResponse.body.user.lastName).toBe('User');
       expect(loginResponse.body.user.officeLocation).toBe('London');
+      expect(loginResponse.body.user.profileComplete).toBe(true);
 
-      // Verify user cannot access admin endpoints
       const userToken = loginResponse.body.token;
       const adminEndpointResponse = await request(app)
         .get('/api/auth/users')
@@ -776,30 +761,31 @@ describe('Authentication Endpoints', () => {
       expect(adminEndpointResponse.status).toBe(403);
     });
 
-    it('should create admin user with profile fields and verify admin access', async () => {
+    it('should provision admin user, complete profile, and access admin endpoints', async () => {
       const createResponse = await request(app)
         .post('/api/auth/users')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          username: 'adminprofile',
+          name: 'Admin Profile',
           email: 'adminprofile@test.com',
-          password: 'password123',
-          first_name: 'Admin',
-          last_name: 'Profile',
-          office_location: 'Prague',
           is_admin: true,
         });
 
       expect(createResponse.status).toBe(201);
       expect(createResponse.body.isAdmin).toBe(true);
-      expect(createResponse.body.role).toBe('admin');
-      expect(createResponse.body.officeLocation).toBe('Prague');
 
-      // Verify admin can login and access admin endpoints
+      await request(app)
+        .post('/api/auth/complete-profile')
+        .send({
+          token: createResponse.body.invitationToken,
+          password: 'password123',
+          office_location: 'Prague',
+        });
+
       const loginResponse = await request(app)
         .post('/api/auth/login')
         .send({
-          username: 'adminprofile',
+          username: 'adminprofile@test.com',
           password: 'password123',
         });
 
@@ -820,23 +806,28 @@ describe('Authentication Endpoints', () => {
     let testUserToken;
 
     beforeAll(async () => {
-      // Create a test user for password reset
       const createResponse = await request(app)
         .post('/api/auth/users')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          username: 'resettestuser',
+          name: 'Reset Test User',
           email: 'resettest@test.com',
+        });
+
+      await request(app)
+        .post('/api/auth/complete-profile')
+        .send({
+          token: createResponse.body.invitationToken,
           password: 'oldpassword123',
+          office_location: 'London',
         });
 
       testUser = createResponse.body;
 
-      // Login to get token
       const loginResponse = await request(app)
         .post('/api/auth/login')
         .send({
-          username: 'resettestuser',
+          username: 'resettest@test.com',
           password: 'oldpassword123',
         });
 
@@ -857,7 +848,7 @@ describe('Authentication Endpoints', () => {
       // Step 2: Get reset token from database (simulating email link)
       const UserService = require('../../src/backend/services/UserService');
       const userService = new UserService();
-      const user = await userService.getUserByUsername('resettestuser');
+      const user = await userService.getUserByUsername('resettest@test.com');
       
       expect(user.resetToken).toBeDefined();
       expect(user.resetTokenExpiry).toBeDefined();
@@ -877,7 +868,7 @@ describe('Authentication Endpoints', () => {
       const oldPasswordLogin = await request(app)
         .post('/api/auth/login')
         .send({
-          username: 'resettestuser',
+          username: 'resettest@test.com',
           password: 'oldpassword123',
         });
 
@@ -887,7 +878,7 @@ describe('Authentication Endpoints', () => {
       const newPasswordLogin = await request(app)
         .post('/api/auth/login')
         .send({
-          username: 'resettestuser',
+          username: 'resettest@test.com',
           password: 'newpassword123',
         });
 
@@ -895,7 +886,7 @@ describe('Authentication Endpoints', () => {
       expect(newPasswordLogin.body.token).toBeDefined();
 
       // Step 6: Verify reset token is cleared after use
-      const userAfterReset = await userService.getUserByUsername('resettestuser');
+      const userAfterReset = await userService.getUserByUsername('resettest@test.com');
       expect(userAfterReset.resetToken).toBeNull();
     });
 
@@ -919,17 +910,19 @@ describe('Authentication Endpoints', () => {
       const userService = new UserService();
       const userRepo = new UserRepository();
 
-      // Create test user
-      const expiredUser = await userService.createUser(
+      const { user: expiredUser, invitationToken } = await userService.createUser(
         {
-          username: 'expiredtokenuser',
+          name: 'Expired Token',
           email: 'expiredtoken@test.com',
-          password: 'password123',
         },
         adminUser.id
       );
+      await userService.completeProfileByInvitationToken(
+        invitationToken,
+        'password123',
+        'London'
+      );
 
-      // Manually set expired token
       const expiredDate = new Date();
       expiredDate.setHours(expiredDate.getHours() - 2); // 2 hours ago
       await userRepo.update(expiredUser.id, {
@@ -1019,24 +1012,17 @@ describe('Authentication Endpoints', () => {
         role: 'admin',
       });
       
-      // Create some other users
-      const regularUser1 = await userService.createUser(
-        {
-          username: 'cleanuptest1',
-          email: 'cleanuptest1@test.com',
-          password: 'password123',
-        },
-        adminUser.id
-      );
+      const regularUser1 = await createProvisionedUserWithPassword(adminUser.id, {
+        email: 'cleanuptest1@test.com',
+        name: 'Cleanup 1',
+        password: 'password123',
+      });
       
-      const regularUser2 = await userService.createUser(
-        {
-          username: 'cleanuptest2',
-          email: 'cleanuptest2@test.com',
-          password: 'password123',
-        },
-        adminUser.id
-      );
+      const regularUser2 = await createProvisionedUserWithPassword(adminUser.id, {
+        email: 'cleanuptest2@test.com',
+        name: 'Cleanup 2',
+        password: 'password123',
+      });
       
       // Ensure admin user exists
       try {
@@ -1070,41 +1056,29 @@ describe('Authentication Endpoints', () => {
     let admin1Token, admin2Token;
 
     beforeAll(async () => {
-      // Create test admin users
-      testAdmin1 = await userService.createUser(
-        {
-          username: 'deleteadmin1',
-          email: 'deleteadmin1@test.com',
-          password: 'Password123',
-          is_admin: true,
-          role: 'admin',
-        },
-        adminUser.id
-      );
-      admin1Token = generateToken(testAdmin1.id, testAdmin1.username, testAdmin1.isAdmin);
+      testAdmin1 = await createProvisionedUserWithPassword(adminUser.id, {
+        email: 'deleteadmin1@test.com',
+        name: 'Delete Admin 1',
+        password: 'Password123',
+        is_admin: true,
+        role: 'admin',
+      });
+      admin1Token = generateToken(testAdmin1);
 
-      testAdmin2 = await userService.createUser(
-        {
-          username: 'deleteadmin2',
-          email: 'deleteadmin2@test.com',
-          password: 'Password123',
-          is_admin: true,
-          role: 'admin',
-        },
-        adminUser.id
-      );
-      admin2Token = generateToken(testAdmin2.id, testAdmin2.username, testAdmin2.isAdmin);
+      testAdmin2 = await createProvisionedUserWithPassword(adminUser.id, {
+        email: 'deleteadmin2@test.com',
+        name: 'Delete Admin 2',
+        password: 'Password123',
+        is_admin: true,
+        role: 'admin',
+      });
+      admin2Token = generateToken(testAdmin2);
 
-      // Create test regular user
-      testRegularUser = await userService.createUser(
-        {
-          username: 'deletetestuser',
-          email: 'deletetestuser@test.com',
-          password: 'Password123',
-          role: 'user',
-        },
-        adminUser.id
-      );
+      testRegularUser = await createProvisionedUserWithPassword(adminUser.id, {
+        email: 'deletetestuser@test.com',
+        name: 'Delete Test User',
+        password: 'Password123',
+      });
     });
 
     test('should delete a regular user successfully', async () => {
@@ -1159,7 +1133,7 @@ describe('Authentication Endpoints', () => {
     });
 
     test('should return 403 when non-admin tries to delete user', async () => {
-      const regularUserToken = generateToken(regularUser.id, regularUser.username, false);
+      const regularUserToken = generateToken(regularUser);
 
       const response = await request(app)
         .delete(`/api/auth/users/${testRegularUser.id}`)
@@ -1196,15 +1170,11 @@ describe('Authentication Endpoints', () => {
         const allDesks = await deskRepo.findAll();
         const deskId = allDesks[0].id;
         
-        const testUser = await userService.createUser(
-          {
-            username: 'cascadetestuser',
-            email: 'cascadetestuser@test.com',
-            password: 'Password123',
-            role: 'user',
-          },
-          adminUser.id
-        );
+        const testUser = await createProvisionedUserWithPassword(adminUser.id, {
+          email: 'cascadetestuser@test.com',
+          name: 'Cascade Test',
+          password: 'Password123',
+        });
 
         const booking = new Booking({
           user_id: testUser.id,

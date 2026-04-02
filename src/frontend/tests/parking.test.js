@@ -16,7 +16,7 @@ beforeAll(() => {
 });
 
 // Mock the parking.js module
-jest.mock('../../js/parking.js', () => ({
+jest.mock('../js/parking.js', () => ({
   checkAvailability: jest.fn(),
   reserveParkingSpace: jest.fn(),
   displayParkingSpaces: jest.fn(),

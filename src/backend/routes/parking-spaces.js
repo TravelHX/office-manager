@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const ParkingSpaceService = require('../services/ParkingSpaceService');
-const { authenticate, optionalAuthenticate } = require('../middleware/auth');
+const { authenticate, optionalAuthenticate, requireCompleteProfile, optionalRequireCompleteProfile } = require('../middleware/auth');
 
 const parkingSpaceService = new ParkingSpaceService();
 
-router.get('/', authenticate, async (req, res, next) => {
+router.get('/', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const parkingSpaces = await parkingSpaceService.getAllParkingSpaces();
     res.json(parkingSpaces.map(ps => ps.toJSON()));
@@ -14,7 +14,7 @@ router.get('/', authenticate, async (req, res, next) => {
   }
 });
 
-router.get('/available', optionalAuthenticate, async (req, res, next) => {
+router.get('/available', optionalAuthenticate, optionalRequireCompleteProfile, async (req, res, next) => {
   try {
     const { reservationDate, timePeriod } = req.query;
     
@@ -48,7 +48,7 @@ router.get('/available', optionalAuthenticate, async (req, res, next) => {
   }
 });
 
-router.get('/:id', authenticate, async (req, res, next) => {
+router.get('/:id', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const parkingSpace = await parkingSpaceService.getParkingSpaceById(parseInt(req.params.id));
     res.json(parkingSpace.toJSON());
@@ -65,7 +65,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
   }
 });
 
-router.post('/', authenticate, async (req, res, next) => {
+router.post('/', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const { spaceNumber, location, description, isActive } = req.body;
     
@@ -124,7 +124,7 @@ router.put('/:id', authenticate, async (req, res, next) => {
   }
 });
 
-router.delete('/:id', authenticate, async (req, res, next) => {
+router.delete('/:id', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     await parkingSpaceService.deleteParkingSpace(parseInt(req.params.id));
     res.status(204).send();

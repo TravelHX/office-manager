@@ -1,3 +1,13 @@
+function parseProfileComplete(value) {
+  if (value === false || value === 0 || value === '0') {
+    return false;
+  }
+  if (value === true || value === 1 || value === '1') {
+    return true;
+  }
+  return true;
+}
+
 class User {
   constructor(data) {
     this.id = data.id;
@@ -11,6 +21,9 @@ class User {
     this.role = data.role || 'user';
     this.resetToken = data.reset_token || data.resetToken || null;
     this.resetTokenExpiry = data.reset_token_expiry || data.resetTokenExpiry || null;
+    this.invitationToken = data.invitation_token || data.invitationToken || null;
+    this.invitationTokenExpiry = data.invitation_token_expiry || data.invitationTokenExpiry || null;
+    this.profileComplete = parseProfileComplete(data.profile_complete ?? data.profileComplete);
     this.createdAt = data.created_at || data.createdAt;
     this.updatedAt = data.updated_at || data.updatedAt;
   }
@@ -25,6 +38,7 @@ class User {
       officeLocation: this.officeLocation,
       isAdmin: this.isAdmin,
       role: this.role,
+      profileComplete: this.profileComplete,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };
@@ -50,10 +64,14 @@ class User {
     const data = {
       username: this.username,
       email: this.email,
-      password_hash: this.passwordHash,
       role: this.role,
     };
 
+    if (this.passwordHash !== null && this.passwordHash !== undefined) {
+      data.password_hash = this.passwordHash;
+    } else {
+      data.password_hash = null;
+    }
     if (this.firstName !== null && this.firstName !== undefined) {
       data.first_name = this.firstName;
     }
@@ -71,6 +89,15 @@ class User {
     }
     if (this.resetTokenExpiry !== null && this.resetTokenExpiry !== undefined) {
       data.reset_token_expiry = this.resetTokenExpiry;
+    }
+    if (this.invitationToken !== null && this.invitationToken !== undefined) {
+      data.invitation_token = this.invitationToken;
+    }
+    if (this.invitationTokenExpiry !== null && this.invitationTokenExpiry !== undefined) {
+      data.invitation_token_expiry = this.invitationTokenExpiry;
+    }
+    if (this.profileComplete !== null && this.profileComplete !== undefined) {
+      data.profile_complete = this.profileComplete;
     }
 
     return data;
