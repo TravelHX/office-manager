@@ -1,5 +1,13 @@
 // Bookings page JavaScript
 
+const apiRequest = (endpoint, options) => {
+    const impl = globalThis.apiRequest;
+    if (typeof impl !== 'function') {
+        throw new Error('apiRequest is not registered; load main.js before bookings.js.');
+    }
+    return impl(endpoint, options);
+};
+
 let allBookings = [];
 let allReservations = [];
 let allOvertimeRecords = [];

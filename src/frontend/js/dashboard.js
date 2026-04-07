@@ -1,5 +1,13 @@
 // Dashboard JavaScript
 
+const apiRequest = (endpoint, options) => {
+    const impl = globalThis.apiRequest;
+    if (typeof impl !== 'function') {
+        throw new Error('apiRequest is not registered; load main.js before dashboard.js.');
+    }
+    return impl(endpoint, options);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     loadDashboardSummary();
     loadUpcomingItems();

@@ -34,9 +34,11 @@ router.post('/complete-profile', async (req, res, next) => {
   try {
     const { token, password, office_location } = req.body || {};
     const user = await userService.completeProfileByInvitationToken(token, password, office_location);
+    const sessionToken = generateToken(user);
     res.json({
-      message: 'Profile complete. You can sign in with your email and password.',
+      message: 'Profile complete.',
       user: user.toJSON(),
+      token: sessionToken,
     });
   } catch (error) {
     if (
@@ -146,7 +148,17 @@ router.post('/login', async (req, res, next) => {
   } catch (error) {
     const logger = require('../utils/logger');
     logger.error(`Login failed: ${error.message}`);
-    
+
+    if (error.message === 'PROFILE_SETUP_REQUIRED') {
+      return res.status(403).json({
+        error: {
+          message:
+            'This account is not activated yet. Use the profile setup link from your invitation email. If you do not have the link, contact your administrator.',
+          code: 'PROFILE_SETUP_REQUIRED',
+        },
+      });
+    }
+
     if (error.message.includes('Invalid username or password')) {
       return res.status(401).json({
         error: {

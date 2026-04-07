@@ -424,6 +424,35 @@ Consistent layout and styling across every page of the application.
 
 - **Colour scheme**: **Blue** is the **primary** brand colour (headers, key actions, active states). **Complementary** colours (e.g. teal or blue-gray accents, neutral surfaces) support readability and hierarchy without clashing with the primary blue.
 
+### 15. Administrative Audit Trail
+
+A durable **audit log** of significant user and system-facing actions for compliance, support, and security review.
+
+- **Admin-only access**: A dedicated **Audit** area is available **only to administrators**. Non-admin users must not see audit UI or call audit APIs (enforce on server; UI hidden or absent for non-admins).
+
+- **Scope of tracking**: **Every meaningful user-driven action** in the application should produce an audit record. This includes at minimum (extend as features grow):
+  - **Authentication**: successful login, logout; optional failed login attempts if technically and policy-wise appropriate
+  - **Desk bookings**: create booking, cancel own booking; **admin** cancel desk booking (with reason if captured)
+  - **Parking**: create reservation, cancel own reservation; **admin** cancel reservation
+  - **Overtime**: create, update, delete own record; **admin** approve/reject (if applicable)
+  - **Admin configuration**: save desk/parking counts and related resource settings; desk/parking numbering changes
+  - **User management**: create user, delete user, password changes initiated by admin or self-service where applicable; profile completion after provisioning
+  - **Bulk or matrix-related actions** that change data (e.g. bulk desk booking) as separate event types where distinct from single-item actions
+
+- **Actors**: The audit trail records **who** performed each action. **All users including administrators** are subject to logging; admin actions use the same schema and are visible in the same trail.
+
+- **Event model** (conceptual): Each entry should include at least: **timestamp** (UTC or documented timezone), **actor user id** (and display identifier such as email where stored for readability), **action type** (stable machine-readable code, e.g. `DESK_BOOKING_CREATED`), **summary or payload** (JSON or text sufficient to reconstruct context without storing secrets: no passwords, no full tokens), optional **target entity type and id** (e.g. booking id, desk id), and **IP address or client hint** if available and allowed by policy.
+
+- **Search (admin UI)**: Admins can **search** the audit trail via a **simple search box** (single field). Search should match common fields such as action type, actor email/name, free-text summary, and relevant ids exposed in the stored payload, with behavior documented after implementation (e.g. case-insensitive substring, date filters as a follow-up if not in initial scope).
+
+- **Performance and retention**: Implementation should use an **indexed** store (database table with appropriate indexes for time and actor). **Retention policy** (how long events are kept) may be configurable or documented as a later task if not in the first delivery.
+
+- **Planned API** (admin only, to be added under Admin endpoints when implemented): e.g. `GET /api/admin/audit-events` with query parameters for **search** text, **pagination** (limit/offset or cursor), and optional filters (date range, actor, action type) if added beyond the minimum search box.
+
+- **Integrity**: Records should be **append-only** from the application (no user-facing edit or delete of audit rows in normal operation). Any administrative purge should itself be auditable or strictly controlled.
+
+This feature supports accountability across **all** roles and makes support and investigations practical without exposing the log to non-admins.
+
 ## API Endpoints
 
 ### Authentication

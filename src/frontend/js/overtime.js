@@ -1,5 +1,13 @@
 // Overtime Tracking JavaScript
 
+const apiRequest = (endpoint, options) => {
+    const impl = globalThis.apiRequest;
+    if (typeof impl !== 'function') {
+        throw new Error('apiRequest is not registered; load main.js before overtime.js.');
+    }
+    return impl(endpoint, options);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     // Check authentication before allowing overtime submission
     if (typeof requireAuth !== 'undefined' && !requireAuth()) {

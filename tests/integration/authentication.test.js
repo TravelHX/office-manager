@@ -112,6 +112,30 @@ describe('Authentication Endpoints', () => {
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('MISSING_CREDENTIALS');
     });
+
+    it('should return PROFILE_SETUP_REQUIRED for provisioned user without password (Bug 0013)', async () => {
+      const createResponse = await request(app)
+        .post('/api/auth/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Provisioned Login Test',
+          email: `prov_login_${Date.now()}@test.com`,
+        });
+
+      expect(createResponse.status).toBe(201);
+      const email = createResponse.body.email;
+
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send({
+          username: email,
+          password: 'temporary-guess',
+        });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe('PROFILE_SETUP_REQUIRED');
+      expect(response.body.error.message).toContain('profile setup link');
+    });
   });
 
   describe('POST /api/auth/logout', () => {

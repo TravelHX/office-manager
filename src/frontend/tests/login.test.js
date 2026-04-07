@@ -1,24 +1,67 @@
 // Login functionality tests
 
+function setWindowLocation(overrides = {}) {
+  delete window.location;
+  window.location = {
+    href: overrides.href ?? '',
+    search: overrides.search ?? '',
+    pathname: overrides.pathname ?? '',
+  };
+}
+
 describe('Login Functionality', () => {
+  let savedDomContentLoadedHandler;
+  let origDocumentAddEventListener;
+
   beforeEach(() => {
-    // Clear localStorage before each test
+    jest.resetModules();
     localStorage.clear();
-    // Mock fetch
     global.fetch = jest.fn();
-    // Reset DOM
     document.body.innerHTML = '';
+    setWindowLocation();
+    savedDomContentLoadedHandler = null;
+    origDocumentAddEventListener = Document.prototype.addEventListener.bind(document);
+    jest.spyOn(document, 'addEventListener').mockImplementation((type, listener, options) => {
+      if (type === 'DOMContentLoaded') {
+        savedDomContentLoadedHandler = listener;
+        return undefined;
+      }
+      return origDocumentAddEventListener(type, listener, options);
+    });
   });
 
   afterEach(() => {
+    document.addEventListener.mockRestore();
     jest.clearAllMocks();
     localStorage.clear();
   });
 
+  function loadLoginPage() {
+    require('../js/login.js');
+    if (savedDomContentLoadedHandler) {
+      savedDomContentLoadedHandler.call(document, new Event('DOMContentLoaded'));
+    }
+  }
+
+  function stubCheckUsersAndLogin(loginResponseFactory) {
+    global.fetch.mockImplementation((url) => {
+      const u = String(url);
+      if (u.includes('/api/auth/check-users')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ hasUsers: true }),
+        });
+      }
+      if (u.includes('/api/auth/login')) {
+        return Promise.resolve(loginResponseFactory());
+      }
+      return Promise.reject(new Error(`Unexpected fetch in login test: ${u}`));
+    });
+  }
+
   describe('Login Form Submission', () => {
     it('should submit login form with username and password', async () => {
-      // Mock successful login response
-      global.fetch.mockResolvedValueOnce({
+      stubCheckUsersAndLogin(() => ({
         ok: true,
         json: async () => ({
           token: 'test-token-123',
@@ -28,9 +71,8 @@ describe('Login Functionality', () => {
             role: 'admin',
           },
         }),
-      });
+      }));
 
-      // Create login form HTML
       document.body.innerHTML = `
         <form id="login-form">
           <input type="text" id="username" name="username" value="admin">
@@ -41,18 +83,15 @@ describe('Login Functionality', () => {
         </form>
       `;
 
-      // Load login.js
-      require('../js/login.js');
+      loadLoginPage();
+      await new Promise((r) => setTimeout(r, 50));
 
-      // Simulate form submission
-      const form = document.getElementById('login-form');
-      const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-      form.dispatchEvent(submitEvent);
+      document.getElementById('login-form').dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      );
 
-      // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((r) => setTimeout(r, 80));
 
-      // Verify fetch was called with correct parameters
       expect(global.fetch).toHaveBeenCalledWith('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -66,8 +105,7 @@ describe('Login Functionality', () => {
     });
 
     it('should handle login error and display error message', async () => {
-      // Mock failed login response
-      global.fetch.mockResolvedValueOnce({
+      stubCheckUsersAndLogin(() => ({
         ok: false,
         json: async () => ({
           error: {
@@ -75,7 +113,7 @@ describe('Login Functionality', () => {
             code: 'INVALID_CREDENTIALS',
           },
         }),
-      });
+      }));
 
       document.body.innerHTML = `
         <form id="login-form">
@@ -87,13 +125,14 @@ describe('Login Functionality', () => {
         </form>
       `;
 
-      require('../js/login.js');
+      loadLoginPage();
+      await new Promise((r) => setTimeout(r, 50));
 
-      const form = document.getElementById('login-form');
-      const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-      form.dispatchEvent(submitEvent);
+      document.getElementById('login-form').dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      );
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((r) => setTimeout(r, 80));
 
       const errorDiv = document.getElementById('login-error');
       expect(errorDiv.style.display).toBe('block');
@@ -107,17 +146,15 @@ describe('Login Functionality', () => {
         role: 'admin',
       };
 
-      global.fetch.mockResolvedValueOnce({
+      stubCheckUsersAndLogin(() => ({
         ok: true,
         json: async () => ({
           token: 'test-token-123',
           user: mockUser,
         }),
-      });
+      }));
 
-      // Mock window.location.href
-      delete window.location;
-      window.location = { href: '' };
+      setWindowLocation();
 
       document.body.innerHTML = `
         <form id="login-form">
@@ -129,23 +166,23 @@ describe('Login Functionality', () => {
         </form>
       `;
 
-      require('../js/login.js');
+      loadLoginPage();
+      await new Promise((r) => setTimeout(r, 50));
 
-      const form = document.getElementById('login-form');
-      const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-      form.dispatchEvent(submitEvent);
+      document.getElementById('login-form').dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      );
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((r) => setTimeout(r, 1500));
 
       expect(localStorage.getItem('authToken')).toBe('test-token-123');
       expect(JSON.parse(localStorage.getItem('user'))).toEqual(mockUser);
     });
 
-    it('should redirect to home if already logged in', () => {
+    it('should redirect to home if already logged in', async () => {
       localStorage.setItem('authToken', 'existing-token');
 
-      delete window.location;
-      window.location = { href: '' };
+      setWindowLocation();
 
       document.body.innerHTML = `
         <form id="login-form">
@@ -155,10 +192,122 @@ describe('Login Functionality', () => {
         </form>
       `;
 
-      require('../js/login.js');
+      loadLoginPage();
+      await new Promise((r) => setTimeout(r, 30));
 
       expect(window.location.href).toBe('/');
     });
+
+    it('should show PROFILE_SETUP_REQUIRED message without storing session (Bug 0013)', async () => {
+      stubCheckUsersAndLogin(() => ({
+        ok: false,
+        json: async () => ({
+          error: {
+            code: 'PROFILE_SETUP_REQUIRED',
+            message: 'Use the profile setup link from your invitation email.',
+          },
+        }),
+      }));
+
+      setWindowLocation({ search: '' });
+
+      document.body.innerHTML = `
+        <form id="login-form">
+          <input type="text" id="username" name="username" value="new@example.com">
+          <input type="password" id="password" name="password" value="x">
+          <button type="submit" id="login-button">Login</button>
+          <div id="login-error" style="display: none;"></div>
+          <div id="login-success" style="display: none;"></div>
+        </form>
+      `;
+
+      loadLoginPage();
+      await new Promise((r) => setTimeout(r, 50));
+
+      document.getElementById('login-form').dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      );
+
+      await new Promise((r) => setTimeout(r, 80));
+
+      const errorDiv = document.getElementById('login-error');
+      expect(errorDiv.style.display).toBe('block');
+      expect(errorDiv.textContent).toContain('profile setup link');
+      expect(localStorage.getItem('authToken')).toBeNull();
+    });
+
+    it('should not store session when API returns user with incomplete profile (Bug 0013)', async () => {
+      stubCheckUsersAndLogin(() => ({
+        ok: true,
+        json: async () => ({
+          token: 'should-not-store',
+          user: {
+            id: 1,
+            username: 'u@test.com',
+            role: 'user',
+            profileComplete: false,
+          },
+        }),
+      }));
+
+      setWindowLocation({ search: '' });
+
+      document.body.innerHTML = `
+        <form id="login-form">
+          <input type="text" id="username" name="username" value="u@test.com">
+          <input type="password" id="password" name="password" value="pw">
+          <button type="submit" id="login-button">Login</button>
+          <div id="login-error" style="display: none;"></div>
+          <div id="login-success" style="display: none;"></div>
+        </form>
+      `;
+
+      loadLoginPage();
+      await new Promise((r) => setTimeout(r, 50));
+
+      document.getElementById('login-form').dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      );
+
+      await new Promise((r) => setTimeout(r, 80));
+
+      expect(localStorage.getItem('authToken')).toBeNull();
+      const errorDiv = document.getElementById('login-error');
+      expect(errorDiv.style.display).toBe('block');
+      expect(errorDiv.textContent).toContain('invitation');
+    });
+
+    it('should show setup hint when setupPending=1 in URL (Bug 0013)', async () => {
+      setWindowLocation({ search: '?setupPending=1' });
+
+      document.body.innerHTML = `
+        <div id="login-setup-hint" style="display: none;"></div>
+        <form id="login-form">
+          <input type="text" id="username" name="username">
+          <input type="password" id="password" name="password">
+          <button type="submit" id="login-button">Login</button>
+          <div id="login-error" style="display: none;"></div>
+          <div id="login-success" style="display: none;"></div>
+        </form>
+      `;
+
+      global.fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u.includes('/api/auth/check-users')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ hasUsers: true }),
+          });
+        }
+        return Promise.reject(new Error(`Unexpected fetch: ${u}`));
+      });
+
+      loadLoginPage();
+      await new Promise((r) => setTimeout(r, 80));
+
+      const hint = document.getElementById('login-setup-hint');
+      expect(hint.style.display).toBe('block');
+      expect(hint.textContent).toContain('profile setup link');
+    });
   });
 });
-

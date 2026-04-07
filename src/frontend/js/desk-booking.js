@@ -1,5 +1,13 @@
 // Desk Booking JavaScript
 
+const apiRequest = (endpoint, options) => {
+    const impl = globalThis.apiRequest;
+    if (typeof impl !== 'function') {
+        throw new Error('apiRequest is not registered; load main.js before desk-booking.js.');
+    }
+    return impl(endpoint, options);
+};
+
 let selectedDeskIds = new Set(); // Track selected desk IDs for multi-select
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -309,6 +317,14 @@ async function bookDesk(deskId, deskNumber, startDate, endDate) {
             showError('Failed to book desk: ' + error.message);
         }
     }
+}
+
+if (typeof window !== 'undefined') {
+    window.checkAvailability = checkAvailability;
+    window.bookDesk = bookDesk;
+    window.displayDesks = displayDesks;
+    window.bookSelectedDesks = bookSelectedDesks;
+    window.selectedDeskIds = selectedDeskIds;
 }
 
 function showError(message) {

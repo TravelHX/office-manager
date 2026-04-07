@@ -858,15 +858,51 @@ This document contains all tasks organized by phases with clear dependencies and
 
 ### Tasks
 
-- [ ] 20.1 Add specification text for shell and theme (see `docs/spec.md` section 14)
-- [ ] 20.2 Define CSS variables for primary blue and complementary palette; update global styles (surfaces, buttons, tables, header/footer)
-- [ ] 20.3 Implement app layout: top bar with brand, sidebar toggle, and account menu anchor
-- [ ] 20.4 Implement collapsible left sidebar for standard pages with shared navigation links and active-state highlighting
-- [ ] 20.5 Move Admin dashboard section tabs to a **left vertical** sidebar; remove horizontal tab bar; preserve tab behaviour and tests
-- [ ] 20.6 Implement collapsible account dropdown (guest: Log in / Register; authenticated: user info + Log out)
-- [ ] 20.7 Apply shell to all HTML pages (index, feature pages, auth pages, complete-profile, matrix) with appropriate sidebar variants
-- [ ] 20.8 Respect existing behaviour (e.g. show Overtime link only when authenticated); update `main.js` and any page scripts
-- [ ] 20.9 Add or update frontend tests for account menu and shell markers (`#account-menu-anchor`, sidebar toggle)
-- [ ] 20.10 Adjust admin frontend tests if selectors changed; run full frontend test suite
-- [ ] 20.11 Update root `README.md` User Guide navigation description after release
-- [ ] 20.12 Update `docs/usecases.md` if navigation paths change materially
+- [x] 20.1 Add specification text for shell and theme (see `docs/spec.md` section 14)
+- [x] 20.2 Define CSS variables for primary blue and complementary palette; update global styles (surfaces, buttons, tables, header/footer)
+- [x] 20.3 Implement app layout: top bar with brand, sidebar toggle, and account menu anchor
+- [x] 20.4 Implement collapsible left sidebar for standard pages with shared navigation links and active-state highlighting
+- [x] 20.5 Move Admin dashboard section tabs to a **left vertical** sidebar; remove horizontal tab bar; preserve tab behaviour and tests
+- [x] 20.6 Implement collapsible account dropdown (guest: Log in / Register; authenticated: user info + Log out)
+- [x] 20.7 Apply shell to all HTML pages (index, feature pages, auth pages, complete-profile, matrix) with appropriate sidebar variants
+- [x] 20.8 Respect existing behaviour (e.g. show Overtime link only when authenticated); update `main.js` and any page scripts
+- [x] 20.9 Add or update frontend tests for account menu and shell markers (`#account-menu-anchor`, sidebar toggle)
+- [ ] 20.10 Adjust remaining frontend tests (streamlined-booking, auth pages, admin, availability-display, parking, bookings, matrix, etc.) for `globalThis.apiRequest` wrappers and updated DOM; run `npm test` in `src/frontend` until all green
+- [x] 20.11 Update root `README.md` User Guide navigation description after release
+- [x] 20.12 Update `docs/usecases.md` if navigation paths change materially
+
+---
+
+## Phase 21: Administrative Audit Trail
+
+**Objective:** Provide an **admin-only Audit** section and **append-only audit log** of meaningful actions by **all users** (including admins), with a **simple search** for administrators.
+
+**Dependencies:** Phase 5 (Admin Functionality), Phase 8 (User Authentication and Management), Phase 20 (application shell) for consistent admin navigation.
+
+**Priority:** High
+
+**Estimated Effort:** 6-10 days
+
+### Tasks
+
+- [ ] 21.1 Finalize event type catalog and field list from `docs/spec.md` section 15; list each HTTP route or service method that must emit an event
+- [ ] 21.2 Design database schema for audit events (table name, columns, indexes for time, actor_user_id, action_type, full-text or composite strategy for search)
+- [ ] 21.3 Add migration creating audit table; document retention approach (default unlimited or documented cap)
+- [ ] 21.4 Implement AuditEvent model and repository (append-only insert; admin-only list/search with parameterized queries)
+- [ ] 21.5 Implement AuditService (or equivalent) to record events with consistent shape; add helper used by routes/services
+- [ ] 21.6 Wire audit emission for **authentication**: login success, logout (and failed login if included)
+- [ ] 21.7 Wire audit emission for **desk bookings**: create, user cancel, admin cancel
+- [ ] 21.8 Wire audit emission for **parking**: create reservation, user cancel, admin cancel
+- [ ] 21.9 Wire audit emission for **overtime**: create, update, delete; admin approve/reject if present in codebase
+- [ ] 21.10 Wire audit emission for **admin configuration** and **desk/parking admin** operations (counts, numbering, matrix-triggered changes if any)
+- [ ] 21.11 Wire audit emission for **user management** (create, delete, password change, profile completion) for both self-service and admin paths
+- [ ] 21.12 Wire audit emission for **bulk booking** and any other mutating flows not yet covered
+- [ ] 21.13 Implement `GET /api/admin/audit-events` (admin only): pagination, `search` query matching documented fields; return safe JSON (no secrets)
+- [ ] 21.14 Add **Audit** item to admin UI (sidebar); build page or tab with table and **search box**; restrict visibility to admins
+- [ ] 21.15 Add unit tests for AuditService and repository (append-only, search behavior)
+- [ ] 21.16 Add integration tests for audit API (403 for non-admin, 200 with events for admin, search returns expected rows)
+- [ ] 21.17 Add integration or frontend tests proving representative actions create audit rows
+- [ ] 21.18 Add Playwright end-to-end test: admin opens Audit, searches, sees expected event after a seeded action
+- [ ] 21.19 Update `docs/spec.md` API section with implemented audit endpoints; move section 15 to **Currently Implemented** when done
+- [ ] 21.20 Update root `README.md` User Guide (admin: Audit section) after implementation
+- [ ] 21.21 Update `docs/usecases.md` with admin audit review and search flow

@@ -54,7 +54,6 @@ document.createElement = jest.fn((tag) => {
 });
 
 document.querySelectorAll = jest.fn(() => []);
-document.body = { appendChild: jest.fn(), removeChild: jest.fn() };
 window.URL = { createObjectURL: jest.fn(), revokeObjectURL: jest.fn() };
 
 // Execute the script

@@ -2,13 +2,10 @@
 
 describe('Registration Screen - No Users Exist', () => {
   beforeEach(() => {
-    // Clear localStorage before each test
+    jest.resetModules();
     localStorage.clear();
-    // Mock fetch
     global.fetch = jest.fn();
-    // Reset DOM
     document.body.innerHTML = '';
-    // Mock window.location
     delete window.location;
     window.location = { href: '' };
   });
@@ -78,6 +75,32 @@ describe('Registration Screen - No Users Exist', () => {
   });
 
   describe('Registration Form Submission', () => {
+    let savedDomContentLoadedHandler;
+    let origDocumentAddEventListener;
+
+    beforeEach(() => {
+      savedDomContentLoadedHandler = null;
+      origDocumentAddEventListener = Document.prototype.addEventListener.bind(document);
+      jest.spyOn(document, 'addEventListener').mockImplementation((type, listener, options) => {
+        if (type === 'DOMContentLoaded') {
+          savedDomContentLoadedHandler = listener;
+          return undefined;
+        }
+        return origDocumentAddEventListener(type, listener, options);
+      });
+    });
+
+    afterEach(() => {
+      document.addEventListener.mockRestore();
+    });
+
+    function loadRegisterPage() {
+      require('../js/register.js');
+      if (savedDomContentLoadedHandler) {
+        savedDomContentLoadedHandler.call(document, new Event('DOMContentLoaded'));
+      }
+    }
+
     it('should submit registration form and create first user as admin (Bug 0009: no username in request)', async () => {
       // Mock successful registration response
       global.fetch.mockResolvedValueOnce({
@@ -99,6 +122,7 @@ describe('Registration Screen - No Users Exist', () => {
         <form id="register-form">
           <input type="email" id="email" name="email" value="firstuser@test.com">
           <input type="password" id="password" name="password" value="password123">
+          <input type="password" id="confirmPassword" name="confirmPassword" value="password123">
           <input type="text" id="firstName" name="firstName" value="First">
           <input type="text" id="lastName" name="lastName" value="User">
           <select id="officeLocation" name="officeLocation">
@@ -110,14 +134,12 @@ describe('Registration Screen - No Users Exist', () => {
         </form>
       `;
 
-      // Load register.js
-      require('../js/register.js');
+      loadRegisterPage();
 
       const form = document.getElementById('register-form');
       const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
       form.dispatchEvent(submitEvent);
 
-      // Wait for async operations
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Verify fetch was called with correct parameters (no username field)
@@ -156,13 +178,19 @@ describe('Registration Screen - No Users Exist', () => {
         <form id="register-form">
           <input type="email" id="email" name="email" value="existing@test.com">
           <input type="password" id="password" name="password" value="password123">
+          <input type="password" id="confirmPassword" name="confirmPassword" value="password123">
+          <input type="text" id="firstName" name="firstName" value="">
+          <input type="text" id="lastName" name="lastName" value="">
+          <select id="officeLocation" name="officeLocation">
+            <option value="" selected></option>
+          </select>
           <button type="submit" id="register-button">Create Administrator Account</button>
           <div id="register-error" style="display: none;"></div>
           <div id="register-success" style="display: none;"></div>
         </form>
       `;
 
-      require('../js/register.js');
+      loadRegisterPage();
 
       const form = document.getElementById('register-form');
       const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
@@ -177,27 +205,71 @@ describe('Registration Screen - No Users Exist', () => {
   });
 });
 
+function mockFetchForMainJs(options) {
+  const hasUsers = options.hasUsers;
+  global.fetch.mockImplementation((url) => {
+    const u = String(url);
+    if (u.includes('/api/auth/check-users')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ hasUsers }),
+      });
+    }
+    if (u.includes('/api/version')) {
+      return Promise.resolve({
+        ok: true,
+        headers: { get: (h) => (h === 'content-type' ? 'application/json' : null) },
+        json: async () => ({ versionNumber: '0.0.0-test' }),
+      });
+    }
+    return Promise.reject(new Error(`Unexpected fetch in test: ${u}`));
+  });
+}
+
 describe('Routing to Registration When No Users Exist', () => {
+  let routingDomContentLoadedHandler;
+  let origDocumentAddEventListenerForRouting;
+
   beforeEach(() => {
+    jest.resetModules();
     localStorage.clear();
     global.fetch = jest.fn();
     delete window.location;
-    window.location = { href: '' };
+    window.location = { href: '', pathname: '', search: '' };
     document.body.innerHTML = '';
+    routingDomContentLoadedHandler = null;
+    origDocumentAddEventListenerForRouting = Document.prototype.addEventListener.bind(document);
+    jest.spyOn(document, 'addEventListener').mockImplementation((type, listener, options) => {
+      if (type === 'DOMContentLoaded') {
+        routingDomContentLoadedHandler = listener;
+        return undefined;
+      }
+      return origDocumentAddEventListenerForRouting(type, listener, options);
+    });
   });
 
   afterEach(() => {
+    document.addEventListener.mockRestore();
     jest.clearAllMocks();
     localStorage.clear();
   });
 
+  function fireRoutingDomReady() {
+    if (routingDomContentLoadedHandler) {
+      routingDomContentLoadedHandler.call(document, new Event('DOMContentLoaded'));
+    }
+  }
+
   it('should redirect to registration when no users exist on login page', async () => {
-    // Mock check-users endpoint returning no users
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        hasUsers: false,
-      }),
+    global.fetch.mockImplementation((url) => {
+      const u = String(url);
+      if (u.includes('/api/auth/check-users')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ hasUsers: false }),
+        });
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${u}`));
     });
 
     document.body.innerHTML = `
@@ -208,101 +280,72 @@ describe('Routing to Registration When No Users Exist', () => {
       </form>
     `;
 
-    // Load login.js
     require('../js/login.js');
+    fireRoutingDomReady();
 
-    // Wait for async check-users call
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Verify redirect to registration
     expect(window.location.href).toBe('/pages/register.html');
   });
 
   it('should redirect to registration when no users exist on protected page', async () => {
-    // Mock check-users endpoint returning no users
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        hasUsers: false,
-      }),
-    });
+    mockFetchForMainJs({ hasUsers: false });
 
-    // Mock current path as a protected page
-    Object.defineProperty(window, 'location', {
-      value: {
-        pathname: '/pages/desk-booking.html',
-        href: '',
-      },
-      writable: true,
-    });
+    delete window.location;
+    window.location = {
+      pathname: '/pages/desk-booking.html',
+      href: '',
+      search: '',
+    };
 
     document.body.innerHTML = '<div id="app"></div>';
 
-    // Load main.js
     require('../js/main.js');
+    fireRoutingDomReady();
 
-    // Wait for async check-users call
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 150));
 
-    // Verify redirect to registration
     expect(window.location.href).toBe('/pages/register.html');
   });
 
   it('should not redirect when users exist', async () => {
-    // Mock check-users endpoint returning users exist
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        hasUsers: true,
-      }),
-    });
+    mockFetchForMainJs({ hasUsers: true });
 
-    Object.defineProperty(window, 'location', {
-      value: {
-        pathname: '/pages/desk-booking.html',
-        href: '',
-      },
-      writable: true,
-    });
+    delete window.location;
+    window.location = {
+      pathname: '/pages/desk-booking.html',
+      href: '',
+      search: '',
+    };
 
     document.body.innerHTML = '<div id="app"></div>';
 
-    // Load main.js
     require('../js/main.js');
+    fireRoutingDomReady();
 
-    // Wait for async check-users call
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 150));
 
-    // Verify no redirect (href should remain empty)
-    expect(window.location.href).toBe('');
+    expect(window.location.href).toContain('/pages/login.html');
+    expect(window.location.href).toContain('desk-booking');
   });
 
   it('should not redirect from registration or login pages even when no users exist', async () => {
-    // Mock check-users endpoint returning no users
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        hasUsers: false,
-      }),
-    });
+    mockFetchForMainJs({ hasUsers: false });
 
-    Object.defineProperty(window, 'location', {
-      value: {
-        pathname: '/pages/register.html',
-        href: '',
-      },
-      writable: true,
-    });
+    delete window.location;
+    window.location = {
+      pathname: '/pages/register.html',
+      href: '',
+      search: '',
+    };
 
     document.body.innerHTML = '<div id="app"></div>';
 
-    // Load main.js
     require('../js/main.js');
+    fireRoutingDomReady();
 
-    // Wait for async check-users call
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 150));
 
-    // Verify no redirect from registration page
     expect(window.location.href).toBe('');
   });
 });

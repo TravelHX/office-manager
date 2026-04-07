@@ -2,6 +2,10 @@
 
 This document contains all manual paths through features and user interaction flows.
 
+## Application layout
+
+Primary navigation is a **collapsible left sidebar** on standard pages. **Admin** uses the same pattern: admin sections appear as **vertical items in the left sidebar** (not a horizontal tab row). The **Account** control is at the **top right** of the bar: use it for **Log in** / **Register** when signed out, or for user details and **Log out** when signed in. The **menu** icon in the top bar toggles the sidebar.
+
 ## Use Case 1: Employee Books Desk for Two Days
 
 **Description:** An employee needs to book a desk in the office for two consecutive days.

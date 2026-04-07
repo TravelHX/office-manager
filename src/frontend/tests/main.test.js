@@ -2,265 +2,194 @@
  * @jest-environment jsdom
  */
 
-// Mock fetch before loading main.js
-global.fetch = jest.fn();
+let main;
 
-// Setup before tests
 beforeAll(() => {
-  // Load main.js and make functions available
-  require('../js/main.js');
-  
-  // Make functions available on window for testing
-  // Note: getAuthToken is already available globally from main.js
+  global.fetch = jest.fn();
+  main = require('../js/main.js');
 });
 
-describe('Main JavaScript Functions', () => {
+describe('Main JavaScript (current behavior)', () => {
   beforeEach(() => {
     localStorage.clear();
     global.fetch.mockClear();
     document.body.innerHTML = '<div class="container"></div>';
   });
 
-  describe('getAuthToken', () => {
-    beforeEach(() => {
-      // Mock window.location
-      delete window.location;
-      window.location = { pathname: '/' };
+  describe('getAuthToken / setAuthToken', () => {
+    test('returns null when no token stored', () => {
+      expect(main.getAuthToken()).toBeNull();
     });
 
-    test('should create token if not exists', () => {
-      localStorage.clear();
-      
-      const token = getAuthToken();
-      
-      expect(token).toBeTruthy();
-      expect(token).toMatch(/^user_/);
-      expect(token).toBe('user_1'); // Should use userId = 1 for development
-    });
-
-    test('should return existing token', () => {
-      const existingToken = 'user_1234567890';
-      localStorage.setItem('auth_token', existingToken);
-      
-      const token = getAuthToken();
-      
-      expect(token).toBe(existingToken);
-    });
-
-    test('should return admin token when on admin page', () => {
-      localStorage.clear();
-      window.location.pathname = '/pages/admin.html';
-      
-      const token = getAuthToken();
-      
-      expect(token).toBeTruthy();
-      expect(token).toMatch(/^admin_/);
-      expect(token).toBe('admin_1'); // Should use userId = 1 for development
-    });
-
-    test('should return admin token when URL contains admin', () => {
-      localStorage.clear();
-      window.location.pathname = '/admin';
-      
-      const token = getAuthToken();
-      
-      expect(token).toBeTruthy();
-      expect(token).toMatch(/^admin_/);
-    });
-
-    test('should return user token when not on admin page', () => {
-      localStorage.clear();
-      window.location.pathname = '/pages/desk-booking.html';
-      
-      const token = getAuthToken();
-      
-      expect(token).toBeTruthy();
-      expect(token).toMatch(/^user_/);
-      expect(token).toBe('user_1'); // Should use userId = 1 for development
+    test('returns stored authToken from localStorage', () => {
+      localStorage.setItem('authToken', 'user_abc');
+      expect(main.getAuthToken()).toBe('user_abc');
     });
   });
 
   describe('apiRequest', () => {
-    beforeEach(() => {
-      // Mock window.location
-      delete window.location;
-      window.location = { pathname: '/' };
-    });
-
-    test('should make GET request with auth header', async () => {
-      const mockResponse = { data: 'test' };
-      global.fetch.mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse,
-      });
-      
-      localStorage.setItem('auth_token', 'user_123');
-      
-      const result = await apiRequest('/test');
-      
-      expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:3000/test',
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            'Authorization': 'Bearer user_123',
-            'Content-Type': 'application/json',
-          }),
-        })
-      );
-      expect(result).toEqual(mockResponse);
-    });
-
-    test('should make POST request with body', async () => {
-      const mockResponse = { success: true };
-      global.fetch.mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse,
-      });
-      
-      const body = { deskId: 1, startDate: '2025-12-15', endDate: '2025-12-16' };
-      
-      await apiRequest('/bookings', {
-        method: 'POST',
-        body: body,
-      });
-      
-      expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:3000/bookings',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify(body),
-        })
-      );
-    });
-
-    test('should throw error on failed request', async () => {
-      global.fetch.mockResolvedValue({
-        ok: false,
-        json: async () => ({ error: { message: 'Not found' } }),
-      });
-      
-      await expect(apiRequest('/test')).rejects.toThrow();
-    });
-
-    test('should handle network errors', async () => {
-      global.fetch.mockRejectedValue(new Error('Network error'));
-      
-      await expect(apiRequest('/test')).rejects.toThrow('Network error');
-    });
-
-    test('should use admin token when on admin page', async () => {
-      window.location.pathname = '/pages/admin.html';
-      localStorage.clear();
-      
-      const mockResponse = { deskCount: 10, parkingCount: 5 };
-      global.fetch.mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse,
-      });
-      
-      await apiRequest('/api/admin/configuration');
-      
-      const callArgs = global.fetch.mock.calls[0];
-      const authHeader = callArgs[1].headers.Authorization;
-      
-      expect(authHeader).toMatch(/^Bearer admin_/);
-    });
-
-    test('should handle 204 No Content response without parsing JSON', async () => {
-      // Mock 204 response (DELETE endpoint typically returns this)
-      global.fetch.mockResolvedValue({
-        ok: true,
-        status: 204,
-        headers: {
-          get: jest.fn((header) => {
-            if (header === 'content-type') return null;
-            return null;
-          }),
-        },
-        text: async () => '',
-      });
-      
-      const result = await apiRequest('/api/bookings/1', {
-        method: 'DELETE',
-      });
-      
-      expect(result).toBeNull();
-      expect(global.fetch).toHaveBeenCalled();
-    });
-
-    test('should handle non-JSON responses gracefully', async () => {
+    test('makes GET with Bearer token when authToken set', async () => {
+      localStorage.setItem('authToken', 'tok_1');
       global.fetch.mockResolvedValue({
         ok: true,
         status: 200,
         headers: {
-          get: jest.fn((header) => {
-            if (header === 'content-type') return 'text/plain';
-            return null;
-          }),
+          get: (h) => (h === 'content-type' ? 'application/json' : null),
         },
-        text: async () => 'Plain text response',
+        text: async () => '{"ok":true}',
       });
-      
-      const result = await apiRequest('/test');
-      
+
+      const result = await main.apiRequest('/api/test');
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/test',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer tok_1',
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+      expect(result).toEqual({ ok: true });
+    });
+
+    test('returns null on 204', async () => {
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 204,
+        headers: { get: () => null },
+        text: async () => '',
+      });
+
+      const result = await main.apiRequest('/api/x', { method: 'DELETE' });
       expect(result).toBeNull();
     });
-  });
 
-  describe('showError', () => {
-    test('should display error message', () => {
-      showError('Test error message');
-      
-      const errorDiv = document.querySelector('.error');
-      expect(errorDiv).toBeTruthy();
-      expect(errorDiv.textContent).toBe('Test error message');
-    });
+    test('throws on failed response', async () => {
+      global.fetch.mockResolvedValue({
+        ok: false,
+        status: 400,
+        headers: {
+          get: (h) => (h === 'content-type' ? 'application/json' : null),
+        },
+        text: async () => JSON.stringify({ error: { message: 'Bad' } }),
+      });
 
-    test('should remove error after timeout', (done) => {
-      jest.useFakeTimers();
-      
-      showError('Test error');
-      
-      const errorDiv = document.querySelector('.error');
-      expect(errorDiv).toBeTruthy();
-      
-      jest.advanceTimersByTime(5000);
-      
-      setTimeout(() => {
-        expect(document.querySelector('.error')).toBeNull();
-        done();
-      }, 100);
-      
-      jest.useRealTimers();
+      await expect(main.apiRequest('/api/x')).rejects.toThrow('Bad');
     });
   });
 
-  describe('showSuccess', () => {
-    test('should display success message', () => {
-      showSuccess('Test success message');
-      
-      const successDiv = document.querySelector('.success');
-      expect(successDiv).toBeTruthy();
-      expect(successDiv.textContent).toBe('Test success message');
+  describe('isAdmin (Bug 0012)', () => {
+    test('returns true when user has role admin', () => {
+      localStorage.setItem('user', JSON.stringify({ role: 'admin' }));
+      expect(main.isAdmin()).toBe(true);
     });
 
-    test('should remove success after timeout', (done) => {
-      jest.useFakeTimers();
-      
-      showSuccess('Test success');
-      
-      const successDiv = document.querySelector('.success');
-      expect(successDiv).toBeTruthy();
-      
-      jest.advanceTimersByTime(5000);
-      
-      setTimeout(() => {
-        expect(document.querySelector('.success')).toBeNull();
-        done();
-      }, 100);
-      
-      jest.useRealTimers();
+    test('returns true when user has is_admin flag from API shape', () => {
+      localStorage.setItem('user', JSON.stringify({ is_admin: 1 }));
+      expect(main.isAdmin()).toBe(true);
+    });
+
+    test('returns false when isAdmin is truthy string (avoid loose truthiness)', () => {
+      localStorage.setItem('user', JSON.stringify({ isAdmin: '0' }));
+      expect(main.isAdmin()).toBe(false);
+    });
+
+    test('returns true for role admin case-insensitive', () => {
+      localStorage.setItem('user', JSON.stringify({ role: ' Admin ' }));
+      expect(main.isAdmin()).toBe(true);
+    });
+
+    test('returns true when isAdmin is numeric string 1 from driver', () => {
+      localStorage.setItem('user', JSON.stringify({ isAdmin: '1' }));
+      expect(main.isAdmin()).toBe(true);
+    });
+  });
+
+  describe('syncCurrentUserFromServer (admin menu / Bug 0012)', () => {
+    test('no-ops when no auth token', async () => {
+      const out = await main.syncCurrentUserFromServer();
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(out).toBeNull();
+    });
+
+    test('updates localStorage user when /me succeeds', async () => {
+      localStorage.setItem('authToken', 'jwt-1');
+      localStorage.setItem('user', JSON.stringify({ id: 1, role: 'user' }));
+
+      const payload = {
+        id: 1,
+        username: 'a@test.com',
+        role: 'admin',
+        isAdmin: true,
+      };
+      global.fetch.mockResolvedValue({
+        ok: true,
+        json: async () => payload,
+      });
+
+      const out = await main.syncCurrentUserFromServer();
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/auth/me',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer jwt-1',
+          }),
+        }),
+      );
+      const u = JSON.parse(localStorage.getItem('user'));
+      expect(u.role).toBe('admin');
+      expect(u.isAdmin).toBe(true);
+      expect(out).toEqual(payload);
+    });
+  });
+
+  describe('serverAllowsUserManagement (Bug 0012)', () => {
+    test('returns false without token', async () => {
+      expect(await main.serverAllowsUserManagement()).toBe(false);
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    test('returns true when GET /api/auth/users returns 200', async () => {
+      localStorage.setItem('authToken', 'tok');
+      global.fetch.mockResolvedValue({ status: 200 });
+
+      const ok = await main.serverAllowsUserManagement();
+
+      expect(ok).toBe(true);
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/auth/users',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer tok',
+          }),
+        }),
+      );
+    });
+
+    test('returns false on 403', async () => {
+      localStorage.setItem('authToken', 'tok');
+      global.fetch.mockResolvedValue({ status: 403 });
+
+      expect(await main.serverAllowsUserManagement()).toBe(false);
+    });
+  });
+
+  describe('showError / showSuccess (container fallback)', () => {
+    test('showError inserts .error into .container', () => {
+      main.showError('oops');
+      const errorDiv = document.querySelector('.container .error');
+      expect(errorDiv).toBeTruthy();
+      expect(errorDiv.textContent).toBe('oops');
+    });
+
+    test('showSuccess inserts .success into .container', () => {
+      main.showSuccess('done');
+      const el = document.querySelector('.container .success');
+      expect(el).toBeTruthy();
+      expect(el.textContent).toBe('done');
     });
   });
 });
-

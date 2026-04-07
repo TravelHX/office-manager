@@ -65,16 +65,12 @@ Welcome to Office Manager. The sections below describe how to use desk bookings,
 2. Go to **https://hx-hub-d-office-manager-app.azurewebsites.net/** (or the URL your administrator provides)
 3. The application will authenticate you automatically
 
-#### Navigation
+#### Navigation and layout
 
-The main navigation menu is at the top of every page:
-
-- **Home** - Dashboard with summary statistics
-- **Desk Booking** - Book and manage desk reservations
-- **Parking** - Reserve parking spaces
-- **Overtime** - Record and track overtime hours
-- **My Bookings** - View all your bookings, reservations, and overtime records
-- **Admin** - Administrative functions (admin users only)
+- **Top bar:** App title (link to Home) on the left, **menu** button to show or hide the sidebar, and **Account** on the right.
+- **Left sidebar (collapsible):** Main links for most pages: **Home**, **Desk Booking**, **Parking**, **Overtime** (when you are signed in), **My Bookings**, **Booking Matrix**, **Admin**. Use the menu button to collapse or expand the sidebar; your choice is remembered for the session.
+- **Account menu (collapsible):** Click **Account** on the right. If you are not signed in, choose **Log in** or **Register**. If you are signed in, the menu shows your name and details and a **Log out** action.
+- **Admin:** Admin areas use the same shell; sections (configuration, bookings, users, and so on) are listed **vertically in the left sidebar**. **Main site** at the top of that sidebar returns to the standard app pages.
 
 ### Desk Booking
 

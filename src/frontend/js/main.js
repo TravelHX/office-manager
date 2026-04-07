@@ -23,18 +23,81 @@ function setCurrentUser(user) {
     localStorage.setItem('user', JSON.stringify(user));
 }
 
+/**
+ * Refresh stored user from GET /api/auth/me (fixes stale localStorage missing role/isAdmin).
+ */
+async function syncCurrentUserFromServer() {
+    const token = getAuthToken();
+    if (!token) {
+        return null;
+    }
+    try {
+        const res = await fetch('/api/auth/me', {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+        if (res.ok) {
+            const user = await res.json();
+            setCurrentUser(user);
+            return user;
+        }
+    } catch (e) {
+        console.warn('Could not sync user from server', e);
+    }
+    return null;
+}
+
+/**
+ * True if the server grants the same access as the User Management UI (GET /api/auth/users).
+ * Prefer this over local isAdmin() when deciding whether to show admin-only navigation.
+ */
+async function serverAllowsUserManagement() {
+    const token = getAuthToken();
+    if (!token) {
+        return false;
+    }
+    try {
+        const res = await fetch('/api/auth/users', {
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
+            },
+        });
+        return res.status === 200;
+    } catch (e) {
+        console.warn('Could not verify user management access', e);
+        return false;
+    }
+}
+
 function isAuthenticated() {
     return !!getAuthToken();
 }
 
 function isAdmin() {
     const user = getCurrentUser();
-    return user && (user.isAdmin || user.role === 'admin');
+    if (!user) {
+        return false;
+    }
+    const role = String(user.role || '').trim().toLowerCase();
+    if (role === 'admin') {
+        return true;
+    }
+    if (user.isAdmin === true || user.isAdmin === 1 || user.isAdmin === '1') {
+        return true;
+    }
+    if (user.is_admin === true || user.is_admin === 1 || user.is_admin === '1') {
+        return true;
+    }
+    return false;
 }
 
 function requireAuth() {
     if (!isAuthenticated()) {
-        const currentPath = window.location.pathname;
+        const currentPath = (window.location && window.location.pathname) || '';
         window.location.href = `/pages/login.html?return=${encodeURIComponent(currentPath)}`;
         return false;
     }
@@ -52,7 +115,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         '/pages/complete-profile.html',
     ];
 
-    const currentPath = window.location.pathname;
+    const currentPath = (window.location && window.location.pathname) || '';
     const isPublicPage = publicPages.some(page => currentPath.includes(page));
 
     // Check if any users exist - if not, redirect to registration (unless already on registration/login)
@@ -87,7 +150,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (isProtectedPage && isAuthenticated()) {
         const u = getCurrentUser();
         if (u && u.profileComplete === false) {
-            window.location.href = '/pages/complete-profile.html';
+            clearAuthToken();
+            window.location.href = '/pages/login.html?setupPending=1';
             return;
         }
     }
@@ -141,10 +205,12 @@ function initSidebarToggle() {
 }
 
 function initSidebarActiveNav() {
-    const path = window.location.pathname.replace(/\/$/, '') || '/';
+    const rawPath = (window.location && window.location.pathname) || '/';
+    const path = rawPath.replace(/\/$/, '') || '/';
     document.querySelectorAll('.sidebar-nav a[href]').forEach((a) => {
         try {
-            const u = new URL(a.getAttribute('href'), window.location.origin);
+            const origin = (window.location && window.location.origin) || 'http://localhost';
+            const u = new URL(a.getAttribute('href'), origin);
             let p = u.pathname.replace(/\/$/, '') || '/';
             if (p === path) {
                 a.classList.add('active');
@@ -246,7 +312,7 @@ async function getApplicationVersion() {
     return 'Unknown';
 }
 
-async function apiRequest(endpoint, options = {}) {
+async function mainApiRequest(endpoint, options = {}) {
     const token = getAuthToken();
     
     const defaultHeaders = {
@@ -299,7 +365,7 @@ async function apiRequest(endpoint, options = {}) {
             if (response.status === 401) {
                 // Clear invalid token and redirect to login
                 clearAuthToken();
-                const currentPath = window.location.pathname;
+                const currentPath = (window.location && window.location.pathname) || '';
                 if (!currentPath.includes('login.html')) {
                     window.location.href = `/pages/login.html?return=${encodeURIComponent(currentPath)}`;
                 }
@@ -417,7 +483,9 @@ function updateUserIndicator() {
             panel.appendChild(actions);
         } else {
             trigger.innerHTML = '<span class="account-trigger-label">Account</span><span class="account-chevron" aria-hidden="true">&#9662;</span>';
-            const ret = encodeURIComponent(window.location.pathname + window.location.search);
+            const p = (window.location && window.location.pathname) || '';
+            const q = (window.location && window.location.search) || '';
+            const ret = encodeURIComponent(p + q);
             const actions = document.createElement('div');
             actions.className = 'account-panel-actions';
             actions.innerHTML = `
@@ -491,4 +559,42 @@ async function logout() {
 
 // Make logout available globally
 window.logout = logout;
+
+// Register API helper for other vanilla scripts (browser + Jest when main loads first)
+if (typeof globalThis !== 'undefined') {
+    globalThis.apiRequest = mainApiRequest;
+    globalThis.getAuthToken = getAuthToken;
+    globalThis.getCurrentUser = getCurrentUser;
+    globalThis.isAuthenticated = isAuthenticated;
+    globalThis.isAdmin = isAdmin;
+    globalThis.requireAuth = requireAuth;
+    globalThis.syncCurrentUserFromServer = syncCurrentUserFromServer;
+    globalThis.serverAllowsUserManagement = serverAllowsUserManagement;
+    globalThis.updateUserIndicator = updateUserIndicator;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        getAuthToken,
+        setAuthToken,
+        clearAuthToken,
+        getCurrentUser,
+        setCurrentUser,
+        isAuthenticated,
+        isAdmin,
+        syncCurrentUserFromServer,
+        serverAllowsUserManagement,
+        requireAuth,
+        apiRequest: mainApiRequest,
+        showError,
+        showSuccess,
+        updateUserIndicator,
+        logout,
+        escapeHtml,
+        loadApplicationVersion,
+        initSidebarToggle,
+        initSidebarActiveNav,
+        updateOvertimeSidebarVisibility,
+    };
+}
 

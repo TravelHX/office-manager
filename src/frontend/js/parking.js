@@ -1,5 +1,13 @@
 // Parking Reservation JavaScript
 
+const apiRequest = (endpoint, options) => {
+    const impl = globalThis.apiRequest;
+    if (typeof impl !== 'function') {
+        throw new Error('apiRequest is not registered; load main.js before parking.js.');
+    }
+    return impl(endpoint, options);
+};
+
 let selectedParkingSpaceIds = new Set(); // Track selected parking space IDs for multi-select
 
 document.addEventListener('DOMContentLoaded', () => {

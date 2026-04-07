@@ -47,6 +47,8 @@ describe('Phase 19: Admin provisioning and profile completion', () => {
       });
     expect(completeRes.status).toBe(200);
     expect(completeRes.body.user.profileComplete).toBe(true);
+    expect(completeRes.body.token).toBeDefined();
+    expect(typeof completeRes.body.token).toBe('string');
 
     const loginRes = await request(app)
       .post('/api/auth/login')

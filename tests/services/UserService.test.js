@@ -6,6 +6,23 @@ const { hashPassword, verifyPassword } = require('../../src/backend/utils/passwo
 // Mock the UserRepository
 jest.mock('../../src/backend/repositories/UserRepository');
 
+describe('User model parseIsAdmin (Bug 0012)', () => {
+  it('treats string 0 as non-admin', () => {
+    const u = new User({ username: 'x', is_admin: '0', role: 'user' });
+    expect(u.isAdmin).toBe(false);
+  });
+
+  it('treats string 1 as admin', () => {
+    const u = new User({ username: 'x', is_admin: '1', role: 'admin' });
+    expect(u.isAdmin).toBe(true);
+  });
+
+  it('treats numeric 1 as admin', () => {
+    const u = new User({ username: 'x', is_admin: 1 });
+    expect(u.isAdmin).toBe(true);
+  });
+});
+
 describe('UserService', () => {
   let userService;
   let mockUserRepository;
@@ -246,7 +263,7 @@ describe('UserService', () => {
       ).rejects.toThrow('Invalid username or password');
     });
 
-    it('should reject login when user has no password (provisioned)', async () => {
+    it('should reject login when user has no password (provisioned) with PROFILE_SETUP_REQUIRED', async () => {
       const user = new User({
         id: 1,
         username: 'u@example.com',
@@ -259,7 +276,7 @@ describe('UserService', () => {
 
       await expect(
         userService.authenticate('u@example.com', 'any')
-      ).rejects.toThrow('Invalid username or password');
+      ).rejects.toThrow('PROFILE_SETUP_REQUIRED');
     });
   });
 
@@ -560,6 +577,14 @@ describe('UserService', () => {
 
       expect(count).toBe(0);
     });
+
+    it('should coerce string COUNT from driver to number (Bug 0012)', async () => {
+      mockUserRepository.count.mockResolvedValue('0');
+
+      const count = await userService.getUserCount();
+
+      expect(count).toBe(0);
+    });
   });
 
   describe('hasUsers', () => {
@@ -608,6 +633,33 @@ describe('UserService', () => {
       expect(result.isAdmin).toBe(true);
       expect(result.role).toBe('admin');
       expect(mockUserRepository.create).toHaveBeenCalled();
+    });
+
+    it('should treat string zero user count as first user and assign admin (Bug 0012)', async () => {
+      mockUserRepository.count.mockResolvedValue('0');
+      mockUserRepository.findByUsername.mockResolvedValue(null);
+      mockUserRepository.findByEmail.mockResolvedValue(null);
+
+      const newUser = new User({
+        id: 1,
+        username: 'first@example.com',
+        email: 'first@example.com',
+        passwordHash: 'hashed',
+        isAdmin: true,
+        role: 'admin',
+      });
+      mockUserRepository.create.mockResolvedValue(newUser);
+
+      const result = await userService.registerUser({
+        email: 'first@example.com',
+        password: 'password123',
+      });
+
+      expect(result.isAdmin).toBe(true);
+      expect(result.role).toBe('admin');
+      const createdArg = mockUserRepository.create.mock.calls[0][0];
+      expect(createdArg.isAdmin).toBe(true);
+      expect(createdArg.role).toBe('admin');
     });
 
     it('should register subsequent users as regular users', async () => {
@@ -816,6 +868,14 @@ describe('UserService', () => {
       const count = await userService.getAdminCount();
 
       expect(count).toBe(0);
+    });
+
+    it('should coerce string admin COUNT from driver to number (Bug 0012)', async () => {
+      mockUserRepository.countAdmins.mockResolvedValue('2');
+
+      const count = await userService.getAdminCount();
+
+      expect(count).toBe(2);
     });
   });
 

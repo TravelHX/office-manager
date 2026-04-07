@@ -1,5 +1,13 @@
 // Booking Matrix JavaScript
 
+const apiRequest = (endpoint, options) => {
+    const impl = globalThis.apiRequest;
+    if (typeof impl !== 'function') {
+        throw new Error('apiRequest is not registered; load main.js before matrix.js.');
+    }
+    return impl(endpoint, options);
+};
+
 let currentMatrixData = null;
 
 document.addEventListener('DOMContentLoaded', () => {

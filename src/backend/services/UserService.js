@@ -314,7 +314,7 @@ class UserService {
 
     if (!user.passwordHash) {
       logger.warn(`Login blocked for provisioned user without password: ${user.username}`);
-      throw new Error('Invalid username or password');
+      throw new Error('PROFILE_SETUP_REQUIRED');
     }
 
     logger.info(`User found: ${user.username} (ID: ${user.id}), verifying password...`);
@@ -614,7 +614,9 @@ class UserService {
    * @returns {Promise<number>} Total user count
    */
   async getUserCount() {
-    return await this.userRepository.count();
+    const raw = await this.userRepository.count();
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
   }
 
   /**
@@ -622,7 +624,9 @@ class UserService {
    * @returns {Promise<number>} Admin user count
    */
   async getAdminCount() {
-    return await this.userRepository.countAdmins();
+    const raw = await this.userRepository.countAdmins();
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
   }
 
   /**

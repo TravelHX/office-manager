@@ -64,9 +64,14 @@ async function runCompleteProfilePage() {
                 return;
             }
 
-            messageDiv.innerHTML = '<div class="success">Profile complete. Redirecting to login...</div>';
+            if (body.token && body.user) {
+                localStorage.setItem('authToken', body.token);
+                localStorage.setItem('user', JSON.stringify(body.user));
+            }
+
+            messageDiv.innerHTML = '<div class="success">Profile complete. Redirecting...</div>';
             setTimeout(() => {
-                window.location.href = '/pages/login.html';
+                window.location.href = '/';
             }, 1500);
         } catch (err) {
             messageDiv.innerHTML = '<div class="error">Network error. Please try again.</div>';

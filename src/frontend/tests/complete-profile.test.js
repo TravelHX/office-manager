@@ -129,7 +129,15 @@ describe('Complete profile page', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({}),
+        json: async () => ({
+          token: 'session-after-setup',
+          user: {
+            id: 99,
+            email: 'u@example.com',
+            profileComplete: true,
+            username: 'u@example.com',
+          },
+        }),
       });
 
     const { runCompleteProfilePage } = require('../js/complete-profile.js');
@@ -161,5 +169,7 @@ describe('Complete profile page', () => {
     expect(document.getElementById('complete-message').innerHTML).toContain(
       'Profile complete',
     );
+    expect(localStorage.getItem('authToken')).toBe('session-after-setup');
+    expect(JSON.parse(localStorage.getItem('user')).profileComplete).toBe(true);
   });
 });

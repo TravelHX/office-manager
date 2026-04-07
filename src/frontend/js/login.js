@@ -17,11 +17,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Check if user is already logged in
-  if (getAuthToken()) {
-    // Redirect to home page
+  // Check if user is already logged in (same source as main.js getAuthToken; no dependency on script load order)
+  if (localStorage.getItem('authToken')) {
     window.location.href = '/';
     return;
+  }
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const setupHint = document.getElementById('login-setup-hint');
+  if (setupHint && urlParams.get('setupPending') === '1') {
+    setupHint.style.display = 'block';
+    setupHint.textContent =
+      'If your account was created by an administrator, open the profile setup link from your email to choose a password before signing in.';
   }
 
   // Check if any users exist - if not, redirect to registration
@@ -63,21 +70,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.error?.code === 'PROFILE_SETUP_REQUIRED') {
+          errorDiv.textContent = data.error.message;
+          errorDiv.style.display = 'block';
+          loginButton.disabled = false;
+          loginButton.textContent = 'Login';
+          return;
+        }
         throw new Error(data.error?.message || 'Login failed');
+      }
+
+      if (data.user && data.user.profileComplete === false) {
+        errorDiv.textContent =
+          'Your profile is not complete. Use the profile setup link from your invitation email, or contact your administrator.';
+        errorDiv.style.display = 'block';
+        loginButton.disabled = false;
+        loginButton.textContent = 'Login';
+        return;
       }
 
       // Store token in localStorage
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-
-      if (data.user && data.user.profileComplete === false) {
-        successDiv.textContent = 'Complete your profile to continue...';
-        successDiv.style.display = 'block';
-        setTimeout(() => {
-          window.location.href = '/pages/complete-profile.html';
-        }, 800);
-        return;
-      }
 
       // Show success message
       successDiv.textContent = 'Login successful! Redirecting...';

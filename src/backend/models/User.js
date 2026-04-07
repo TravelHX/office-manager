@@ -8,6 +8,31 @@ function parseProfileComplete(value) {
   return true;
 }
 
+/**
+ * Normalize admin flag from DB/driver (avoid Boolean('0') === true from loose string conversion).
+ */
+function parseIsAdmin(value) {
+  if (value === true || value === 1 || value === '1') {
+    return true;
+  }
+  if (value === false || value === 0 || value === '0' || value === null) {
+    return false;
+  }
+  if (typeof value === 'string') {
+    const t = value.trim().toLowerCase();
+    if (t === 'true' || t === '1') {
+      return true;
+    }
+    if (t === 'false' || t === '0' || t === '') {
+      return false;
+    }
+  }
+  if (value === undefined) {
+    return false;
+  }
+  return Boolean(value);
+}
+
 class User {
   constructor(data) {
     this.id = data.id;
@@ -17,7 +42,9 @@ class User {
     this.email = data.email;
     this.officeLocation = data.office_location || data.officeLocation || null;
     this.passwordHash = data.password_hash || data.passwordHash;
-    this.isAdmin = data.is_admin !== undefined ? Boolean(data.is_admin) : (data.isAdmin !== undefined ? Boolean(data.isAdmin) : false);
+    this.isAdmin = data.is_admin !== undefined && data.is_admin !== null
+      ? parseIsAdmin(data.is_admin)
+      : (data.isAdmin !== undefined && data.isAdmin !== null ? parseIsAdmin(data.isAdmin) : false);
     this.role = data.role || 'user';
     this.resetToken = data.reset_token || data.resetToken || null;
     this.resetTokenExpiry = data.reset_token_expiry || data.resetTokenExpiry || null;

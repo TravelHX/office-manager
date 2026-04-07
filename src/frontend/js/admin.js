@@ -1,6 +1,28 @@
 // Admin Dashboard JavaScript
 
-document.addEventListener('DOMContentLoaded', () => {
+/** Set after /me sync + serverAllowsUserManagement probe (authoritative for User Management UI). */
+let userManagementEnabled = false;
+
+const apiRequest = (endpoint, options) => {
+    const impl = globalThis.apiRequest;
+    if (typeof impl !== 'function') {
+        throw new Error('apiRequest is not registered; load main.js before admin.js.');
+    }
+    return impl(endpoint, options);
+};
+
+document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof globalThis.syncCurrentUserFromServer === 'function') {
+        await globalThis.syncCurrentUserFromServer();
+    }
+
+    if (typeof globalThis.serverAllowsUserManagement === 'function') {
+        userManagementEnabled = await globalThis.serverAllowsUserManagement();
+    }
+    if (!userManagementEnabled && typeof globalThis.isAdmin === 'function') {
+        userManagementEnabled = globalThis.isAdmin();
+    }
+
     setupTabs();
     loadConfiguration();
     loadAllDesks();
@@ -8,9 +30,12 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAllBookings();
     loadAllParkingReservations();
     loadAllOvertimeRecords();
-    
-    // Check if user is admin and show user management tab
-    if (typeof isAdmin !== 'undefined' && isAdmin()) {
+
+    if (typeof globalThis.updateUserIndicator === 'function') {
+        globalThis.updateUserIndicator();
+    }
+
+    if (userManagementEnabled) {
         const usersTabBtn = document.getElementById('users-tab-btn');
         if (usersTabBtn) {
             usersTabBtn.style.display = 'block';
@@ -50,7 +75,7 @@ function setupTabs() {
             }
             
             // Reload users when users tab is opened
-            if (targetTab === 'users' && typeof isAdmin !== 'undefined' && isAdmin()) {
+            if (targetTab === 'users' && userManagementEnabled) {
                 loadAllUsers();
             }
         });

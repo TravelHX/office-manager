@@ -40,14 +40,16 @@ if ($LASTEXITCODE -ne 0) {
 
 # Wait for database to be healthy
 Write-Host "Waiting for database to be ready..." -ForegroundColor Yellow
-$maxWait = 60
+$maxWait = 120
 $waited = 0
 $healthy = $false
 
 while ($waited -lt $maxWait -and -not $healthy) {
     Start-Sleep -Seconds 2
     $waited += 2
-    $healthStatus = docker inspect --format='{{.State.Health.Status}}' office-manager-test-mysql 2>$null
+    # Use double-quoted --format so PowerShell does not pass malformed args to docker.exe
+    $healthStatus = (docker inspect --format "{{.State.Health.Status}}" office-manager-test-mysql 2>$null)
+    if ($null -ne $healthStatus) { $healthStatus = $healthStatus.Trim() }
     if ($healthStatus -eq "healthy") {
         $healthy = $true
         Write-Host "Database is ready!" -ForegroundColor Green
