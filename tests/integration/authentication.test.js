@@ -79,7 +79,7 @@ describe('Authentication Endpoints', () => {
       expect(response.body.error.code).toBe('INVALID_CREDENTIALS');
     });
 
-    it('should reject login with non-existent username', async () => {
+    it('should reject login with non-existent email (unknown user)', async () => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
@@ -88,7 +88,8 @@ describe('Authentication Endpoints', () => {
         });
 
       expect(response.status).toBe(401);
-      expect(response.body.error.code).toBe('INVALID_CREDENTIALS');
+      expect(response.body.error.code).toBe('UNKNOWN_USER');
+      expect(response.body.error.message).toContain('administrator must create');
     });
 
     it('should reject login without username', async () => {
@@ -462,7 +463,7 @@ describe('Authentication Endpoints', () => {
   });
 
   describe('POST /api/auth/forgot-password', () => {
-    it('should accept password reset request for valid email', async () => {
+    it('should return admin-assisted reset message without sending email', async () => {
       const response = await request(app)
         .post('/api/auth/forgot-password')
         .send({
@@ -470,10 +471,12 @@ describe('Authentication Endpoints', () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toContain('password reset link');
+      expect(response.body.message).toContain('does not send email');
+      expect(response.body.message).toContain('administrator');
+      expect(response.body.code).toBe('NO_EMAIL_PASSWORD_RESET');
     });
 
-    it('should return success even for non-existent email (security)', async () => {
+    it('should return same guidance for any valid email (no enumeration via email send)', async () => {
       const response = await request(app)
         .post('/api/auth/forgot-password')
         .send({
@@ -481,7 +484,7 @@ describe('Authentication Endpoints', () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toContain('password reset link');
+      expect(response.body.code).toBe('NO_EMAIL_PASSWORD_RESET');
     });
 
     it('should reject invalid email format', async () => {
@@ -499,14 +502,7 @@ describe('Authentication Endpoints', () => {
     let resetToken;
 
     beforeEach(async () => {
-      // Request password reset to get a token
-      await request(app)
-        .post('/api/auth/forgot-password')
-        .send({
-          email: 'testuser@test.com',
-        });
-
-      // Get the token from the database (in real scenario, this would be in email)
+      await userService.requestPasswordReset('testuser@test.com');
       const UserRepository = require('../../src/backend/repositories/UserRepository');
       const userRepo = new UserRepository();
       const user = await userRepo.findByEmail('testuser@test.com');
@@ -667,8 +663,7 @@ describe('Authentication Endpoints', () => {
       }
     });
 
-    it('should register subsequent users as regular users', async () => {
-      // This test assumes at least one user already exists (adminUser)
+    it('should reject self-registration when a user already exists', async () => {
       const response = await request(app)
         .post('/api/auth/register')
         .send({
@@ -677,11 +672,9 @@ describe('Authentication Endpoints', () => {
           password: 'password123',
         });
 
-      expect(response.status).toBe(201);
-      expect(response.body.user).toBeDefined();
-      expect(response.body.user.isAdmin).toBe(false);
-      expect(response.body.user.role).toBe('user');
-      expect(response.body.token).toBeDefined();
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe('REGISTRATION_CLOSED');
+      expect(response.body.error.message).toContain('administrator must create');
     });
 
     it('should reject registration with duplicate username', async () => {
@@ -859,25 +852,16 @@ describe('Authentication Endpoints', () => {
     });
 
     it('should complete full password reset flow', async () => {
-      // Step 1: Request password reset
-      const forgotPasswordResponse = await request(app)
-        .post('/api/auth/forgot-password')
-        .send({
-          email: 'resettest@test.com',
-        });
-
-      expect(forgotPasswordResponse.status).toBe(200);
-      expect(forgotPasswordResponse.body.message).toBeDefined();
-
-      // Step 2: Get reset token from database (simulating email link)
       const UserService = require('../../src/backend/services/UserService');
       const userService = new UserService();
+      await userService.requestPasswordReset('resettest@test.com');
+
       const user = await userService.getUserByUsername('resettest@test.com');
       
       expect(user.resetToken).toBeDefined();
       expect(user.resetTokenExpiry).toBeDefined();
 
-      // Step 3: Reset password with token
+      // Reset password with token (admin gives user this link out of band)
       const resetPasswordResponse = await request(app)
         .post('/api/auth/reset-password')
         .send({

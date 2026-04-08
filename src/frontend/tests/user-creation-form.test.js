@@ -214,7 +214,8 @@ describe('User provisioning form (Phase 19)', () => {
 
     const messageDiv = document.getElementById('create-user-message');
     expect(messageDiv).toBeTruthy();
-    expect(messageDiv.innerHTML).toContain('Profile setup link');
+    expect(messageDiv.innerHTML).toContain('Optional setup URL');
+    expect(messageDiv.innerHTML).toContain('sign in with their email');
     expect(messageDiv.innerHTML).toContain(
       'https://app.example/pages/complete-profile.html?token=tok1',
     );

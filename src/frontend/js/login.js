@@ -28,7 +28,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (setupHint && urlParams.get('setupPending') === '1') {
     setupHint.style.display = 'block';
     setupHint.textContent =
-      'If your account was created by an administrator, open the profile setup link from your email to choose a password before signing in.';
+      'Your account still needs a password and office. Sign in with your email; you will be taken to finish setup.';
+  }
+  const needsAdminHint = document.getElementById('login-needs-admin-hint');
+  if (needsAdminHint && urlParams.get('needsAdmin') === '1') {
+    needsAdminHint.style.display = 'block';
+    needsAdminHint.textContent =
+      'Self-service registration is only for the very first user. Ask an administrator to add your account, then sign in here.';
   }
 
   // Check if any users exist - if not, redirect to registration
@@ -70,7 +76,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.error?.code === 'PROFILE_SETUP_REQUIRED' && data.error.profileSetupUrl) {
+          window.location.href = data.error.profileSetupUrl;
+          return;
+        }
         if (data.error?.code === 'PROFILE_SETUP_REQUIRED') {
+          errorDiv.textContent = data.error.message;
+          errorDiv.style.display = 'block';
+          loginButton.disabled = false;
+          loginButton.textContent = 'Login';
+          return;
+        }
+        if (data.error?.code === 'UNKNOWN_USER') {
           errorDiv.textContent = data.error.message;
           errorDiv.style.display = 'block';
           loginButton.disabled = false;
@@ -82,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (data.user && data.user.profileComplete === false) {
         errorDiv.textContent =
-          'Your profile is not complete. Use the profile setup link from your invitation email, or contact your administrator.';
+          'Your profile is not complete. Sign in with your email to continue setup, or contact your administrator.';
         errorDiv.style.display = 'block';
         loginButton.disabled = false;
         loginButton.textContent = 'Login';

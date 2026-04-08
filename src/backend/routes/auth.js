@@ -3,6 +3,7 @@ const router = express.Router();
 const UserService = require('../services/UserService');
 const { authenticate, authorize, requireCompleteProfile } = require('../middleware/auth');
 const { generateToken } = require('../utils/token');
+const { isValidEmail } = require('../utils/email-validator');
 
 const userService = new UserService();
 
@@ -136,37 +137,58 @@ router.post('/login', async (req, res, next) => {
       });
     }
 
-    const user = await userService.authenticate(username, password);
-    const token = generateToken(user);
+    const result = await userService.performLogin(username, password);
 
-    logger.info(`Login successful for username: ${username}`);
-
-    res.json({
-      token,
-      user: user.toJSON(),
-    });
-  } catch (error) {
-    const logger = require('../utils/logger');
-    logger.error(`Login failed: ${error.message}`);
-
-    if (error.message === 'PROFILE_SETUP_REQUIRED') {
-      return res.status(403).json({
+    if (result.type === 'unknown_user') {
+      return res.status(401).json({
         error: {
           message:
-            'This account is not activated yet. Use the profile setup link from your invitation email. If you do not have the link, contact your administrator.',
-          code: 'PROFILE_SETUP_REQUIRED',
+            'No account exists for this email. An administrator must create your account before you can sign in.',
+          code: 'UNKNOWN_USER',
         },
       });
     }
 
-    if (error.message.includes('Invalid username or password')) {
+    if (result.type === 'needs_setup') {
+      return res.status(403).json({
+        error: {
+          message:
+            'Finish setting up your account by choosing a password and office location on the next page.',
+          code: 'PROFILE_SETUP_REQUIRED',
+          profileSetupUrl: result.profileSetupUrl,
+        },
+      });
+    }
+
+    if (result.type === 'setup_expired') {
+      return res.status(403).json({
+        error: {
+          message:
+            'Your account setup window has expired. Ask your administrator to reset your access or provision you again.',
+          code: 'PROFILE_SETUP_EXPIRED',
+        },
+      });
+    }
+
+    if (result.type === 'invalid_credentials') {
       return res.status(401).json({
         error: {
-          message: error.message,
+          message: 'Invalid username or password',
           code: 'INVALID_CREDENTIALS',
         },
       });
     }
+
+    const token = generateToken(result.user);
+    logger.info(`Login successful for username: ${username}`);
+
+    res.json({
+      token,
+      user: result.user.toJSON(),
+    });
+  } catch (error) {
+    const logger = require('../utils/logger');
+    logger.error(`Login failed: ${error.message}`);
     next(error);
   }
 });
@@ -190,7 +212,7 @@ router.get('/me', authenticate, async (req, res, next) => {
   }
 });
 
-// Create user endpoint (admin only) — email + name only; user completes profile via invitation link
+// Create user endpoint (admin only) — email + name only; user completes profile after login or via optional setup URL
 router.post('/users', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const { name, email, first_name, last_name, is_admin, role } = req.body || {};
@@ -401,12 +423,12 @@ router.delete('/users/:id', authenticate, requireCompleteProfile, authorize(['ad
   }
 });
 
-// Forgot password endpoint (request password reset)
+// Forgot password: no outbound email; instruct user to contact an admin
 router.post('/forgot-password', async (req, res, next) => {
   try {
     const { email } = req.body;
 
-    if (!email) {
+    if (!email || !String(email).trim()) {
       return res.status(400).json({
         error: {
           message: 'Email is required',
@@ -415,25 +437,22 @@ router.post('/forgot-password', async (req, res, next) => {
       });
     }
 
-    await userService.requestPasswordReset(email);
-
-    // Always return success to prevent email enumeration
-    res.json({
-      message: 'If an account with that email exists, a password reset link has been sent.',
-    });
-  } catch (error) {
-    if (error.message.includes('Valid email')) {
+    if (!isValidEmail(String(email).trim())) {
       return res.status(400).json({
         error: {
-          message: error.message,
+          message: 'Invalid email format',
           code: 'VALIDATION_ERROR',
         },
       });
     }
-    // Don't reveal errors to prevent email enumeration
+
     res.json({
-      message: 'If an account with that email exists, a password reset link has been sent.',
+      message:
+        'This application does not send email. Ask your administrator to reset your password from User Management. They can give you a reset link or set you up again.',
+      code: 'NO_EMAIL_PASSWORD_RESET',
     });
+  } catch (error) {
+    next(error);
   }
 });
 

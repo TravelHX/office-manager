@@ -1,4 +1,15 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const response = await fetch('/api/auth/check-users');
+    const data = await response.json();
+    if (data.hasUsers) {
+      window.location.href = '/pages/login.html?needsAdmin=1';
+      return;
+    }
+  } catch (e) {
+    console.error('Error checking for users:', e);
+  }
+
   const registerForm = document.getElementById('register-form');
   const errorDiv = document.getElementById('register-error');
   const successDiv = document.getElementById('register-success');

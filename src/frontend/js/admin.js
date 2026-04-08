@@ -613,9 +613,9 @@ async function createUser() {
         });
         
         const setupHint = response.profileSetupUrl
-            ? `<p><strong>Profile setup link</strong> (share with the user):<br><code style="word-break: break-all;">${window.location.origin}${response.profileSetupUrl}</code></p>`
+            ? `<p><strong>Optional setup URL</strong> (share out of band if you want a direct link):<br><code style="word-break: break-all;">${window.location.origin}${response.profileSetupUrl}</code></p><p>Otherwise they can sign in on the login page with their email; the app will send them to finish password and office.</p>`
             : '';
-        messageDiv.innerHTML = `<div class="success">User provisioned. They must open the setup link to choose password and office.</div>${setupHint}`;
+        messageDiv.innerHTML = `<div class="success">User provisioned. They should sign in with their email on the login page to set a password and office.</div>${setupHint}`;
         
         loadAllUsers();
         

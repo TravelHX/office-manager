@@ -280,6 +280,86 @@ describe('UserService', () => {
     });
   });
 
+  describe('performLogin', () => {
+    it('returns unknown_user when email not found', async () => {
+      mockUserRepository.findByUsername.mockResolvedValue(null);
+      mockUserRepository.findByEmail.mockResolvedValue(null);
+
+      const r = await userService.performLogin('nobody@example.com', 'x');
+      expect(r.type).toBe('unknown_user');
+    });
+
+    it('returns needs_setup with profile URL when provisioned with valid invitation', async () => {
+      const future = new Date();
+      future.setDate(future.getDate() + 7);
+      const user = new User({
+        id: 1,
+        username: 'u@example.com',
+        email: 'u@example.com',
+        passwordHash: null,
+        invitation_token: 'tok123',
+        invitation_token_expiry: future,
+        role: 'user',
+      });
+
+      mockUserRepository.findByUsername.mockResolvedValue(user);
+
+      const r = await userService.performLogin('u@example.com', 'anything');
+      expect(r.type).toBe('needs_setup');
+      expect(r.profileSetupUrl).toContain('complete-profile.html');
+      expect(r.profileSetupUrl).toContain(encodeURIComponent('tok123'));
+    });
+
+    it('returns setup_expired when invitation is missing or expired', async () => {
+      const past = new Date();
+      past.setDate(past.getDate() - 1);
+      const user = new User({
+        id: 1,
+        username: 'u@example.com',
+        email: 'u@example.com',
+        passwordHash: null,
+        invitation_token: 'tok',
+        invitation_token_expiry: past,
+        role: 'user',
+      });
+      mockUserRepository.findByUsername.mockResolvedValue(user);
+
+      const r = await userService.performLogin('u@example.com', 'x');
+      expect(r.type).toBe('setup_expired');
+    });
+
+    it('returns invalid_credentials when password wrong', async () => {
+      const passwordHash = await hashPassword('good');
+      const user = new User({
+        id: 1,
+        username: 'u@example.com',
+        email: 'u@example.com',
+        passwordHash,
+        role: 'user',
+      });
+      mockUserRepository.findByUsername.mockResolvedValue(user);
+
+      const r = await userService.performLogin('u@example.com', 'bad');
+      expect(r.type).toBe('invalid_credentials');
+    });
+
+    it('returns success when password correct', async () => {
+      const passwordHash = await hashPassword('good');
+      const user = new User({
+        id: 1,
+        username: 'u@example.com',
+        email: 'u@example.com',
+        passwordHash,
+        role: 'user',
+      });
+      mockUserRepository.findByUsername.mockResolvedValue(user);
+
+      const r = await userService.performLogin('u@example.com', 'good');
+      expect(r.type).toBe('success');
+      expect(r.user.username).toBe('u@example.com');
+    });
+  });
+
   describe('getUserById', () => {
     it('should return user when found', async () => {
       const user = new User({
@@ -662,32 +742,18 @@ describe('UserService', () => {
       expect(createdArg.role).toBe('admin');
     });
 
-    it('should register subsequent users as regular users', async () => {
+    it('should reject self-registration when any user already exists', async () => {
       mockUserRepository.count.mockResolvedValue(1);
       mockUserRepository.findByUsername.mockResolvedValue(null);
       mockUserRepository.findByEmail.mockResolvedValue(null);
-      
-      const newUser = new User({
-        id: 2,
-        username: 'seconduser',
-        email: 'seconduser@example.com',
-        passwordHash: 'hashed',
-        isAdmin: false,
-        role: 'user',
-      });
-      mockUserRepository.create.mockResolvedValue(newUser);
 
-      const userData = {
-        username: 'seconduser',
-        email: 'seconduser@example.com',
-        password: 'password123',
-      };
-
-      const result = await userService.registerUser(userData);
-
-      expect(result).toBeDefined();
-      expect(result.isAdmin).toBe(false);
-      expect(result.role).toBe('user');
+      await expect(
+        userService.registerUser({
+          username: 'seconduser',
+          email: 'seconduser@example.com',
+          password: 'password123',
+        })
+      ).rejects.toThrow('Self-service registration is not available');
     });
 
     it('should throw error if username already exists', async () => {

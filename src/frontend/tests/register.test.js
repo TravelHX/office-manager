@@ -102,7 +102,10 @@ describe('Registration Screen - No Users Exist', () => {
     }
 
     it('should submit registration form and create first user as admin (Bug 0009: no username in request)', async () => {
-      // Mock successful registration response
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ hasUsers: false }),
+      });
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -163,7 +166,10 @@ describe('Registration Screen - No Users Exist', () => {
     });
 
     it('should handle registration error and display error message', async () => {
-      // Mock failed registration response
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ hasUsers: false }),
+      });
       global.fetch.mockResolvedValueOnce({
         ok: false,
         json: async () => ({
@@ -201,6 +207,28 @@ describe('Registration Screen - No Users Exist', () => {
       const errorDiv = document.getElementById('register-error');
       expect(errorDiv.style.display).toBe('block');
       expect(errorDiv.textContent).toContain('Email already exists');
+    });
+
+    it('should redirect to login when users already exist', async () => {
+      delete window.location;
+      window.location = { href: '' };
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ hasUsers: true }),
+      });
+
+      document.body.innerHTML = `
+        <form id="register-form">
+          <input type="email" id="email" name="email" value="x@test.com">
+          <button type="submit" id="register-button">Create Administrator Account</button>
+        </form>
+      `;
+
+      loadRegisterPage();
+      await new Promise((resolve) => setTimeout(resolve, 80));
+
+      expect(window.location.href).toBe('/pages/login.html?needsAdmin=1');
     });
   });
 });

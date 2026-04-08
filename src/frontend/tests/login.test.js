@@ -104,6 +104,79 @@ describe('Login Functionality', () => {
       });
     });
 
+    it('should redirect to complete-profile when PROFILE_SETUP_REQUIRED includes profileSetupUrl', async () => {
+      const loc = { href: '' };
+      delete window.location;
+      window.location = loc;
+
+      stubCheckUsersAndLogin(() => ({
+        ok: false,
+        json: async () => ({
+          error: {
+            code: 'PROFILE_SETUP_REQUIRED',
+            message: 'Finish setting up',
+            profileSetupUrl: '/pages/complete-profile.html?token=abc',
+          },
+        }),
+      }));
+
+      document.body.innerHTML = `
+        <form id="login-form">
+          <input type="text" id="username" name="username" value="new@example.com">
+          <input type="password" id="password" name="password" value="x">
+          <button type="submit" id="login-button">Login</button>
+          <div id="login-error" style="display: none;"></div>
+          <div id="login-success" style="display: none;"></div>
+        </form>
+      `;
+
+      loadLoginPage();
+      await new Promise((r) => setTimeout(r, 50));
+
+      document.getElementById('login-form').dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      );
+
+      await new Promise((r) => setTimeout(r, 80));
+
+      expect(loc.href).toBe('/pages/complete-profile.html?token=abc');
+    });
+
+    it('should show UNKNOWN_USER message when email is not registered', async () => {
+      stubCheckUsersAndLogin(() => ({
+        ok: false,
+        json: async () => ({
+          error: {
+            message: 'No account exists for this email. An administrator must create your account before you can sign in.',
+            code: 'UNKNOWN_USER',
+          },
+        }),
+      }));
+
+      document.body.innerHTML = `
+        <form id="login-form">
+          <input type="text" id="username" name="username" value="ghost@example.com">
+          <input type="password" id="password" name="password" value="x">
+          <button type="submit" id="login-button">Login</button>
+          <div id="login-error" style="display: none;"></div>
+          <div id="login-success" style="display: none;"></div>
+        </form>
+      `;
+
+      loadLoginPage();
+      await new Promise((r) => setTimeout(r, 50));
+
+      document.getElementById('login-form').dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      );
+
+      await new Promise((r) => setTimeout(r, 80));
+
+      const errorDiv = document.getElementById('login-error');
+      expect(errorDiv.style.display).toBe('block');
+      expect(errorDiv.textContent).toContain('administrator must create');
+    });
+
     it('should handle login error and display error message', async () => {
       stubCheckUsersAndLogin(() => ({
         ok: false,
@@ -198,13 +271,13 @@ describe('Login Functionality', () => {
       expect(window.location.href).toBe('/');
     });
 
-    it('should show PROFILE_SETUP_REQUIRED message without storing session (Bug 0013)', async () => {
+    it('should show PROFILE_SETUP_REQUIRED message when no profileSetupUrl without storing session', async () => {
       stubCheckUsersAndLogin(() => ({
         ok: false,
         json: async () => ({
           error: {
             code: 'PROFILE_SETUP_REQUIRED',
-            message: 'Use the profile setup link from your invitation email.',
+            message: 'Please complete setup.',
           },
         }),
       }));
@@ -232,7 +305,7 @@ describe('Login Functionality', () => {
 
       const errorDiv = document.getElementById('login-error');
       expect(errorDiv.style.display).toBe('block');
-      expect(errorDiv.textContent).toContain('profile setup link');
+      expect(errorDiv.textContent).toContain('complete setup');
       expect(localStorage.getItem('authToken')).toBeNull();
     });
 
@@ -274,7 +347,7 @@ describe('Login Functionality', () => {
       expect(localStorage.getItem('authToken')).toBeNull();
       const errorDiv = document.getElementById('login-error');
       expect(errorDiv.style.display).toBe('block');
-      expect(errorDiv.textContent).toContain('invitation');
+      expect(errorDiv.textContent).toContain('administrator');
     });
 
     it('should show setup hint when setupPending=1 in URL (Bug 0013)', async () => {
@@ -307,7 +380,7 @@ describe('Login Functionality', () => {
 
       const hint = document.getElementById('login-setup-hint');
       expect(hint.style.display).toBe('block');
-      expect(hint.textContent).toContain('profile setup link');
+      expect(hint.textContent).toContain('finish setup');
     });
   });
 });

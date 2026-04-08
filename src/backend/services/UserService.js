@@ -329,6 +329,39 @@ class UserService {
   }
 
   /**
+   * Full login decision for HTTP: success, unknown email, provisioned user needing profile setup, expired setup, or bad password.
+   * @returns {Promise<{ type: 'success', user: User } | { type: 'unknown_user' } | { type: 'needs_setup', profileSetupUrl: string } | { type: 'setup_expired' } | { type: 'invalid_credentials' }>}
+   */
+  async performLogin(username, password) {
+    if (!username || !password) {
+      throw new Error('Username and password are required');
+    }
+    const key = String(username).trim().toLowerCase();
+    let user = await this.userRepository.findByUsername(key);
+    if (!user) {
+      user = await this.userRepository.findByEmail(key);
+    }
+    if (!user) {
+      return { type: 'unknown_user' };
+    }
+    if (!user.passwordHash) {
+      if (!user.invitationToken || isTokenExpired(user.invitationTokenExpiry)) {
+        return { type: 'setup_expired' };
+      }
+      const enc = encodeURIComponent(user.invitationToken);
+      return {
+        type: 'needs_setup',
+        profileSetupUrl: `/pages/complete-profile.html?token=${enc}`,
+      };
+    }
+    const isValid = await verifyPassword(password, user.passwordHash);
+    if (!isValid) {
+      return { type: 'invalid_credentials' };
+    }
+    return { type: 'success', user };
+  }
+
+  /**
    * Get user by ID
    * @param {number} id - User ID
    * @returns {Promise<User>} User
@@ -540,7 +573,7 @@ class UserService {
   }
 
   /**
-   * Request password reset (generates reset token and sends email)
+   * Generate a password reset token for a user (no outbound email; admin shares reset link out of band).
    * @param {string} email - User email address
    * @returns {Promise<void>}
    */
@@ -565,13 +598,8 @@ class UserService {
       reset_token_expiry: resetTokenExpiry,
     });
 
-    // TODO: Send email with reset link
-    // For now, we'll just log it (in production, implement email sending)
     const logger = require('../utils/logger');
-    logger.info(`Password reset requested for ${email}. Token: ${resetToken}`);
-    
-    // In a real implementation, you would send an email here:
-    // await sendPasswordResetEmail(user.email, resetToken);
+    logger.info(`Password reset token stored for ${email} (admin-assisted; no email sent).`);
   }
 
   /**
@@ -790,9 +818,14 @@ class UserService {
       throw new Error('Email already exists');
     }
 
-    // Check if this is the first user
+    // Only the first user may self-register; everyone else is provisioned by an admin
     const userCount = await this.getUserCount();
-    const isFirstUser = userCount === 0;
+    if (userCount > 0) {
+      throw new Error(
+        'Self-service registration is not available. An administrator must create your account before you can sign in.'
+      );
+    }
+    const isFirstUser = true;
 
     // Hash password
     const passwordHash = await hashPassword(userData.password);

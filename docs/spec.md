@@ -214,14 +214,14 @@ This feature will help administrators quickly see which desk numbers have been a
 Complete user authentication and management system with role-based access control:
 
 - **Email as Username**: Email address serves as the username/login identifier. No separate username field is required - users log in using their email address.
-- **User Creation**: Admin users **provision** new users with **email address** (login identifier) and **name** only. Password, office location, and other profile fields are **not** set by the admin; the user supplies them on first login (see **### 13. Minimal Admin User Provisioning and First-Login Profile Completion**).
+- **User Creation**: Admin users **provision** new users with **email address** (login identifier) and **name** only. Password, office location, and other profile fields are **not** set by the admin; the user completes them immediately after signing in on the login page (see **### 13**). The application **does not send email**; optional setup URLs may be copied by the admin and shared out of band.
 - **Password Management**: Users can change their passwords
 - **Admin Configuration**: Initial admin user configured via `config.json` in the `data/` folder with configurable email address (used as username) and optional password
 - **User Restrictions**: Users can only book desks/spaces for themselves and update their own data
 - **Development Test User**: Test user (Email: test@example.com or similar, Password: Password123) created automatically in development mode only (to be removed - see First User Admin Registration feature)
 - **User Indicator**: Icon at top left of screen displays logged-in user information
 - **Access Control**: 
-  - Logged-in users: Full access to all features except user creation (admin only)
+  - Logged-in users: Full access to all features except **user management** (adding and removing users; **admin only**)
   - Not logged-in users: Can only view available desks/spaces, cannot access overtime screen or make bookings
 - **Login Redirect**: Unauthenticated users attempting to book desks/spaces are redirected to login screen
 
@@ -234,6 +234,8 @@ Enhanced user management system with comprehensive user profiles and password re
 - **User Profile Fields**: Email address is the login identifier (no separate username). Full name is stored from registration or from admin provisioning plus profile completion. Office location is chosen by the user (London or Prague) when they complete their profile after provisioning or at registration.
 - **Office Location**: Hardcoded list of office locations (currently London or Prague)
 - **Admin Flag**: Users have an `IsAdmin` boolean flag to designate administrative privileges
+- **Admin user management (add and remove)**: **Only administrators** may **add** (provision) users and **remove** (delete) users. An admin **must not** be allowed to **remove their own account** (self-deletion is forbidden); another admin must perform removal of a given admin account if required.
+- **Minimum admin invariant**: The system **must always** have **at least one** user with administrative privileges. No operation (including deletion or role change) may leave the system with zero admins. This is enforced in validation and API behavior (see **### 10**).
 - **Admin User Creation**: Admin users provision new users with **email and name only** through the admin interface; the user sets password and office via the profile setup link (see **### 13**). Self-registration (first user and subsequent users where enabled) collects email, password, name, and office as implemented for that flow.
 - **Login Screen**: Dedicated login screen for user authentication using email address as the username/login identifier
 - **Password Reset**: Forgotten password functionality that emails a reset link to the user's email address
@@ -250,7 +252,7 @@ Initial user registration system where the first user to register automatically 
 - **Application Startup Cleanup**: When the application starts, it automatically runs cleanup logic that:
   - Removes the admin/password123 test user if it exists
   - If the "admin" user exists, flushes all users from the system (clean slate for production)
-- **Registration Flow**: When no users exist, users are presented with a registration screen instead of login screen
+- **Registration Flow**: When no users exist, users are presented with a registration screen instead of login screen. When any user already exists, self-registration is **not** available; visitors are directed to log in and are informed that an administrator must add them.
 - **Automatic Admin Assignment**: The first registered user is automatically assigned admin privileges without manual intervention
 
 This feature will provide a clean initialization process where the first user becomes the admin, removing the need for manual admin setup scripts in production.
@@ -331,20 +333,20 @@ Simplified booking flow by removing the unnecessary modal dialog:
 
 This feature will streamline the booking process by removing an unnecessary confirmation step, making bookings faster and more intuitive.
 
-### 10. Admin User Deletion
+### 10. Admin User Deletion and Admin Invariants
 
-Administrative functionality to delete users with safety constraints:
+Administrative functionality to **add** and **remove** users, with mandatory safety rules:
 
-- **Admin User Deletion**: Admin users can delete other users from the system
-- **Minimum Admin Constraint**: The system must always maintain at least one admin user
-  - If attempting to delete the last admin user, the operation is prevented with an appropriate error message
-  - Validation checks the number of admin users before allowing deletion
-- **User Deletion**: Admin users can delete regular (non-admin) users without restrictions
-- **Admin Deletion**: Admin users can delete other admin users, but only if at least one admin will remain
-- **Error Handling**: Clear error messages when deletion is prevented due to minimum admin constraint
+- **Who may add or remove users**: **Only admin users** have permission to **provision (add)** users and to **delete (remove)** users. Non-admins cannot add or remove user accounts.
+- **Self-removal forbidden**: An admin **must not** be able to **delete their own** user account. The UI and API must reject attempts to remove the currently authenticated admin as the target of deletion, with a clear error message. Removing a given admin account (if needed) is performed by **another** administrator.
+- **At least one admin (system invariant)**: There **must always be** at least **one** admin user in the system at all times. No sequence of operations may result in zero users holding administrative privileges.
+  - Deleting or demoting the **last** remaining admin is **not** allowed; validation blocks it with an appropriate error message.
+  - Deleting **another** admin is allowed only when **at least one** admin will remain afterward.
+- **Regular users**: Admins may delete non-admin users subject to cascade and business rules below.
+- **Error Handling**: Clear error messages when deletion is prevented (self-deletion, last admin, or other validation failures).
 - **Cascade Handling**: Determine how to handle bookings, reservations, and overtime records associated with deleted users (e.g., mark as cancelled, reassign, or prevent deletion if active bookings exist)
 
-This feature will provide administrators with user management capabilities while ensuring system integrity through the minimum admin constraint.
+This feature provides administrators with user lifecycle management while enforcing **no self-deletion** and the **minimum one admin** rule.
 
 ### 11. Comprehensive Test Coverage
 
@@ -406,7 +408,7 @@ Intended behavior for bringing new users into the system with minimal admin effo
 
 - **Access until complete**: Users with an incomplete profile must **not** have full access to actions that require a complete identity (e.g. making desk or parking bookings, recording overtime, or other protected features as defined during implementation). Viewing limited public or informational screens may be allowed if appropriate; the goal is to force completion before normal use.
 
-- **Security and abuse**: Provisioning must not introduce accounts that others can take over without verification. Any invitation, magic link, or first-login flow must follow secure practices (e.g. time-limited tokens, email verification, or reliance on corporate IdP where applicable).
+- **Security and abuse**: Setup and reset tokens are **time-limited** and unguessable. The product may assume a trusted network or admin-controlled distribution of optional setup URLs. **Outbound email is not used** for invitations or password reset in the current product scope.
 
 - **Existing users**: Users who already have a full profile are unaffected. Migrations must define behavior for any existing rows (e.g. treat as profile complete).
 
