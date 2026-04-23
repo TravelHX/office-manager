@@ -2,602 +2,44 @@
 
 ## Document Purpose
 
-This file (`docs/todo.md`) lists **tasks to execute** so the codebase and product **match** `docs/spec.md`. Completing these tasks (in order, respecting dependencies) moves the project toward the intended functionality described in the specification. It is not the specification itself; see `docs/spec.md`. For what is **already implemented**, see `README.md` in the project root.
-
-This document contains all tasks organized by phases with clear dependencies and priorities.
-
-## Phase 1: Project Setup and Infrastructure
-
-**Objective:** Establish the project foundation, including Docker setup, Node.js project setup, MySQL database configuration, raw SQL data access layer, test environment configuration, and basic infrastructure components.
-
-**Dependencies:** None
-
-**Priority:** High
-
-**Estimated Effort:** 3-4 days
-
-### Tasks
-
-- [x] 1.1 Create Dockerfile for Node.js backend application
-- [x] 1.2 Create docker-compose.yml for development environment (backend and MySQL)
-- [x] 1.3 Create docker-compose.test.yml for test environment with test database
-- [x] 1.4 Create utils/ directory for utility scripts
-- [x] 1.5 Create test environment setup scripts in utils/ directory
-- [x] 1.6 Create test database initialization scripts in utils/ directory
-- [x] 1.7 Configure Docker networking and environment variables
-- [x] 1.8 Initialize Node.js project with package.json and install dependencies
-- [x] 1.9 Set up project structure (src/, tests/, frontend/, utils/ folders)
-- [x] 1.10 Install and configure MySQL connection pool library (mysql2)
-- [x] 1.11 Create database connection module with connection pooling
-- [x] 1.12 Create SQL scripts for database initialization and migrations
-- [x] 1.13 Set up MySQL database schema initialization in Docker
-- [x] 1.14 Implement base data access layer with raw SQL query execution
-- [x] 1.15 Create base repository pattern using raw SQL queries
-- [x] 1.16 Set up Node.js HTTP server (Express or native HTTP module)
-- [x] 1.17 Implement basic routing structure for API endpoints
-- [x] 1.18 Implement basic authentication and authorization middleware
-- [x] 1.19 Set up logging and error handling infrastructure
-- [x] 1.20 Create configuration management for environment variables (Docker-aware)
-- [x] 1.21 Set up testing framework (Jest/Mocha) and test infrastructure
-- [x] 1.22 Create test database setup and teardown utilities in utils/ directory
-- [x] 1.23 Create test scripts in utils/ directory for running tests in Docker
-- [x] 1.24 Set up frontend folder structure (HTML, CSS, JS)
-- [x] 1.25 Create base HTML template and CSS framework
-- [x] 1.26 Write tests for database connection and data access layer (run in Docker test environment)
+This file (`docs/todo.md`) lists **remaining tasks** so the codebase and product **match** `docs/spec.md`. Completing these tasks (in order, respecting dependencies) moves the project toward the intended functionality described in the specification. It is not the specification itself; see `docs/spec.md`. For what is **already implemented**, see `README.md` in the project root.
 
 ---
 
-## Phase 2: Desk Booking Feature
+## Phase 14: First User Admin Registration (Remaining Tasks)
 
-**Objective:** Implement the desk booking tracking functionality, allowing users to view, book, and manage desk reservations. This phase implements Use Cases 1, 3, and 6 from `docs/usecases.md`.
-
-**Dependencies:** Phase 1 (Project Setup and Infrastructure)
-
-**Priority:** High
-
-**Estimated Effort:** 3-4 days
-
-### Tasks
-
-- [x] 2.1 Design and create database schema for desks and bookings
-- [x] 2.2 Create Desk model and related DTOs
-- [x] 2.3 Create Booking model and related DTOs
-- [x] 2.4 Implement Desk repository with CRUD operations using raw SQL queries
-- [x] 2.5 Implement Booking repository with CRUD operations using raw SQL queries
-- [x] 2.6 Create DeskService with business logic for desk management
-- [x] 2.7 Create BookingService with business logic for booking management
-- [x] 2.8 Implement validation for booking conflicts and availability
-- [x] 2.9 Implement multi-day booking support (date range selection)
-- [x] 2.10 Create Node.js API endpoints for desk management (list, create, update, delete)
-- [x] 2.11 Create Node.js API endpoints for booking management (create, view, cancel)
-- [x] 2.12 Create Node.js API endpoint to check desk availability for date ranges
-- [x] 2.13 Implement error handling for unavailable desks with appropriate messages
-- [x] 2.14 Write unit tests for DeskService
-- [x] 2.15 Write unit tests for BookingService
-- [x] 2.16 Write integration tests for desk booking API endpoints
-- [x] 2.17 Create HTML/CSS/JS UI components for desk listing and selection
-- [x] 2.18 Create HTML/CSS/JS UI components for booking creation and management (including date range picker)
-- [x] 2.19 Create HTML/CSS/JS UI component for "My Bookings" view
-- [x] 2.20 Implement booking cancellation UI and functionality
-- [x] 2.21 Write JavaScript tests for desk booking functionality
-- [x] 2.22 Validate implementation against Use Case 1 (Employee Books Desk for Two Days)
-- [x] 2.23 Validate implementation against Use Case 3 (Employee Attempts to Book Unavailable Desk)
-- [x] 2.24 Validate implementation against Use Case 6 (User Cancels Their Own Desk Booking)
-
----
-
-## Phase 3: Parking Tracking Feature
-
-**Objective:** Implement the parking space tracking functionality, allowing users to view, reserve, and manage parking space assignments. This phase implements Use Case 2 from `docs/usecases.md`.
-
-**Dependencies:** Phase 1 (Project Setup and Infrastructure)
-
-**Priority:** High
-
-**Estimated Effort:** 3-4 days
-
-### Tasks
-
-- [x] 3.1 Design and create database schema for parking spaces and reservations
-- [x] 3.2 Create ParkingSpace model and related DTOs
-- [x] 3.3 Create ParkingReservation model and related DTOs
-- [x] 3.4 Implement ParkingSpace repository with CRUD operations using raw SQL queries
-- [x] 3.5 Implement ParkingReservation repository with CRUD operations using raw SQL queries
-- [x] 3.6 Create ParkingSpaceService with business logic for parking space management
-- [x] 3.7 Create ParkingReservationService with business logic for reservation management
-- [x] 3.8 Implement validation for reservation conflicts and availability
-- [x] 3.9 Implement half-day reservation support (morning/afternoon time periods)
-- [x] 3.10 Create Node.js API endpoints for parking space management (list, create, update, delete)
-- [x] 3.11 Create Node.js API endpoints for reservation management (create, view, cancel)
-- [x] 3.12 Create Node.js API endpoint to check parking space availability for date ranges and time periods
-- [x] 3.13 Write unit tests for ParkingSpaceService
-- [x] 3.14 Write unit tests for ParkingReservationService
-- [x] 3.15 Write integration tests for parking tracking API endpoints
-- [x] 3.16 Create HTML/CSS/JS UI components for parking space listing and selection
-- [x] 3.17 Create HTML/CSS/JS UI components for reservation creation and management (including time period selection)
-- [x] 3.18 Integrate parking reservations into "My Bookings" view
-- [x] 3.19 Implement parking reservation cancellation UI and functionality
-- [x] 3.20 Write JavaScript tests for parking tracking functionality
-- [x] 3.21 Validate implementation against Use Case 2 (Employee Books Desk and Parking Space for Half Day)
-
----
-
-## Phase 4: Overtime Tracking Feature
-
-**Objective:** Implement the overtime hours tracking functionality, allowing users to record, view, and manage overtime hours. This phase implements part of Use Case 7 from `docs/usecases.md`.
-
-**Dependencies:** Phase 1 (Project Setup and Infrastructure)
-
-**Priority:** High
-
-**Estimated Effort:** 3-4 days
-
-### Tasks
-
-- [x] 4.1 Design and create database schema for overtime records
-- [x] 4.2 Create OvertimeRecord model and related DTOs
-- [x] 4.3 Implement OvertimeRecord repository with CRUD operations using raw SQL queries
-- [x] 4.4 Create OvertimeService with business logic for overtime management
-- [x] 4.5 Implement validation for overtime records (date ranges, hours, time calculations)
-- [x] 4.6 Implement automatic calculation of total hours from start/end times
-- [x] 4.7 Create Node.js API endpoints for overtime record management (create, view, update, delete)
-- [x] 4.8 Create Node.js API endpoint to retrieve overtime history for users
-- [x] 4.9 Create Node.js API endpoint to generate overtime reports
-- [x] 4.10 Implement overtime approval workflow (if required)
-- [x] 4.11 Write unit tests for OvertimeService
-- [x] 4.12 Write integration tests for overtime tracking API endpoints
-- [x] 4.13 Create HTML/CSS/JS UI components for overtime entry form (date, start time, end time, description)
-- [x] 4.14 Create HTML/CSS/JS UI components for overtime history display
-- [x] 4.15 Create HTML/CSS/JS UI components for overtime reports
-- [x] 4.16 Integrate overtime records into dashboard and "My Bookings" view
-- [x] 4.17 Write JavaScript tests for overtime tracking functionality
-- [x] 4.18 Validate implementation against Use Case 7 (Employee Books Desk, Parking Space, and Records Overtime)
-
----
-
-## Phase 5: Admin Functionality
-
-**Objective:** Implement administrative features for managing office resources and user bookings. This phase implements Use Cases 4 and 5 from `docs/usecases.md`.
-
-**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking)
-
-**Priority:** High
-
-**Estimated Effort:** 2-3 days
-
-### Tasks
-
-- [x] 5.1 Design and create database schema for admin configuration (desk count, parking space count)
-- [x] 5.2 Create AdminConfiguration model and related DTOs
-- [x] 5.3 Implement AdminConfiguration repository with CRUD operations using raw SQL queries
-- [x] 5.4 Create AdminService with business logic for resource configuration
-- [x] 5.5 Implement validation for configuration changes (cannot reduce below active bookings)
-- [x] 5.6 Create Node.js API endpoints for admin configuration (get, update desk/parking counts)
-- [x] 5.7 Create Node.js API endpoints for viewing all bookings (admin view)
-- [x] 5.8 Create Node.js API endpoint for admin to cancel any user booking
-- [x] 5.9 Implement admin authentication and authorization checks
-- [x] 5.10 Write unit tests for AdminService
-- [x] 5.11 Write integration tests for admin API endpoints
-- [x] 5.12 Create HTML/CSS/JS UI components for admin dashboard
-- [x] 5.13 Create HTML/CSS/JS UI components for resource configuration (desk/parking count management)
-- [x] 5.14 Create HTML/CSS/JS UI components for admin booking management view
-- [x] 5.15 Implement admin booking cancellation UI with reason entry
-- [x] 5.16 Write JavaScript tests for admin functionality
-- [x] 5.17 Validate implementation against Use Case 4 (Admin Sets Up Number of Desks and Parking Spaces)
-- [x] 5.18 Validate implementation against Use Case 5 (Admin Cancels User Desk Booking)
-
----
-
-## Phase 6: Integration and Polish
-
-**Objective:** Integrate all features, add common UI elements, implement user dashboard, and perform final testing and polish. This phase completes Use Case 7 from `docs/usecases.md`.
-
-**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking), Phase 4 (Overtime Tracking), Phase 5 (Admin Functionality)
-
-**Priority:** Medium
-
-**Estimated Effort:** 2-3 days
-
-### Tasks
-
-- [x] 6.1 Create HTML/CSS/JS user dashboard showing all bookings, reservations, and overtime summary
-- [x] 6.2 Implement HTML/CSS/JS navigation and common UI components
-- [ ] 6.3 Add user profile and settings management (deferred - basic functionality complete)
-- [x] 6.4 Implement search and filtering across all features
-- [x] 6.5 Add notification system for booking reminders and updates
-- [x] 6.6 Integrate all features into unified "My Bookings" view
-- [x] 6.7 Perform end-to-end integration testing for all use cases (use case tests implemented)
-- [x] 6.8 Validate complete workflow from Use Case 7 (Employee Books Desk, Parking Space, and Records Overtime)
-- [x] 6.9 Perform security testing and validation (authentication/authorization implemented and tested)
-- [x] 6.10 Optimize performance and raw SQL database queries (indexes added, queries optimized)
-- [x] 6.11 Update documentation with API endpoints and usage examples
-- [x] 6.12 Create user documentation and help guides
-- [x] 6.13 Perform final validation against all use cases in `docs/usecases.md`
-
----
-
-## Phase 7: Enhanced Admin Configuration and Display Improvements
-
-**Objective:** Enhance admin resource configuration with flexible numbering options and improve desk number display throughout the booking interface.
-
-**Dependencies:** Phase 5 (Admin Functionality), Phase 2 (Desk Booking)
-
-**Priority:** Medium
-
-**Estimated Effort:** 2-3 days
-
-### Tasks
-
-- [x] 7.1 Design database schema changes to support flexible desk/parking number assignment
-- [x] 7.2 Update Desk model to support both auto-generated and manually assigned numbers
-- [x] 7.3 Update ParkingSpace model to support both auto-generated and manually assigned numbers
-- [x] 7.4 Implement auto-generation logic for sequential desk numbers (e.g., 1-10 for 10 desks)
-- [x] 7.5 Implement auto-generation logic for sequential parking space numbers (e.g., 1-10 for 10 spaces)
-- [x] 7.6 Create AdminService methods for bulk desk creation with auto-generated numbers
-- [x] 7.7 Create AdminService methods for bulk parking space creation with auto-generated numbers
-- [x] 7.8 Create AdminService methods for manual desk number assignment
-- [x] 7.9 Create AdminService methods for manual parking space number assignment
-- [x] 7.10 Create Node.js API endpoint for bulk desk creation with auto-generation option
-- [x] 7.11 Create Node.js API endpoint for bulk parking space creation with auto-generation option
-- [x] 7.12 Create Node.js API endpoint for manual desk number assignment
-- [x] 7.13 Create Node.js API endpoint for manual parking space number assignment
-- [x] 7.14 Update admin configuration UI to include auto-generate vs manual assignment options
-- [x] 7.15 Create UI component for auto-generation mode (input count, generate numbers 1-N)
-- [x] 7.16 Create UI component for manual assignment mode (assign specific numbers to specific desks/spaces)
-- [x] 7.17 Update desk booking display to prominently show desk numbers
-- [x] 7.18 Update booking confirmation messages to include desk number
-- [x] 7.19 Update "My Bookings" view to display desk numbers prominently
-- [x] 7.20 Update parking reservation display to show parking space numbers prominently
-- [x] 7.21 Write unit tests for auto-generation logic
-- [x] 7.22 Write unit tests for manual assignment logic
-- [x] 7.23 Write integration tests for enhanced admin configuration endpoints
-- [x] 7.24 Write JavaScript tests for admin configuration UI
-- [x] 7.25 Write JavaScript tests for enhanced desk number display
-- [x] 7.26 Validate that desk numbers are displayed correctly throughout the booking flow
-- [x] 7.27 Update admin dashboard to display allocated desk numbers
-- [x] 7.28 Update admin booking management view to show desk numbers for each booking
-- [x] 7.29 Update admin desk configuration view to list all desk numbers
-- [x] 7.30 Update admin parking configuration view to list all parking space numbers
-- [x] 7.31 Write JavaScript tests for admin desk number display
-
----
-
-## Phase 8: User Authentication and Management
-
-**Objective:** Implement comprehensive user authentication and management system with role-based access control, user creation, password management, and proper access restrictions.
-
-**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking), Phase 4 (Overtime Tracking), Phase 5 (Admin Functionality)
-
-**Priority:** High
-
-**Estimated Effort:** 4-5 days
-
-### Tasks
-
-- [x] 8.1 Design and create database schema for users table (user_id, password_hash, is_admin, created_at, updated_at)
-- [x] 8.2 Create User model and related DTOs
-- [x] 8.3 Implement User repository with CRUD operations using raw SQL queries
-- [x] 8.4 Implement password hashing and verification utilities (bcrypt or similar)
-- [x] 8.5 Create UserService with business logic for user management
-- [x] 8.6 Implement user creation functionality (admin only)
-- [x] 8.7 Implement password change functionality for users
-- [x] 8.8 Create config.json structure in data/ folder for admin user configuration
-- [x] 8.9 Implement admin user initialization from config.json (user ID configurable, password optional)
-- [x] 8.10 Create development mode test user (0001 / Password123) - only in development
-- [x] 8.11 Update authentication middleware to validate user existence and password
-- [x] 8.12 Implement session/token management for logged-in users
-- [x] 8.13 Create login API endpoint (POST /api/auth/login)
-- [x] 8.14 Create logout API endpoint (POST /api/auth/logout)
-- [x] 8.15 Create user creation API endpoint (POST /api/users) - admin only
-- [x] 8.16 Create password change API endpoint (PUT /api/users/password)
-- [x] 8.17 Create get current user API endpoint (GET /api/users/me)
-- [x] 8.18 Update booking endpoints to use authenticated user ID instead of token-based user ID
-- [x] 8.19 Update all API endpoints to require authentication (except public viewing endpoints)
-- [x] 8.20 Implement access control: logged-in users can access all features except user creation
-- [x] 8.21 Implement access control: non-logged-in users can only view available desks/spaces
-- [x] 8.22 Create login page HTML/CSS/JS
-- [x] 8.23 Create user creation UI component (admin only)
-- [x] 8.24 Create password change UI component
-- [x] 8.25 Implement user indicator icon/display in top left of screen showing logged-in user
-- [x] 8.26 Implement redirect to login page when unauthenticated user tries to book desk/space
-- [x] 8.27 Update frontend to check authentication status and show/hide features accordingly
-- [x] 8.28 Hide overtime screen for non-logged-in users
-- [x] 8.29 Update booking forms to use authenticated user context
-- [x] 8.30 Write unit tests for UserService
-- [x] 8.31 Write unit tests for password hashing and verification
-- [x] 8.32 Write integration tests for authentication endpoints
-- [x] 8.33 Write integration tests for user creation (admin only)
-- [x] 8.34 Write integration tests for password change
-- [x] 8.35 Write integration tests for access control (logged-in vs not logged-in)
-- [x] 8.36 Write JavaScript tests for login functionality
-- [x] 8.37 Write JavaScript tests for user indicator display
-- [x] 8.38 Write JavaScript tests for access control and redirects
-- [x] 8.39 Validate that users can only book desks/spaces for themselves
-- [x] 8.40 Validate that users can only update their own data
-
----
-
-## Phase 9: Booking Matrix Screen
-
-**Objective:** Implement a visual matrix screen displaying desk and parking bookings organized by people/users and dates for easy visualization and management.
-
-**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking), Phase 8 (User Authentication and Management)
-
-**Priority:** Medium
-
-**Estimated Effort:** 3-4 days
-
-### Tasks
-
-- [x] 9.1 Design matrix data structure and API response format for bookings by user and date
-- [x] 9.2 Create MatrixService with business logic for aggregating bookings by user and date
-- [x] 9.3 Implement method to retrieve desk bookings grouped by user and date range
-- [x] 9.4 Implement method to retrieve parking bookings grouped by user and date range
-- [x] 9.5 Implement date range filtering for matrix data
-- [x] 9.6 Implement user filtering for matrix data
-- [x] 9.7 Implement desk/parking space filtering for matrix data
-- [x] 9.8 Create Node.js API endpoint for matrix data (GET /api/matrix/bookings)
-- [x] 9.9 Create API endpoint parameters for date range, user filter, desk filter, parking filter
-- [x] 9.10 Design HTML/CSS layout for matrix grid (users/people vs dates)
-- [x] 9.11 Create matrix UI component with responsive grid layout
-- [x] 9.12 Implement date range selector UI component
-- [x] 9.13 Implement filtering UI components (user, desk, parking space filters)
-- [x] 9.14 Create visual indicators for desk bookings in matrix cells
-- [x] 9.15 Create visual indicators for parking bookings in matrix cells
-- [x] 9.16 Implement color coding or visual markers to distinguish desk vs parking bookings
-- [x] 9.17 Add hover/tooltip functionality to show booking details in matrix cells
-- [x] 9.18 Implement matrix cell click functionality to view/edit booking details
-- [x] 9.19 Create separate matrix views for desks and parking (with toggle option)
-- [x] 9.20 Create combined matrix view showing both desks and parking
-- [x] 9.21 Add export functionality for matrix data (CSV or similar)
-- [x] 9.22 Implement pagination or scrolling for large date ranges
-- [x] 9.23 Add admin access control for matrix screen
-- [x] 9.24 Create matrix screen navigation link in admin dashboard
-- [x] 9.25 Write unit tests for MatrixService
-- [x] 9.26 Write unit tests for booking aggregation logic
-- [x] 9.27 Write integration tests for matrix API endpoints
-- [x] 9.28 Write integration tests for filtering functionality
-- [x] 9.29 Write JavaScript tests for matrix UI components
-- [x] 9.30 Write JavaScript tests for date range selection
-- [x] 9.31 Write JavaScript tests for filtering UI
-- [x] 9.32 Write JavaScript tests for visual indicators and tooltips
-- [x] 9.33 Validate matrix displays correct bookings for selected date range
-- [x] 9.34 Validate filtering works correctly for users, desks, and parking spaces
-
----
-
-## Phase 10: Booking Validation Rules
-
-**Objective:** Implement comprehensive validation rules to prevent booking conflicts, ensuring one person cannot book multiple desks/parking spaces for overlapping periods, and one desk/parking space cannot be booked by multiple people for the same day.
-
-**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking), Phase 8 (User Authentication and Management)
-
-**Priority:** High
-
-**Estimated Effort:** 2-3 days
-
-### Tasks
-
-- [x] 10.1 Design validation logic for detecting overlapping bookings for the same user
-- [x] 10.2 Implement date range overlap detection utility function
-- [x] 10.3 Create validation method in BookingService to check for existing user bookings in date range
-- [x] 10.4 Implement validation: prevent user from booking multiple desks for overlapping periods
-- [x] 10.5 Implement validation: prevent user from booking multiple parking spaces for overlapping periods
-- [x] 10.6 Create validation method to check if desk is already booked by another user for date range
-- [x] 10.7 Implement validation: prevent multiple users from booking same desk for same day
-- [x] 10.8 Create validation method to check if parking space is already booked by another user for date/time period
-- [x] 10.9 Implement validation: prevent multiple users from booking same parking space for same day/time period
-- [x] 10.10 Update desk booking creation endpoint to validate user's existing bookings
-- [x] 10.11 Update desk booking creation endpoint to validate desk availability for other users
-- [x] 10.12 Update parking reservation creation endpoint to validate user's existing reservations
-- [x] 10.13 Update parking reservation creation endpoint to validate parking space availability for other users
-- [x] 10.14 Create clear error messages for overlapping booking conflicts
-- [x] 10.15 Create clear error messages for desk/parking space already booked conflicts
-- [x] 10.16 Update frontend to display validation error messages clearly
-- [x] 10.17 Handle partial date range overlaps correctly (any date overlap triggers failure)
-- [x] 10.18 Ensure validation works for both single-day and multi-day bookings
-- [x] 10.19 Ensure validation works for parking time periods (morning, afternoon, full_day)
-- [x] 10.20 Write unit tests for date range overlap detection utility
-- [x] 10.21 Write unit tests for user booking overlap validation
-- [x] 10.22 Write unit tests for desk availability validation
-- [x] 10.23 Write unit tests for parking space availability validation
-- [x] 10.24 Write integration tests: user cannot book multiple desks for overlapping dates
-- [x] 10.25 Write integration tests: user cannot book multiple parking spaces for overlapping periods
-- [x] 10.26 Write integration tests: multiple users cannot book same desk for same day
-- [x] 10.27 Write integration tests: multiple users cannot book same parking space for same day/time period
-- [x] 10.28 Write integration tests: partial date overlaps are detected correctly
-- [x] 10.29 Write integration tests: error messages are clear and informative
-- [x] 10.30 Write JavaScript tests for frontend error message display
-- [x] 10.31 Validate that booking fails with appropriate error when user has overlapping desk booking
-- [x] 10.32 Validate that booking fails with appropriate error when desk is already booked by another user
-- [x] 10.33 Validate that parking reservation fails with appropriate error when user has overlapping reservation
-- [x] 10.34 Validate that parking reservation fails with appropriate error when space is already reserved by another user
-
----
-
-## Phase 11: Comprehensive Test Coverage
-
-**Objective:** Ensure comprehensive test coverage with end-to-end tests for all use cases and features, and unit tests for all units of functionality where feasible.
-
-**Dependencies:** All previous phases (comprehensive coverage requires all features to be implemented)
-
-**Priority:** High
-
-**Estimated Effort:** 5-7 days
-
-### Tasks
-
-- [x] 11.1 Audit all use cases in `docs/usecases.md` and identify missing end-to-end test coverage
-- [x] 11.2 Create end-to-end test for Use Case 1 (Employee Books Desk for Two Days) if missing
-- [x] 11.3 Create end-to-end test for Use Case 2 (Employee Books Desk and Parking Space for Half Day) if missing
-- [x] 11.4 Create end-to-end test for Use Case 3 (Employee Attempts to Book Unavailable Desk) if missing
-- [x] 11.5 Create end-to-end test for Use Case 4 (Admin Sets Up Number of Desks and Parking Spaces) if missing
-- [x] 11.6 Create end-to-end test for Use Case 5 (Admin Cancels User Desk Booking) if missing
-- [x] 11.7 Create end-to-end test for Use Case 6 (User Cancels Their Own Desk Booking) if missing
-- [x] 11.8 Create end-to-end test for Use Case 7 (Employee Books Desk, Parking Space, and Records Overtime) if missing
-- [x] 11.9 Audit all implemented features and identify missing end-to-end test coverage
-- [x] 11.10 Create end-to-end tests for any features missing coverage (desk booking, parking tracking, overtime tracking, admin functionality, user management, etc.)
-- [x] 11.11 Audit all business logic services and identify missing unit test coverage
-- [x] 11.12 Create unit tests for DeskService methods if any are missing
-- [x] 11.13 Create unit tests for BookingService methods if any are missing
-- [x] 11.14 Create unit tests for ParkingSpaceService methods if any are missing
-- [x] 11.15 Create unit tests for ParkingReservationService methods if any are missing
-- [x] 11.16 Create unit tests for OvertimeService methods if any are missing
-- [x] 11.17 Create unit tests for AdminService methods if any are missing
-- [x] 11.18 Create unit tests for UserService methods if any are missing
-- [x] 11.19 Create unit tests for MatrixService methods if any are missing
-- [x] 11.20 Audit all repository methods and identify missing unit test coverage
-- [x] 11.21 Create unit tests for DeskRepository methods if any are missing
-- [x] 11.22 Create unit tests for BookingRepository methods if any are missing
-- [x] 11.23 Create unit tests for ParkingSpaceRepository methods if any are missing
-- [x] 11.24 Create unit tests for ParkingReservationRepository methods if any are missing
-- [x] 11.25 Create unit tests for OvertimeRecordRepository methods if any are missing
-- [x] 11.26 Create unit tests for AdminConfigurationRepository methods if any are missing
-- [x] 11.27 Create unit tests for UserRepository methods if any are missing
-- [x] 11.28 Audit all API endpoint handlers and identify missing unit test coverage
-- [x] 11.29 Create unit tests for desk booking API endpoints if any are missing (covered by integration tests)
-- [x] 11.30 Create unit tests for parking API endpoints if any are missing (covered by integration tests)
-- [x] 11.31 Create unit tests for overtime API endpoints if any are missing (covered by integration tests)
-- [x] 11.32 Create unit tests for admin API endpoints if any are missing (covered by integration tests)
-- [x] 11.33 Create unit tests for user management API endpoints if any are missing (covered by integration tests)
-- [x] 11.34 Create unit tests for authentication API endpoints if any are missing (covered by integration tests)
-- [x] 11.35 Audit all utility functions and helper methods and identify missing unit test coverage
-- [x] 11.36 Create unit tests for date range overlap detection utilities if missing
-- [x] 11.37 Create unit tests for password hashing/verification utilities if missing
-- [x] 11.38 Create unit tests for any other utility functions if missing
-- [x] 11.39 Set up test coverage reporting tool (e.g., Istanbul/nyc, Jest coverage)
-- [x] 11.40 Configure test coverage thresholds and requirements
-- [x] 11.41 Generate test coverage report and identify gaps
-- [x] 11.42 Ensure all tests are idempotent (can run multiple times in any order)
-- [x] 11.43 Review all tests to ensure they cover single, discrete functionality
-- [x] 11.44 Review all tests to ensure meaningful names that describe scenarios
-- [x] 11.45 Remove any test-only code paths from production code
-- [x] 11.46 Verify all tests pass before considering coverage complete
-- [x] 11.47 Document test coverage requirements and standards
-- [x] 11.48 Create test coverage maintenance guidelines
-- [x] 11.49 Validate that all use cases have at least one end-to-end test
-- [x] 11.50 Validate that all features have at least one end-to-end test
-- [x] 11.51 Validate that critical business logic has comprehensive unit test coverage
-
----
-
-## Phase 12: Enhanced User Management
-
-**Objective:** Enhance user management system with comprehensive user profiles (first name, last name, email used as username/login identifier, office location), admin flag management, password reset functionality, and admin setup script. Note: No separate username field - email address serves as the login identifier.
-
-**Dependencies:** Phase 8 (User Authentication and Management)
-
-**Priority:** High
-
-**Estimated Effort:** 3-4 days
-
-### Tasks
-
-- [x] 12.1 Update database schema to add user profile fields (first_name, last_name, email used as username/login identifier, office_location, is_admin). Ensure email is unique and used for authentication.
-- [x] 12.2 Update User model to include first_name, last_name, email (as username/login identifier), office_location, and is_admin fields. No separate username field required.
-- [x] 12.3 Create OfficeLocation enum or constant with hardcoded values (London, Prague)
-- [x] 12.4 Update UserService to handle user profile fields during creation
-- [x] 12.5 Update UserService to validate email format
-- [x] 12.6 Update UserService to validate office location is from allowed list
-- [x] 12.7 Update UserService to handle IsAdmin flag assignment
-- [x] 12.8 Update user creation API endpoint (POST /api/users) to accept first_name, last_name, email (used as username/login identifier), office_location, is_admin. No separate username parameter needed.
-- [x] 12.9 Update user update API endpoint to allow updating profile fields (admin or self)
-- [x] 12.10 Create password reset token generation functionality
-- [x] 12.11 Create password reset token storage in database (reset_token, reset_token_expiry)
-- [ ] 12.12 Implement email sending functionality for password reset links (deferred - token generation and storage complete, email sending requires external service integration)
-- [x] 12.13 Create password reset request API endpoint (POST /api/auth/forgot-password) - accepts email (which is the username/login identifier)
-- [x] 12.14 Create password reset API endpoint (POST /api/auth/reset-password) - accepts token and new password
-- [x] 12.15 Update login screen to include "Forgot Password" link
-- [x] 12.16 Create forgot password page HTML/CSS/JS
-- [x] 12.17 Create reset password page HTML/CSS/JS
-- [x] 12.18 Update user creation UI to include first name, last name, email, office location fields
-- [x] 12.19 Add office location dropdown/select with hardcoded options (London, Prague)
-- [x] 12.20 Add IsAdmin checkbox/toggle in user creation form (admin only)
-- [x] 12.21 Update user profile display to show first name, last name, email, office location
-- [x] 12.22 Update user indicator in top left to show user's name (first name + last name or email)
-- [x] 12.23 Create utility script in utils/ directory to add admin user (paul.michaels@travelhx.com)
-- [x] 12.24 Script should set IsAdmin flag to true for paul.michaels@travelhx.com
-- [x] 12.25 Script should handle password setup (prompt or use default)
-- [x] 12.26 Update authentication middleware to check IsAdmin flag for admin-only endpoints
-- [x] 12.27 Update admin authorization checks to use IsAdmin flag instead of user ID checks
-- [x] 12.28 Write unit tests for UserService with new profile fields
-- [x] 12.29 Write unit tests for email validation
-- [x] 12.30 Write unit tests for office location validation
-- [x] 12.31 Write unit tests for password reset token generation
-- [x] 12.32 Write unit tests for password reset functionality
-- [x] 12.33 Write integration tests for user creation with profile fields
-- [x] 12.34 Write integration tests for password reset request endpoint
-- [x] 12.35 Write integration tests for password reset endpoint
-- [x] 12.36 Write integration tests for admin flag functionality
-- [x] 12.37 Write JavaScript tests for forgot password page
-- [x] 12.38 Write JavaScript tests for reset password page
-- [x] 12.39 Write JavaScript tests for user creation form with new fields
-- [x] 12.40 Write JavaScript tests for office location dropdown
-- [x] 12.41 Write end-to-end test for user creation with profile fields (admin)
-- [x] 12.42 Write end-to-end test for password reset flow
-- [ ] 12.43 Write end-to-end test for admin setup script (deferred - script functionality covered by first user registration in Phase 14)
-- [x] 12.44 Validate that users can be created with all required profile fields
-- [x] 12.45 Validate that IsAdmin flag works correctly for admin-only features
-- [ ] 12.46 Validate that password reset email is sent correctly (deferred - email sending requires external service integration)
-- [x] 12.47 Validate that password reset link works correctly
-- [ ] 12.48 Validate that admin setup script successfully creates admin user (deferred - script functionality covered by first user registration in Phase 14)
-
----
-
-## Phase 14: First User Admin Registration
-
-**Objective:** Implement first user admin registration system where the first user to register automatically becomes admin, remove admin/password123 test user, and add startup cleanup logic. Note: Users register/login using email address as the username identifier (no separate username field).
+**Objective:** Complete testing, validation, and registration-blocking logic for first user admin registration system.
 
 **Dependencies:** Phase 8 (User Authentication and Management), Phase 12 (Enhanced User Management)
 
 **Priority:** High
 
-**Estimated Effort:** 2-3 days
+**Estimated Effort:** 1-2 days
 
 ### Tasks
 
-- [x] 14.1 Implement application startup cleanup logic to check for and remove admin/password123 user if it exists (runs automatically when application starts)
-- [x] 14.2 Implement application startup cleanup logic to check if "admin" user exists and flush all users if found (runs automatically when application starts)
-- [x] 14.3 Implement user count check functionality in UserService
-- [x] 14.4 Update user registration logic to check if this is the first user
-- [x] 14.5 Implement automatic admin assignment for first registered user
-- [x] 14.6 Create API endpoint to check if any users exist (GET /api/auth/check-users)
-- [x] 14.7 Update registration API endpoint to automatically set IsAdmin=true for first user
-- [x] 14.8 Create "no users" detection middleware or route handler
-- [x] 14.9 Create registration screen for when no users exist
-- [x] 14.10 Update frontend routing to show registration screen when no users exist
-- [x] 14.11 Add informative message on registration screen explaining first user becomes admin
-- [x] 14.12 Update login screen to redirect to registration if no users exist
-- [x] 14.13 Ensure startup cleanup logic runs automatically during application initialization, before application starts accepting requests
-- [x] 14.14 Remove or update development test user creation logic (email-based test user / Password123 - note: email is used as username/login identifier)
-- [x] 14.15 Update config.json admin user initialization to be removed or made optional
-- [x] 14.16 Ensure admin user cleanup happens atomically (all or nothing)
-- [x] 14.17 Add logging for startup user cleanup operations
-- [x] 14.18 Write unit tests for user count check functionality
-- [x] 14.19 Write unit tests for first user admin assignment logic
-- [x] 14.20 Write unit tests for application startup cleanup user removal logic
-- [x] 14.21 Write unit tests for application startup admin user detection and flush logic
-- [x] 14.22 Write integration tests for registration when no users exist
-- [x] 14.23 Write integration tests for first user automatically becoming admin
-- [ ] 14.24 Write integration tests for application startup cleanup removing admin/password123 user
-- [ ] 14.25 Write integration tests for application startup cleanup flushing users when admin user exists
-- [ ] 14.26 Write JavaScript tests for registration screen when no users exist
-- [ ] 14.27 Write JavaScript tests for routing to registration when no users exist
-- [ ] 14.28 Write end-to-end test for first user registration becoming admin
-- [ ] 14.29 Write end-to-end test for application startup cleanup
-- [ ] 14.30 Validate that first user to register becomes admin automatically
-- [ ] 14.31 Validate that registration screen appears when no users exist
-- [ ] 14.32 Validate that admin/password123 user is removed automatically when application starts
-- [ ] 14.33 Validate that all users are flushed automatically when admin user exists at application startup
-- [ ] 14.34 Validate that subsequent users do not automatically become admin
+- [x] 14.24 Write integration tests for application startup cleanup removing admin/password123 user
+- [x] 14.25 Write integration tests for application startup cleanup flushing users when admin user exists
+- [x] 14.26 Write JavaScript tests for registration screen when no users exist
+- [x] 14.27 Write JavaScript tests for routing to registration when no users exist
+- [ ] 14.28 Write end-to-end test for first user registration becoming admin (Playwright; deferred where Playwright is not in CI; API-level end-to-end coverage exists in `tests/integration/authentication.test.js`)
+- [ ] 14.29 Write end-to-end test for application startup cleanup (Playwright; deferred where Playwright is not in CI; API-level end-to-end coverage exists in `tests/integration/authentication.test.js`)
+- [x] 14.30 Validate that first user to register becomes admin automatically
+- [x] 14.31 Validate that registration screen appears when no users exist
+- [x] 14.32 Validate that admin/password123 user is removed automatically when application starts
+- [x] 14.33 Validate that all users are flushed automatically when admin user exists at application startup
+- [x] 14.34 Validate that subsequent users do not automatically become admin
+- [x] 14.35 Block registration when users already exist: registration API endpoint must return an error (e.g. 403) when at least one user exists; UI must not show the registration form and instead display a message directing the visitor to log in or contact an administrator to be provisioned (spec section 4b: "When any user already exists, self-registration is not available")
+- [x] 14.36 Write integration test: POST /api/auth/register returns error when users already exist in the system
+- [x] 14.37 Write JavaScript test: registration page shows informational message and no form when users already exist
 
 ---
 
-## Phase 13: Availability Display Enhancement
+## Phase 15: Multi-Select Desk and Parking Booking (Remaining Tasks)
 
-**Objective:** Enhance the booking interface to display the number of remaining spaces when users select dates for desk or parking space bookings.
+**Objective:** Complete end-to-end testing and validation for multi-select booking functionality.
 
-**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking)
+**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking), Phase 13 (Availability Display Enhancement)
 
 **Priority:** Medium
 
@@ -605,78 +47,6 @@ This document contains all tasks organized by phases with clear dependencies and
 
 ### Tasks
 
-- [x] 13.1 Create API endpoint or enhance existing endpoint to return remaining desk count for selected date range
-- [x] 13.2 Create API endpoint or enhance existing endpoint to return remaining parking space count for selected date and time period
-- [x] 13.3 Update desk availability API to include total desks and remaining desks count
-- [x] 13.4 Update parking availability API to include total spaces and remaining spaces count
-- [x] 13.5 Update BookingService to calculate remaining desk count for date range
-- [x] 13.6 Update ParkingReservationService to calculate remaining parking space count for date/time period
-- [x] 13.7 Update desk booking selection screen to display remaining desks count
-- [x] 13.8 Update parking booking selection screen to display remaining parking spaces count
-- [x] 13.9 Create UI component to display remaining spaces counter prominently
-- [x] 13.10 Update availability display to show "X desks remaining" or "X parking spaces remaining"
-- [x] 13.11 Ensure remaining count updates when date selection changes
-- [x] 13.12 Ensure remaining count updates when time period selection changes (for parking)
-- [x] 13.13 Add visual styling to make remaining spaces count prominent and easy to read
-- [x] 13.14 Handle edge cases (e.g., 0 remaining, all spaces booked)
-- [x] 13.15 Write unit tests for remaining desk count calculation
-- [x] 13.16 Write unit tests for remaining parking space count calculation
-- [x] 13.17 Write integration tests for availability API endpoints with remaining count
-- [x] 13.18 Write JavaScript tests for remaining spaces display component
-- [x] 13.19 Write JavaScript tests for remaining count updates on date/time selection changes
-- [x] 13.20 Write end-to-end test for remaining spaces display in desk booking flow
-- [x] 13.21 Write end-to-end test for remaining spaces display in parking booking flow
-- [x] 13.22 Validate that remaining desk count displays correctly for selected dates
-- [x] 13.23 Validate that remaining parking space count displays correctly for selected date and time period
-- [x] 13.24 Validate that remaining count updates correctly when dates change
-
----
-
-## Phase 15: Multi-Select Desk and Parking Booking
-
-**Objective:** Implement multi-select functionality for desk and parking space booking, allowing users to select multiple resources and book them all at once, while maintaining existing single-booking functionality.
-
-**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking), Phase 13 (Availability Display Enhancement)
-
-**Priority:** Medium
-
-**Estimated Effort:** 2-3 days
-
-### Tasks
-
-- [x] 15.1 Design selection state management for multiple desks/parking spaces
-- [x] 15.2 Create selection data structure to track selected desk IDs and parking space IDs
-- [x] 15.3 Update desk booking UI to add "Select" button alongside existing "Book" button
-- [x] 15.4 Update parking booking UI to add "Select" button alongside existing "Book" button
-- [x] 15.5 Implement "Select" button functionality to add desk/space to selection list
-- [x] 15.6 Implement visual indicator for selected desks/spaces (highlighting, checkmark, etc.)
-- [x] 15.7 Implement deselection functionality (clicking "Select" again removes from selection)
-- [x] 15.8 Create "Book Selected" button component that appears when items are selected
-- [x] 15.9 Implement "Book Selected" button to book all selected desks for the same date range
-- [x] 15.10 Implement "Book Selected" button to book all selected parking spaces for the same date/time period
-- [x] 15.11 Create bulk booking API endpoint or enhance existing endpoint to handle multiple bookings
-- [x] 15.12 Update BookingService to support bulk desk booking creation
-- [x] 15.13 Update ParkingReservationService to support bulk parking space reservation creation
-- [x] 15.14 Implement validation for bulk bookings (ensure all selected items are available)
-- [x] 15.15 Implement error handling for partial failures in bulk bookings
-- [x] 15.16 Add "Clear Selection" functionality to deselect all items
-- [x] 15.17 Ensure selection persists when scrolling through desk/parking lists
-- [x] 15.18 Update selection count display (e.g., "3 desks selected")
-- [x] 15.19 Ensure "Book Selected" button is disabled when no items are selected
-- [x] 15.20 Ensure "Book Selected" button is enabled when items are selected
-- [x] 15.21 Maintain existing "Book" button functionality for single bookings
-- [x] 15.22 Update UI to show both buttons clearly and distinguish their functions
-- [x] 15.23 Write unit tests for selection state management
-- [x] 15.24 Write unit tests for bulk booking service methods
-- [x] 15.25 Write unit tests for bulk booking validation logic
-- [x] 15.26 Write integration tests for bulk desk booking API endpoint
-- [x] 15.27 Write integration tests for bulk parking reservation API endpoint
-- [x] 15.28 Write integration tests for partial failure handling in bulk bookings
-- [x] 15.29 Write JavaScript tests for "Select" button functionality
-- [x] 15.30 Write JavaScript tests for "Book Selected" button functionality
-- [x] 15.31 Write JavaScript tests for selection state management
-- [x] 15.32 Write JavaScript tests for visual selection indicators
-- [x] 15.33 Write JavaScript tests for "Clear Selection" functionality
 - [ ] 15.34 Write end-to-end test for multi-select desk booking flow
 - [ ] 15.35 Write end-to-end test for multi-select parking booking flow
 - [ ] 15.36 Write end-to-end test for mixed single and multi-select booking
@@ -687,124 +57,38 @@ This document contains all tasks organized by phases with clear dependencies and
 
 ---
 
-## Phase 16: Remove Booking Confirmation Modal
+## Phase 17: Admin User Deletion (Remaining Tasks)
 
-**Objective:** Remove the unnecessary modal dialog that appears when booking a desk or parking space to streamline the booking process.
-
-**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking)
-
-**Priority:** Low
-
-**Estimated Effort:** 0.5-1 day
-
-### Tasks
-
-- [x] 16.1 Identify all locations where booking confirmation modal is displayed
-- [x] 16.2 Remove modal dialog code from desk booking functionality
-- [x] 16.3 Remove modal dialog code from parking booking functionality
-- [x] 16.4 Update booking flow to proceed directly without confirmation modal
-- [x] 16.5 Ensure success feedback is still provided (e.g., success message, visual update)
-- [x] 16.6 Ensure error handling still works correctly without modal
-- [x] 16.7 Update any JavaScript code that depends on modal confirmation
-- [x] 16.8 Remove modal-related CSS/styles if no longer needed
-- [x] 16.9 Update booking confirmation messages to use non-modal display (e.g., toast notification, inline message)
-- [x] 16.10 Write unit tests to verify booking proceeds without modal
-- [x] 16.11 Write JavaScript tests for direct booking flow without modal
-- [x] 16.12 Write end-to-end test for streamlined booking flow
-- [x] 16.13 Validate that desk booking works correctly without confirmation modal
-- [x] 16.14 Validate that parking booking works correctly without confirmation modal
-- [x] 16.15 Validate that success feedback is still displayed appropriately
-- [x] 16.16 Validate that error messages are still displayed appropriately
-
----
-
-## Phase 17: Admin User Deletion
-
-**Objective:** Implement admin user deletion functionality with constraint that there must always be at least one admin user in the system.
+**Objective:** Implement self-deletion prevention so admins cannot delete their own account, per spec sections 4a and 10.
 
 **Dependencies:** Phase 8 (User Authentication and Management), Phase 12 (Enhanced User Management)
 
 **Priority:** Medium
 
-**Estimated Effort:** 2-3 days
+**Estimated Effort:** 1-2 days
 
 ### Tasks
 
-- [x] 17.1 Design user deletion logic with minimum admin constraint validation
-- [x] 17.2 Implement method to count admin users in UserService
-- [x] 17.3 Implement validation to check if deletion would leave zero admin users
-- [x] 17.4 Create user deletion method in UserService with admin count validation
-- [x] 17.5 Determine handling strategy for user's associated data (bookings, reservations, overtime records)
-- [x] 17.6 Implement cascade handling for user's bookings (cancel, reassign, or prevent deletion)
-- [x] 17.7 Implement cascade handling for user's parking reservations
-- [x] 17.8 Implement cascade handling for user's overtime records
-- [x] 17.9 Create user deletion API endpoint (DELETE /api/users/:id) - admin only
-- [x] 17.10 Implement validation in API endpoint to prevent deleting last admin
-- [x] 17.11 Create clear error message for attempting to delete last admin user
-- [x] 17.12 Update admin user management UI to include delete button/action
-- [x] 17.13 Add confirmation dialog for user deletion (to prevent accidental deletions)
-- [x] 17.14 Display appropriate error message in UI when deletion is prevented
-- [x] 17.15 Update user list to show which users can be deleted (highlight last admin if applicable)
-- [x] 17.16 Disable delete button for last admin user in UI
-- [x] 17.17 Write unit tests for admin user count functionality
-- [x] 17.18 Write unit tests for minimum admin constraint validation
-- [x] 17.19 Write unit tests for user deletion with various scenarios
-- [x] 17.20 Write unit tests for cascade handling of user data
-- [x] 17.21 Write integration tests for user deletion API endpoint
-- [x] 17.22 Write integration tests for preventing deletion of last admin user
-- [x] 17.23 Write integration tests for cascade handling of bookings/reservations/overtime
-- [x] 17.24 Write JavaScript tests for delete button functionality
-- [x] 17.25 Write JavaScript tests for deletion confirmation dialog
-- [x] 17.26 Write JavaScript tests for error message display
-- [x] 17.27 Write end-to-end test for admin deleting a regular user
-- [x] 17.28 Write end-to-end test for admin deleting another admin (when multiple admins exist)
-- [x] 17.29 Write end-to-end test for preventing deletion of last admin user
-- [x] 17.30 Validate that regular users can be deleted successfully
-- [x] 17.31 Validate that admin users can be deleted when multiple admins exist
-- [x] 17.32 Validate that last admin user cannot be deleted
-- [x] 17.33 Validate that appropriate error message is shown when attempting to delete last admin
-- [x] 17.34 Validate that user's associated data is handled correctly upon deletion
+- [x] 17.35 Implement self-deletion prevention: API must reject DELETE /api/users/:id when `:id` is the currently authenticated admin, regardless of how many admins exist (spec sections 4a and 10 require this as a rule separate from the last-admin invariant)
+- [x] 17.36 Update admin user management UI to hide or disable the delete button on the current user's own row
+- [x] 17.37 Create clear error message for self-deletion attempt ("You cannot delete your own account; another administrator must perform this action")
+- [x] 17.38 Write integration test: admin with multiple other admins still cannot delete themselves (returns 400/403 with descriptive error)
+- [x] 17.39 Write JavaScript test: delete button is not rendered or is disabled for the current user's own entry in the user list
 
 ---
 
-## Phase 18: Version Tracking and Management
+## Phase 18: Version Tracking and Management (Remaining Tasks)
 
-**Objective:** Implement automatic version tracking system that increments version number on each commit/deployment using semantic versioning, stores version in database and client config, and updates version on application startup.
+**Objective:** Complete end-to-end testing and validation for version tracking system.
 
 **Dependencies:** Phase 1 (Project Setup and Infrastructure)
 
 **Priority:** Medium
 
-**Estimated Effort:** 2-3 days
+**Estimated Effort:** 1 day
 
 ### Tasks
 
-- [x] 18.1 Design database schema for version tracking table (version_number, updated_at, deployment_info)
-- [x] 18.2 Create Version model and related DTOs
-- [x] 18.3 Implement Version repository with CRUD operations using raw SQL queries
-- [x] 18.4 Create VersionService with business logic for version management
-- [x] 18.5 Implement semantic versioning parser and increment logic (MAJOR.MINOR.PATCH)
-- [x] 18.6 Create script or process to read current version and increment on commit/deployment
-- [x] 18.7 Implement version increment logic (determine which part to increment: major, minor, or patch)
-- [x] 18.8 Create application startup hook to update version in database (runs first thing on startup)
-- [x] 18.9 Implement error handling for version update failures
-- [x] 18.10 Create error display mechanism to show version update errors on screen
-- [x] 18.11 Create client-side configuration file/table for version storage
-- [x] 18.12 Implement client-side version reading and storage
-- [x] 18.13 Create API endpoint to retrieve current version (GET /api/version)
-- [x] 18.14 Create API endpoint to update version (POST /api/version) - internal use
-- [x] 18.15 Implement version comparison logic (if needed for migrations or compatibility checks)
-- [x] 18.16 Add version number to application startup logs
-- [x] 18.17 Create UI component to display version number (optional - footer or about page)
-- [x] 18.18 Write unit tests for semantic versioning parser
-- [x] 18.19 Write unit tests for version increment logic
-- [x] 18.20 Write unit tests for VersionService
-- [x] 18.21 Write unit tests for version update on startup
-- [x] 18.22 Write unit tests for error handling
-- [x] 18.23 Write integration tests for version database operations
-- [x] 18.24 Write integration tests for startup version update
-- [x] 18.25 Write integration tests for version API endpoints
-- [x] 18.26 Write JavaScript tests for client-side version config
 - [ ] 18.27 Write end-to-end test for version tracking on deployment
 - [ ] 18.28 Validate that version increments correctly on each commit/deployment
 - [ ] 18.29 Validate that version is updated in database on application startup
@@ -814,62 +98,19 @@ This document contains all tasks organized by phases with clear dependencies and
 
 ---
 
-## Phase 19: Minimal Admin Provisioning and First-Login Profile Completion
+## Phase 20: Global Application Shell and Blue Theme (Remaining Tasks)
 
-**Objective:** When an admin creates a user, only **email** and **name** are required. The user completes **password**, **office location**, and any other required profile fields on **first login** (or first authenticated session), with restricted access until profile completion.
+**Objective:** Complete frontend test adjustments for the global application shell.
 
-**Dependencies:** Phase 8 (User Authentication and Management), Phase 12 (Enhanced User Management) as applicable to the current user model and admin UI.
-
-**Priority:** High
-
-**Estimated Effort:** 4-6 days
-
-### Tasks
-
-- [x] 19.1 Design user lifecycle states (e.g. provisioned / profile incomplete / active) and validation rules for admin create vs profile completion
-- [x] 19.2 Design secure first-access path (e.g. invitation email with time-limited token, or login flow that detects incomplete profile and forces completion) and document chosen approach in technical notes
-- [x] 19.3 Implement database schema changes if needed (e.g. profile completion flag, nullable password hash, invitation token fields) with migration scripts
-- [x] 19.4 Update User model and DTOs to reflect provisional vs complete users
-- [x] 19.5 Change admin-only user creation API to accept **only** email and name (remove password and office location from create payload); validate and reject extra required fields from admin
-- [x] 19.6 Update admin user creation UI to collect **only** email and name
-- [x] 19.7 Implement API for profile completion (password, office location, and other required fields) usable only in the appropriate incomplete-profile context
-- [x] 19.8 Implement server-side enforcement: incomplete-profile users cannot perform protected actions (bookings, reservations, overtime, etc.) until completion
-- [x] 19.9 Implement client flow after authentication: detect incomplete profile and redirect to onboarding / profile completion screens
-- [x] 19.10 Build profile completion UI (password, office location, optional name confirmation per spec)
-- [x] 19.11 Define migration behavior for existing users (default to profile complete) and test upgrade path
-- [x] 19.12 Write unit tests for admin create validation, profile state transitions, and completion rules
-- [x] 19.13 Write integration tests for admin create user (email + name only), profile completion API, and access restrictions
-- [x] 19.14 Write JavaScript tests for admin form and profile completion UI where applicable
-- [ ] 19.15 Write Playwright end-to-end test: admin provisions user with email and name; user completes profile on first login and gains full access (deferred: no Playwright in CI image yet; flow covered by `tests/integration/provisioning-phase19.test.js` and frontend Jest tests)
-- [x] 19.16 Update `docs/usecases.md` with the admin provisioning and first-login completion flows
-- [x] 19.17 Update root `README.md` User Guide (admin and end-user sections) after implementation
-
----
-
-## Phase 20: Global Application Shell and Blue Theme
-
-**Objective:** Apply a consistent **app shell** with **collapsible left navigation**, **collapsible top-right account menu** (Log in when anonymous; user details and Log out when authenticated), **admin vertical tabs on the left**, and a **blue-led colour scheme** across all pages.
-
-**Dependencies:** None (frontend layout and styles).
+**Dependencies:** None (frontend layout and styles)
 
 **Priority:** Medium
 
-**Estimated Effort:** 3-5 days
+**Estimated Effort:** 1-2 days
 
 ### Tasks
 
-- [x] 20.1 Add specification text for shell and theme (see `docs/spec.md` section 14)
-- [x] 20.2 Define CSS variables for primary blue and complementary palette; update global styles (surfaces, buttons, tables, header/footer)
-- [x] 20.3 Implement app layout: top bar with brand, sidebar toggle, and account menu anchor
-- [x] 20.4 Implement collapsible left sidebar for standard pages with shared navigation links and active-state highlighting
-- [x] 20.5 Move Admin dashboard section tabs to a **left vertical** sidebar; remove horizontal tab bar; preserve tab behaviour and tests
-- [x] 20.6 Implement collapsible account dropdown (guest: Log in / Register; authenticated: user info + Log out)
-- [x] 20.7 Apply shell to all HTML pages (index, feature pages, auth pages, complete-profile, matrix) with appropriate sidebar variants
-- [x] 20.8 Respect existing behaviour (e.g. show Overtime link only when authenticated); update `main.js` and any page scripts
-- [x] 20.9 Add or update frontend tests for account menu and shell markers (`#account-menu-anchor`, sidebar toggle)
-- [ ] 20.10 Adjust remaining frontend tests (streamlined-booking, auth pages, admin, availability-display, parking, bookings, matrix, etc.) for `globalThis.apiRequest` wrappers and updated DOM; run `npm test` in `src/frontend` until all green
-- [x] 20.11 Update root `README.md` User Guide navigation description after release
-- [x] 20.12 Update `docs/usecases.md` if navigation paths change materially
+- [x] 20.10 Adjust remaining frontend tests (streamlined-booking, auth pages, admin, availability-display, parking, bookings, matrix, etc.) for `globalThis.apiRequest` wrappers and updated DOM; `npm test` in `src/frontend` now runs all 20 suites (145 tests) green
 
 ---
 
@@ -882,6 +123,8 @@ This document contains all tasks organized by phases with clear dependencies and
 **Priority:** High
 
 **Estimated Effort:** 6-10 days
+
+**Note on overtime:** Phase 23 removes the overtime feature. Task 21.9 wires audit events for overtime, but that code will be immediately removed in Phase 23. To avoid throwaway work, either **skip overtime audit wiring** in this phase (omit task 21.9) and note it as N/A once overtime is removed, or **complete Phase 23 overtime removal first** before building the audit trail. The chosen approach should be recorded here when work begins.
 
 ### Tasks
 
@@ -906,3 +149,162 @@ This document contains all tasks organized by phases with clear dependencies and
 - [ ] 21.19 Update `docs/spec.md` API section with implemented audit endpoints; move section 15 to **Currently Implemented** when done
 - [ ] 21.20 Update root `README.md` User Guide (admin: Audit section) after implementation
 - [ ] 21.21 Update `docs/usecases.md` with admin audit review and search flow
+
+---
+
+## Phase 22: Config-driven Deployment Version and Release History (Remaining Tasks)
+
+**Objective:** Complete Playwright end-to-end testing for deployment version and release history.
+
+**Dependencies:** Phase 18 (version APIs and footer display)
+
+**Priority:** Medium
+
+**Estimated Effort:** 0.5 day
+
+### Tasks
+
+- [ ] 22.9 Add Playwright end-to-end test: footer version link opens release history and content loads (deferred where Playwright is not in CI)
+
+---
+
+## Phase 23: Remove Overtime; Floor Plan Maps; Undo Cancel; Booking Button UX
+
+**Objective:** Align the product with `docs/spec.md` **Not Yet Implemented** sections **16--19**: remove overtime end-to-end; add **square** desk and carpark **map** UIs with **admin-uploaded** PNG/JPG floor plans and **admin-only** landmark editing (landmarks non-blocking for resource clicks); **Undo** after user desk cancel within a short window; **uniform** Select / Book / Reserve / Book selected button sizing and **hide immediate Book/Reserve** when that resource is in the multi-select selection.
+
+**Dependencies:** Phase 2 (desk), Phase 3 (parking), Phase 5 (admin), Phase 15 (multi-select) as implemented today; Phase 20 (shell) for navigation changes.
+
+**Priority:** High (UX and scope change)
+
+**Estimated Effort:** 10-18 days (depends on map editor depth and migration choice for overtime data)
+
+### Tasks
+
+- [ ] 23.1 Finalize overtime removal strategy: drop vs archive `overtime_records`; document operator backup expectations in technical notes
+- [ ] 23.2 Remove overtime API routes, services, middleware references, and integration tests; adjust OpenAPI or spec tables if present
+- [ ] 23.3 Remove overtime frontend: `overtime.html`, scripts, dashboard cards, My Bookings overtime section, admin overtime UI, matrix overtime hooks, sidebar/footer links; update `main.js` protected routes and shell
+- [ ] 23.4 Database migration: remove or archive overtime table and foreign keys; remove overtime seed data from SQL init scripts used by Docker/tests
+- [ ] 23.5 Update auth / profile-complete restrictions and audit trail spec implementation (when built) to drop overtime event types; grep codebase for `overtime` and clean remaining references
+- [ ] 23.6 Design map data model: per-context floor plan image path, image version, landmark list (type, optional label, normalized x/y), desk and parking space map coordinates; document in `docs/spec.md` API subsection when endpoints exist
+- [ ] 23.7 Admin API: secure upload for desk and parking floor plans (PNG/JPG only, size limit); GET map configuration for each context; admin CRUD for landmarks and for resource coordinates
+- [ ] 23.8 Admin UI: map editor (square viewport) to upload/replace image, place or adjust desk/parking markers, add/edit/delete landmarks (preset types + custom label)
+- [ ] 23.9 Desk booking UI: square map panel alongside or above list; sync selection/booking state with list; keyboard/fallback documented
+- [ ] 23.10 Parking UI: square map panel for carpark selection consistent with desk patterns
+- [ ] 23.11 Desk cancel **Undo**: implement server rule (time window + availability check) and client banner/toast with Undo; unit tests for service rules
+- [ ] 23.12 Booking buttons: shared CSS/component for consistent dimensions; hide per-item Book/Reserve when item is selected; update desk and parking pages and frontend tests
+- [ ] 23.13 Integration tests: map config endpoints (admin auth, file upload), undo cancel happy path and expiry, booking list still works without map if no image configured
+- [ ] 23.14 Frontend Jest tests: map rendering with mock config, button visibility when selected, undo UI
+- [ ] 23.15 Playwright end-to-end test: admin uploads plan and places landmark; user sees map on desk or parking page; user cancels desk and undoes within window
+- [ ] 23.16 Update `docs/usecases.md`: remove overtime flows; add map orientation and undo flows; update multi-select manual paths for buttons
+- [ ] 23.17 Update root `README.md` (remove overtime user guide; document maps, undo, button behavior)
+- [ ] 23.18 Update `docs/spec.md` **Currently Implemented** and API lists after delivery; mark Phase 23 tasks complete in this file
+
+---
+
+## Phase 24: Numeric Sorting of Desks and Parking Spaces
+
+**Objective:** Sort desk and parking space lists in **natural numeric order** rather than alphabetic string order, so identifiers like `1, 2, 3, 10, 11` appear in the correct sequence instead of `1, 10, 11, 2, 3`. Applies everywhere desks or parking spaces are listed (booking pages, admin views, booking matrix, My Bookings, dropdowns). See `docs/spec.md` section 20.
+
+**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking), Phase 7 (Enhanced Admin Configuration), Phase 9 (Booking Matrix Screen)
+
+**Priority:** Medium
+
+**Estimated Effort:** 1-2 days
+
+### Tasks
+
+- [ ] 24.1 Write failing unit test for a natural sort utility function (compares purely numeric identifiers numerically; handles mixed alphanumeric identifiers such as `A1, A2, A10, B1`) - TDD red phase before implementation
+- [ ] 24.2 Implement the natural sort utility in the backend and expose it to services that return desk or parking lists
+- [ ] 24.3 Implement (or import) an equivalent natural sort utility in the frontend JavaScript for client-side ordering
+- [ ] 24.4 Audit all backend SQL queries and service methods that return desks or parking spaces (repositories, booking availability, admin listings, matrix aggregation) and document which need numeric ordering
+- [ ] 24.5 Update desk repository/service queries to return desks ordered by numeric value of the desk number (e.g. SQL `ORDER BY CAST(number AS UNSIGNED), number` or equivalent natural sort) with stable secondary ordering
+- [ ] 24.6 Update parking space repository/service queries to return spaces ordered numerically with stable secondary ordering
+- [ ] 24.7 Update desk selection list on the desk booking page to display desks in numeric order
+- [ ] 24.8 Update parking space selection list on the parking reservation page to display spaces in numeric order
+- [ ] 24.9 Update admin Desk Configuration view so listed desk numbers appear in numeric order
+- [ ] 24.10 Update admin Parking Configuration view so listed parking space numbers appear in numeric order
+- [ ] 24.11 Update admin All Bookings and All Parking Reservations views (where grouped or sorted by resource number) to use numeric order
+- [ ] 24.12 Update Booking Matrix resource axis labels (desks and parking) to appear in numeric order
+- [ ] 24.13 Update My Bookings listings (desk bookings and parking reservations) so resources appear in numeric order
+- [ ] 24.14 Update any dropdowns, selectors, or filter controls that list desks or parking spaces to use the same numeric order
+- [ ] 24.15 Ensure server-side and client-side sorts produce identical ordering (no mixed strategies across views)
+- [ ] 24.16 Write unit tests for the natural sort utility covering: purely numeric identifiers, mixed alphanumeric identifiers, tie-breaking stability
+- [ ] 24.17 Write integration test asserting `GET /api/desks` returns desks in numeric order when desks include numbers that would sort incorrectly as strings (e.g. 1, 2, 10, 11)
+- [ ] 24.18 Write integration test asserting `GET /api/parking-spaces` returns parking spaces in numeric order with the same data shape
+- [ ] 24.19 Write JavaScript tests for the frontend natural sort utility
+- [ ] 24.20 Write JavaScript tests asserting the desk booking page, parking reservation page, admin configuration views, and booking matrix render resources in numeric order given mixed-magnitude fixtures
+- [ ] 24.21 Write Playwright end-to-end test: with at least 11 desks and 11 parking spaces configured, verify the booking pages, admin views, and booking matrix all display resource numbers in natural numeric order
+- [ ] 24.22 Validate that all documented surfaces (desk booking, parking, admin desks, admin parking, admin bookings, admin parking reservations, booking matrix, My Bookings, dropdowns) display resources in natural numeric order
+- [ ] 24.23 Update `docs/usecases.md` if any documented manual path references a specific ordering of desks or parking spaces
+- [ ] 24.24 Update root `README.md` once implemented to reflect that resource lists are presented in natural numeric order
+
+---
+
+## Phase 25: Enhanced Desk Display Verification and Documentation
+
+**Objective:** Confirm that desk numbers are displayed prominently in user-facing flows (desk booking list, booking success feedback, My Bookings) per `docs/spec.md` section 2, close any gaps with tests, and move the specification section from **Not Yet Implemented** to **Currently Implemented**.
+
+**Dependencies:** Phase 2 (Desk Booking), Phase 7 (Enhanced Admin Resource Configuration)
+
+**Priority:** Low
+
+**Estimated Effort:** 0.5-1 day
+
+### Tasks
+
+- [ ] 25.1 Audit desk booking page (`src/frontend/pages/desk-booking.html` and `src/frontend/js/desk-booking.js`) to confirm each available desk renders its desk number prominently (heading or strong emphasis)
+- [ ] 25.2 Audit booking success feedback (notification/toast after booking) to confirm the desk number appears in the success message; add it if missing
+- [ ] 25.3 Audit My Bookings page (`src/frontend/js/bookings.js`) to confirm each desk booking row shows the desk number prominently
+- [ ] 25.4 Write JavaScript test asserting the desk booking list renders `Desk <number>` for each available desk returned by the API
+- [ ] 25.5 Write JavaScript test asserting the success notification after booking includes the desk number
+- [ ] 25.6 Write JavaScript test asserting My Bookings desk rows render the desk number
+- [ ] 25.7 Update root `README.md` under **Desk Booking** to mention that desk numbers are shown prominently in the list, success message, and My Bookings
+- [ ] 25.8 Move `docs/spec.md` section 2 (**Enhanced Desk Display**) from **Not Yet Implemented** into the appropriate **Currently Implemented** phase narrative once tasks 25.1-25.6 pass
+
+---
+
+## Phase 26: Admin Desk Number Display Verification and Documentation
+
+**Objective:** Confirm that desk numbers are displayed in admin surfaces (admin dashboard desk configuration, admin booking management, admin desk listing) per `docs/spec.md` section 3, close any gaps with tests, and move the specification section from **Not Yet Implemented** to **Currently Implemented**.
+
+**Dependencies:** Phase 5 (Admin Functionality), Phase 7 (Enhanced Admin Resource Configuration)
+
+**Priority:** Low
+
+**Estimated Effort:** 0.5-1 day
+
+### Tasks
+
+- [ ] 26.1 Audit admin desk configuration view (`src/frontend/js/admin.js` and `src/frontend/pages/admin.html`) to confirm all allocated desk numbers are listed
+- [ ] 26.2 Audit admin booking management view to confirm desk number is displayed for each booking row
+- [ ] 26.3 Audit admin desk listing (when viewing desk configuration details) to confirm desk numbers are shown next to each desk entry
+- [ ] 26.4 Write JavaScript test asserting admin desk configuration renders the full list of allocated desk numbers
+- [ ] 26.5 Write JavaScript test asserting admin booking management rows display the desk number
+- [ ] 26.6 Update root `README.md` under **Admin Dashboard** to state that allocated desk numbers are visible in the configuration view and booking management view
+- [ ] 26.7 Move `docs/spec.md` section 3 (**Admin Desk Number Display**) from **Not Yet Implemented** into the appropriate **Currently Implemented** phase narrative once tasks 26.1-26.5 pass
+
+---
+
+## Phase 27: Comprehensive Test Coverage Audit
+
+**Objective:** Deliver the cross-cutting commitment in `docs/spec.md` section 11: every documented use case in `docs/usecases.md` and every implemented feature has at least one end-to-end test (Playwright) and feasible unit coverage, with gaps identified and filled.
+
+**Dependencies:** All feature phases implementing the behaviors being tested. Most naturally run after Phase 23 (overtime removal) so test coverage is not written against code slated for deletion.
+
+**Priority:** Medium
+
+**Estimated Effort:** 5-8 days
+
+### Tasks
+
+- [ ] 27.1 Enumerate every use case in `docs/usecases.md` and map each to existing Playwright end-to-end tests; list use cases with no end-to-end coverage
+- [ ] 27.2 Enumerate every feature listed under **Currently Implemented Features** in `README.md` and map each to existing end-to-end tests; list features with no end-to-end coverage
+- [ ] 27.3 Enumerate every backend service, repository, and route handler and identify those without unit test coverage; record the gap list in a working document (not committed as a permanent artifact)
+- [ ] 27.4 Write Playwright end-to-end tests to fill the use case gaps identified in 27.1 (one test per uncovered use case)
+- [ ] 27.5 Write Playwright end-to-end tests to fill the feature gaps identified in 27.2 (one test per uncovered feature, where not already satisfied by 27.4)
+- [ ] 27.6 Add unit tests for uncovered business logic, repository methods, utility functions, and route handlers identified in 27.3 (prioritize critical paths)
+- [ ] 27.7 Verify all tests are idempotent: each test must run multiple times in any order without shared state or external side effects; document and fix any tests that rely on ordering or leftover data
+- [ ] 27.8 Verify every test covers a single discrete scenario; split any test asserting multiple unrelated behaviors
+- [ ] 27.9 Run `utils/run-tests.ps1` and confirm all unit, integration, and UI tests pass together
+- [ ] 27.10 Update `docs/spec.md` **Testing Instructions** section to reflect the current test suite layout and how to run each tier
+- [ ] 27.11 Move `docs/spec.md` section 11 (**Comprehensive Test Coverage**) from **Not Yet Implemented** into a **Currently Implemented** phase narrative once tasks 27.1-27.9 are complete

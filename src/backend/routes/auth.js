@@ -99,7 +99,15 @@ router.post('/register', async (req, res, next) => {
   } catch (error) {
     const logger = require('../utils/logger');
     logger.error(`Registration failed: ${error.message}`);
-    
+
+    if (error.message.includes('Self-service registration is not available')) {
+      return res.status(403).json({
+        error: {
+          message: error.message,
+          code: 'REGISTRATION_CLOSED',
+        },
+      });
+    }
     if (error.message.includes('already exists')) {
       return res.status(409).json({
         error: {
@@ -416,6 +424,14 @@ router.delete('/users/:id', authenticate, requireCompleteProfile, authorize(['ad
         error: {
           message: error.message,
           code: 'CANNOT_DELETE_LAST_ADMIN',
+        },
+      });
+    }
+    if (error.message.includes('cannot delete your own account')) {
+      return res.status(403).json({
+        error: {
+          message: error.message,
+          code: 'CANNOT_DELETE_SELF',
         },
       });
     }

@@ -1,8 +1,21 @@
+const fs = require('fs');
+const path = require('path');
 const request = require('supertest');
 const app = require('../../src/backend/server');
 const { executeQuery } = require('../../src/backend/database/connection');
 const UserService = require('../../src/backend/services/UserService');
 const { createProvisionedUserWithPassword } = require('../helpers/provisionUser');
+
+const CONFIG_PATH = path.resolve(__dirname, '../../data/config.json');
+
+function resetDeploymentVersionInConfig(version) {
+  if (!fs.existsSync(CONFIG_PATH)) {
+    return;
+  }
+  const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  config.deployment_info = Object.assign({}, config.deployment_info, { version });
+  fs.writeFileSync(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
+}
 
 describe('Version API Integration Tests', () => {
   let authToken;
@@ -31,6 +44,14 @@ describe('Version API Integration Tests', () => {
       });
 
     adminToken = loginResponse.body.token;
+  });
+
+  beforeEach(() => {
+    resetDeploymentVersionInConfig('1.0.0.0');
+  });
+
+  afterEach(() => {
+    resetDeploymentVersionInConfig('1.0.0.0');
   });
 
   beforeEach(async () => {
@@ -76,7 +97,7 @@ describe('Version API Integration Tests', () => {
         .get('/api/version')
         .expect(200);
 
-      const versionRegex = /^\d+\.\d+\.\d+$/;
+      const versionRegex = /^\d+\.\d+\.\d+\.\d+$/;
       expect(response.body.versionNumber).toMatch(versionRegex);
     });
   });
@@ -92,7 +113,7 @@ describe('Version API Integration Tests', () => {
         })
         .expect(200);
 
-      expect(response.body.versionNumber).toBe('1.0.0');
+      expect(response.body.versionNumber).toBe('1.0.0.0');
       expect(response.body.deploymentInfo).toBe('Test deployment');
 
       // Verify version was updated in database
@@ -100,7 +121,7 @@ describe('Version API Integration Tests', () => {
         .get('/api/version')
         .expect(200);
 
-      expect(getResponse.body.versionNumber).toBe('1.0.0');
+      expect(getResponse.body.versionNumber).toBe('1.0.0.0');
     });
 
     test('should require authentication', async () => {
@@ -181,7 +202,7 @@ describe('Version API Integration Tests', () => {
         .send({})
         .expect(200);
 
-      expect(response.body.versionNumber).toBe('1.2.4');
+      expect(response.body.versionNumber).toBe('1.2.4.0');
     });
 
     test('should increment minor version', async () => {
@@ -201,7 +222,7 @@ describe('Version API Integration Tests', () => {
         })
         .expect(200);
 
-      expect(response.body.versionNumber).toBe('1.3.0');
+      expect(response.body.versionNumber).toBe('1.3.0.0');
     });
 
     test('should increment major version', async () => {
@@ -221,7 +242,7 @@ describe('Version API Integration Tests', () => {
         })
         .expect(200);
 
-      expect(response.body.versionNumber).toBe('2.0.0');
+      expect(response.body.versionNumber).toBe('2.0.0.0');
     });
 
     test('should return 400 for invalid increment type', async () => {

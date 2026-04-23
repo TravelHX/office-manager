@@ -1,13 +1,11 @@
 /**
- * Semantic Versioning Utilities
- * Supports MAJOR.MINOR.PATCH format (e.g., 1.2.3)
+ * Semantic versioning: MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH.REVISION (e.g. 1.2.3 or 1.2.3.0).
+ * Canonical string form uses four numeric segments.
  */
 
 /**
- * Parse a semantic version string
- * @param {string} versionString - Version string (e.g., "1.2.3")
- * @returns {Object} Parsed version object with major, minor, patch
- * @throws {Error} If version string is invalid
+ * @param {string} versionString
+ * @returns {{ major: number, minor: number, patch: number, revision: number }}
  */
 function parseVersion(versionString) {
   if (!versionString || typeof versionString !== 'string') {
@@ -15,42 +13,53 @@ function parseVersion(versionString) {
   }
 
   const parts = versionString.trim().split('.');
-  if (parts.length !== 3) {
-    throw new Error(`Invalid version format: ${versionString}. Expected format: MAJOR.MINOR.PATCH (e.g., 1.2.3)`);
+  if (parts.length !== 3 && parts.length !== 4) {
+    throw new Error(
+      `Invalid version format: ${versionString}. Expected MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH.REVISION (e.g. 1.2.3 or 1.0.0.0)`
+    );
   }
 
-  const major = parseInt(parts[0], 10);
-  const minor = parseInt(parts[1], 10);
-  const patch = parseInt(parts[2], 10);
-
-  if (isNaN(major) || isNaN(minor) || isNaN(patch)) {
+  const nums = parts.map((p) => parseInt(p, 10));
+  if (nums.some((n) => isNaN(n))) {
     throw new Error(`Invalid version format: ${versionString}. All parts must be numbers`);
   }
-
-  if (major < 0 || minor < 0 || patch < 0) {
+  if (nums.some((n) => n < 0)) {
     throw new Error(`Invalid version format: ${versionString}. Version numbers cannot be negative`);
   }
 
-  return { major, minor, patch };
+  const [major, minor, patch, revision = 0] = nums;
+  return { major, minor, patch, revision };
 }
 
 /**
- * Format version object to string
- * @param {Object} version - Version object with major, minor, patch
- * @returns {string} Version string (e.g., "1.2.3")
+ * @param {{ major: number, minor: number, patch: number, revision?: number }} version
+ * @returns {string}
  */
 function formatVersion(version) {
-  if (!version || typeof version.major !== 'number' || typeof version.minor !== 'number' || typeof version.patch !== 'number') {
+  if (
+    !version ||
+    typeof version.major !== 'number' ||
+    typeof version.minor !== 'number' ||
+    typeof version.patch !== 'number'
+  ) {
     throw new Error('Invalid version object. Must have major, minor, and patch properties');
   }
-  return `${version.major}.${version.minor}.${version.patch}`;
+  const revision = typeof version.revision === 'number' ? version.revision : 0;
+  return `${version.major}.${version.minor}.${version.patch}.${revision}`;
 }
 
 /**
- * Increment version based on type
- * @param {string} currentVersion - Current version string (e.g., "1.2.3")
- * @param {string} incrementType - Type of increment: 'major', 'minor', or 'patch'
- * @returns {string} New version string
+ * @param {string} versionString
+ * @returns {string}
+ */
+function normalizeVersion(versionString) {
+  return formatVersion(parseVersion(versionString));
+}
+
+/**
+ * @param {string} currentVersion
+ * @param {'major'|'minor'|'patch'} incrementType
+ * @returns {string}
  */
 function incrementVersion(currentVersion, incrementType = 'patch') {
   const validTypes = ['major', 'minor', 'patch'];
@@ -59,26 +68,28 @@ function incrementVersion(currentVersion, incrementType = 'patch') {
   }
 
   const version = parseVersion(currentVersion);
-  
+
   if (incrementType === 'major') {
     version.major += 1;
     version.minor = 0;
     version.patch = 0;
+    version.revision = 0;
   } else if (incrementType === 'minor') {
     version.minor += 1;
     version.patch = 0;
+    version.revision = 0;
   } else {
     version.patch += 1;
+    version.revision = 0;
   }
 
   return formatVersion(version);
 }
 
 /**
- * Compare two versions
- * @param {string} version1 - First version string
- * @param {string} version2 - Second version string
- * @returns {number} -1 if version1 < version2, 0 if equal, 1 if version1 > version2
+ * @param {string} version1
+ * @param {string} version2
+ * @returns {number}
  */
 function compareVersions(version1, version2) {
   const v1 = parseVersion(version1);
@@ -93,13 +104,15 @@ function compareVersions(version1, version2) {
   if (v1.patch !== v2.patch) {
     return v1.patch > v2.patch ? 1 : -1;
   }
+  if (v1.revision !== v2.revision) {
+    return v1.revision > v2.revision ? 1 : -1;
+  }
   return 0;
 }
 
 /**
- * Validate version string format
- * @param {string} versionString - Version string to validate
- * @returns {boolean} True if valid, false otherwise
+ * @param {string} versionString
+ * @returns {boolean}
  */
 function isValidVersion(versionString) {
   try {
@@ -113,6 +126,7 @@ function isValidVersion(versionString) {
 module.exports = {
   parseVersion,
   formatVersion,
+  normalizeVersion,
   incrementVersion,
   compareVersions,
   isValidVersion,

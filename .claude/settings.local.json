@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git ls-tree:*)",
+      "Bash(git add:*)",
+      "Bash(npx jest *)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(docker info *)",
+      "Bash(powershell.exe -NoProfile -Command ' *)",
+      "Bash(powershell.exe -NoProfile -Command \"Get-Content -Path C:\\\\Users\\\\H700125\\\\AppData\\\\Local\\\\Temp\\\\run-tests-output.txt -Wait -Tail 0\")"
+    ]
+  }
+}

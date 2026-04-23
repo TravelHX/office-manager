@@ -4,6 +4,8 @@
     "username": "admin",
     "email": "admin@example.com",
     "password": "Password123"
+  },
+  "deployment_info": {
+    "version": "1.0.0.0"
   }
 }
-

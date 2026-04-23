@@ -681,6 +681,11 @@ class UserService {
       throw new Error('Only admins can delete users');
     }
 
+    // Prevent self-deletion regardless of how many admins exist (spec sections 4a, 10)
+    if (userId === deletedBy) {
+      throw new Error('You cannot delete your own account; another administrator must perform this action');
+    }
+
     // Check if user exists
     const user = await this.userRepository.findById(userId);
     if (!user) {

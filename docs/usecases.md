@@ -6,6 +6,25 @@ This document contains all manual paths through features and user interaction fl
 
 Primary navigation is a **collapsible left sidebar** on standard pages. **Admin** uses the same pattern: admin sections appear as **vertical items in the left sidebar** (not a horizontal tab row). The **Account** control is at the **top right** of the bar: use it for **Log in** / **Register** when signed out, or for user details and **Log out** when signed in. The **menu** icon in the top bar toggles the sidebar.
 
+## Use Case: View release history from footer
+
+**Description:** A user wants to see what changed in deployed builds.
+
+**Steps:**
+1. Open any page that shows the app shell and footer
+2. Locate **Version:** in the footer
+3. Click the version number (hyperlink)
+4. The **Release history** page opens and displays text loaded from server data (`data/release_history.txt`)
+
+**Expected Result:** Release history content is visible (or an empty file message if the file is empty).
+
+**Manual testing path:**
+1. Open Home or Login
+2. Click the version link in the footer
+3. Confirm the Release history page title and that body text matches the deployed `release_history.txt`
+
+**Automated coverage:** `src/frontend/tests/version.test.js` (footer markup and version fetch); `tests/integration/release-history.test.js` (**GET /api/release-history**).
+
 ## Use Case 1: Employee Books Desk for Two Days
 
 **Description:** An employee needs to book a desk in the office for two consecutive days.
@@ -281,5 +300,32 @@ Primary navigation is a **collapsible left sidebar** on standard pages. **Admin*
 6. Log in as that user with the email and new password
 7. Confirm a protected action (e.g. desk booking availability or booking) works
 8. Optional: create a second provisioned user, do not complete setup, confirm protected APIs or UI block access until setup is done
+
+---
+
+## Use Case 9: First User Registers and Becomes Administrator
+
+**Description:** On a freshly started application with no users, the first person to open the site is routed to a registration screen. They create an account and are automatically granted administrator privileges. After the first account exists, self-service registration is closed: anyone visiting the registration page sees an informational message directing them to log in or contact an administrator.
+
+**Steps:**
+1. The application starts on a clean database (no users); startup cleanup removes any legacy admin/password123 user and, if a pre-existing admin user is found, flushes all users
+2. A visitor opens the site and is routed to the registration screen (because no users exist)
+3. The visitor enters first name, last name, email, office location, password, and confirm password, then submits
+4. The system creates the first user with admin role and returns a session token
+5. The first user is signed in and can reach admin features (User Management, Resource Configuration, All Bookings, and so on)
+6. A second visitor opens the registration page
+7. The registration page detects that users exist; it hides the form and shows a "self-service registration is not available" message with a link to the login page
+8. If that second visitor instead posts directly to `POST /api/auth/register`, the API responds `403 REGISTRATION_CLOSED`
+9. The administrator creates accounts for new colleagues through User Management (Use Case 8) rather than via self-registration
+
+**Expected Result:** The first registered user is always admin; subsequent visitors cannot self-register. Accounts for additional users are provisioned by an existing administrator.
+
+**Manual Testing Path:**
+1. Stop the application, clear or flush users in the database, and start the application (startup cleanup runs automatically)
+2. Open the site root; confirm the page shows the registration form and first-user informational message
+3. Submit valid registration values and confirm redirect to the application home with admin-only areas available
+4. Log out and open `/pages/register.html` directly; confirm the form is hidden and the closed-registration message with a login link is shown
+5. Issue `POST /api/auth/register` with a new email via a tool such as `curl`; confirm the response is `403` with code `REGISTRATION_CLOSED`
+6. Log in as the admin and use User Management to provision a second user (Use Case 8) to demonstrate the supported path after first-user registration
 
 ---

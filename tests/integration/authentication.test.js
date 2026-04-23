@@ -731,6 +731,48 @@ describe('Authentication Endpoints', () => {
       expect(response.body.error).toBeDefined();
       expect(response.body.error.message).toContain('required');
     });
+
+    // Phase 14.34 - subsequent users do not automatically become admin
+    it('should create subsequent admin-provisioned users as non-admin by default (Phase 14.34)', async () => {
+      const createResponse = await request(app)
+        .post('/api/auth/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Subsequent User',
+          email: 'subsequentuser-phase1434@test.com',
+        });
+
+      expect(createResponse.status).toBe(201);
+      // The created user MUST NOT be admin and MUST have the 'user' role by default
+      expect(createResponse.body.isAdmin).toBe(false);
+      expect(createResponse.body.role).toBe('user');
+
+      // Complete the profile so we can log in
+      await request(app)
+        .post('/api/auth/complete-profile')
+        .send({
+          token: createResponse.body.invitationToken,
+          password: 'password123',
+          office_location: 'London',
+        });
+
+      const loginResponse = await request(app)
+        .post('/api/auth/login')
+        .send({
+          username: 'subsequentuser-phase1434@test.com',
+          password: 'password123',
+        });
+
+      expect(loginResponse.status).toBe(200);
+      expect(loginResponse.body.user.isAdmin).toBe(false);
+      expect(loginResponse.body.user.role).toBe('user');
+
+      // Admin-only endpoint must be forbidden for the new user
+      const adminEndpointResponse = await request(app)
+        .get('/api/auth/users')
+        .set('Authorization', `Bearer ${loginResponse.body.token}`);
+      expect(adminEndpointResponse.status).toBe(403);
+    });
   });
 
   describe('End-to-End: User provisioning and profile completion (Admin)', () => {
@@ -1206,6 +1248,47 @@ describe('Authentication Endpoints', () => {
         const bookingsAfter = await bookingRepo.findByUserId(testUser.id);
         expect(bookingsAfter.length).toBe(0);
       }
+    });
+
+    test('should prevent an admin from deleting their own account even when other admins exist (17.38)', async () => {
+      // Create two fresh admins so the last-admin rule is not the reason for refusal
+      const selfAdmin = await createProvisionedUserWithPassword(adminUser.id, {
+        email: 'selfdeladmin@test.com',
+        name: 'Self Delete Admin',
+        password: 'Password123',
+        is_admin: true,
+        role: 'admin',
+      });
+      const otherAdmin = await createProvisionedUserWithPassword(adminUser.id, {
+        email: 'otherdeladmin@test.com',
+        name: 'Other Admin',
+        password: 'Password123',
+        is_admin: true,
+        role: 'admin',
+      });
+
+      const selfAdminToken = generateToken(selfAdmin);
+
+      const response = await request(app)
+        .delete(`/api/auth/users/${selfAdmin.id}`)
+        .set('Authorization', `Bearer ${selfAdminToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe('CANNOT_DELETE_SELF');
+      expect(response.body.error.message).toContain('cannot delete your own account');
+
+      // Verify the admin still exists
+      const stillExists = await userService.getUserById(selfAdmin.id);
+      expect(stillExists).toBeDefined();
+      expect(stillExists.id).toBe(selfAdmin.id);
+
+      // Clean up: another admin removes the test admins
+      await request(app)
+        .delete(`/api/auth/users/${selfAdmin.id}`)
+        .set('Authorization', `Bearer ${admin1Token}`);
+      await request(app)
+        .delete(`/api/auth/users/${otherAdmin.id}`)
+        .set('Authorization', `Bearer ${admin1Token}`);
     });
   });
 });

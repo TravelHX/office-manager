@@ -3,7 +3,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const response = await fetch('/api/auth/check-users');
     const data = await response.json();
     if (data.hasUsers) {
-      window.location.href = '/pages/login.html?needsAdmin=1';
+      const formEl = document.getElementById('register-form');
+      const infoEl = document.querySelector('.info-message');
+      const closedEl = document.getElementById('registration-closed-message');
+      if (formEl) {
+        formEl.style.display = 'none';
+      }
+      if (infoEl && infoEl !== closedEl) {
+        infoEl.style.display = 'none';
+      }
+      if (closedEl) {
+        closedEl.style.display = 'block';
+      }
       return;
     }
   } catch (e) {

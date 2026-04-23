@@ -1,0 +1,3 @@
+Release history (newest first recommended)
+
+1.0.0.0 - Initial deployment version from config (deployment_info.version).

@@ -3,23 +3,45 @@
  */
 
 describe('Reset Password Functionality', () => {
+  let savedDomContentLoadedHandler;
+  let origDocumentAddEventListener;
+
   beforeEach(() => {
+    jest.resetModules();
     localStorage.clear();
     global.fetch = jest.fn();
     document.body.innerHTML = '';
-    
+
     // Mock URLSearchParams
     delete window.location;
     window.location = {
       href: '',
       search: '',
     };
+
+    savedDomContentLoadedHandler = null;
+    origDocumentAddEventListener = Document.prototype.addEventListener.bind(document);
+    jest.spyOn(document, 'addEventListener').mockImplementation((type, listener, options) => {
+      if (type === 'DOMContentLoaded') {
+        savedDomContentLoadedHandler = listener;
+        return undefined;
+      }
+      return origDocumentAddEventListener(type, listener, options);
+    });
   });
 
   afterEach(() => {
+    document.addEventListener.mockRestore();
     jest.clearAllMocks();
     localStorage.clear();
   });
+
+  function loadResetPasswordPage() {
+    require('../js/reset-password.js');
+    if (savedDomContentLoadedHandler) {
+      savedDomContentLoadedHandler.call(document, new Event('DOMContentLoaded'));
+    }
+  }
 
   describe('Reset Password Form Submission', () => {
     it('should submit reset password form with token and new password', async () => {
@@ -47,7 +69,7 @@ describe('Reset Password Functionality', () => {
         </form>
       `;
 
-      require('../js/reset-password.js');
+      loadResetPasswordPage();
 
       const form = document.getElementById('reset-password-form');
       const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
@@ -87,16 +109,7 @@ describe('Reset Password Functionality', () => {
         </form>
       `;
 
-      // Mock URLSearchParams
-      const originalURLSearchParams = global.URLSearchParams;
-      global.URLSearchParams = jest.fn((search) => {
-        const params = new originalURLSearchParams(search);
-        return {
-          get: (key) => key === 'token' ? 'url-token-456' : null,
-        };
-      });
-
-      require('../js/reset-password.js');
+      loadResetPasswordPage();
 
       const tokenInput = document.getElementById('token');
       expect(tokenInput.value).toBe('url-token-456');
@@ -120,7 +133,7 @@ describe('Reset Password Functionality', () => {
         </form>
       `;
 
-      require('../js/reset-password.js');
+      loadResetPasswordPage();
 
       const form = document.getElementById('reset-password-form');
       const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
@@ -152,7 +165,7 @@ describe('Reset Password Functionality', () => {
         </form>
       `;
 
-      require('../js/reset-password.js');
+      loadResetPasswordPage();
 
       const form = document.getElementById('reset-password-form');
       const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
@@ -184,7 +197,7 @@ describe('Reset Password Functionality', () => {
         </form>
       `;
 
-      require('../js/reset-password.js');
+      loadResetPasswordPage();
 
       const form = document.getElementById('reset-password-form');
       const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
@@ -226,7 +239,7 @@ describe('Reset Password Functionality', () => {
         </form>
       `;
 
-      require('../js/reset-password.js');
+      loadResetPasswordPage();
 
       const form = document.getElementById('reset-password-form');
       const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
@@ -258,7 +271,7 @@ describe('Reset Password Functionality', () => {
         </form>
       `;
 
-      require('../js/reset-password.js');
+      loadResetPasswordPage();
 
       const passwordInput = document.getElementById('newPassword');
       const passwordToggle = document.getElementById('password-toggle');

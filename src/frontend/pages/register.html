@@ -131,6 +131,10 @@
                 <strong>First User Registration</strong>
                 You are registering as the first user. The first user will automatically be assigned administrator privileges.
             </div>
+            <div id="registration-closed-message" class="info-message" style="display: none;" role="alert">
+                <strong>Self-service registration is not available</strong>
+                An account already exists on this system, so registration is closed. Please <a id="registration-closed-login-link" href="/pages/login.html?needsAdmin=1">log in</a> with the account your administrator created for you, or contact an administrator to be added.
+            </div>
             <form id="register-form">
                 <div class="form-group">
                     <label for="firstName">First Name</label>
@@ -181,7 +185,7 @@
 
     <footer class="app-footer">
         <p>&copy; 2025 Office Manager. All rights reserved.</p>
-        <p id="app-version" style="font-size: 0.85rem; opacity: 0.85; margin-top: 0.5rem;">Version: <span id="version-number">-</span></p>
+        <p id="app-version" style="font-size: 0.85rem; opacity: 0.85; margin-top: 0.5rem;">Version: <a id="version-link" href="/pages/release-history.html"><span id="version-number">-</span></a></p>
     </footer>
 
     <script src="/js/main.js"></script>

@@ -14,6 +14,33 @@ Office Manager is a web application designed to manage office operations and res
 
 ## Currently Implemented Features
 
+### User Authentication and Management
+
+- Email-based login (email address is the username/login identifier)
+- Role-based access control: admin users and regular users
+- Session/token management for logged-in users
+- User indicator in top-left showing logged-in user information
+- Access control: logged-in users can access all features; non-logged-in users can only view available desks/spaces
+- Login redirect when unauthenticated users attempt to book
+- Password change functionality
+- Password reset with time-limited tokens (no outbound email; admin shares reset links)
+
+### First User Admin Registration
+
+- First user to register automatically becomes admin
+- Registration screen displayed when no users exist in the system
+- Application startup cleanup: removes legacy test users and provides clean slate for production
+- Subsequent users do not automatically become admin
+- Self-service registration is closed once any user exists: the registration API returns 403 (`REGISTRATION_CLOSED`) and the registration page hides the form and shows a message directing the visitor to log in or contact an administrator
+
+### Minimal Admin Provisioning and Profile Completion
+
+- Admins provision new users with **email and full name only**
+- Admin shares a time-limited **profile setup link** with the new user
+- User completes **password** and **office location** on first access via the setup link
+- Incomplete-profile users cannot access protected features (bookings, reservations) until completion
+- User list shows **Pending setup** vs **Active** profile status
+
 ### Desk Booking
 
 - View available desks for selected date ranges
@@ -21,6 +48,10 @@ Office Manager is a web application designed to manage office operations and res
 - View and manage personal desk bookings
 - Cancel own bookings
 - Admin can view all bookings and cancel any booking
+- Remaining desk count displayed for selected dates (availability enhancement)
+- Booking proceeds directly without confirmation modal (streamlined flow)
+- Booking validation: one desk per person per period, one person per desk per day
+- Clear error messages for booking conflicts and overlapping date ranges
 
 ### Parking Space Reservation
 
@@ -29,27 +60,74 @@ Office Manager is a web application designed to manage office operations and res
 - View and manage personal parking reservations
 - Cancel own reservations
 - Admin can view all reservations and cancel any reservation
+- Remaining parking space count displayed for selected date and time period
+- Booking validation: one parking space per person per period, one space per person per day/time
+- Clear error messages for reservation conflicts
 
-### Overtime Tracking
+### Multi-Select Desk and Parking Booking
+
+- Select multiple desks or parking spaces before booking
+- Dual button system: "Select" (adds to selection list) and "Book" (books immediately)
+- Visual selection indicators for selected items
+- "Book Selected" button books all selected items for the same date range in one operation
+- Selection persists when scrolling; "Clear Selection" to deselect all
+- Existing single "Book" button functionality maintained
+
+### Overtime Tracking (scheduled for removal)
 
 - Record overtime hours with automatic calculation
 - View overtime history
 - Generate overtime reports
 - Admin can view all overtime records
+- **Note:** Overtime is scheduled for removal from the product (see spec.md section 16)
+
+### Enhanced Admin Resource Configuration
+
+- Auto-generate sequential desk numbers (e.g. setting 10 desks creates desks numbered 1-10)
+- Auto-generate sequential parking space numbers
+- Manual number assignment for specific desks and parking spaces
+- Support for both auto-generated and manually assigned numbers
 
 ### Admin Dashboard
 
-- Configure number of desks and parking spaces
+- Configure number of desks and parking spaces (with flexible numbering)
 - View all bookings, reservations, and overtime records
-- Cancel any user's bookings or reservations
+- Cancel any user's bookings or reservations with reason
 - Manage office resources
-- User management: provision users with **email and full name only**; share the generated **profile setup link** so the user can set password and office location; user list shows **Pending setup** vs **Active** profile status; delete users (confirmation required); the last admin cannot be deleted; related bookings, parking reservations, and overtime records are removed with the user
+- User management: provision users (email + name only), share profile setup links, view profile status, delete users (confirmation required)
+- Last admin user cannot be deleted; related bookings, parking reservations, and overtime records are removed with a deleted user
 
 ### User Dashboard
 
 - View summary statistics (active bookings, reservations, overtime hours)
 - Quick access to booking and reservation features
 - Unified "My Bookings" view showing all personal bookings, reservations, and overtime records
+- Search and filtering across all booking types
+
+### Booking Matrix Screen
+
+- Visual matrix grid: users/people on one axis, dates on the other
+- Desk and parking bookings displayed with colour-coded visual indicators
+- Date range selection for the matrix view
+- Filtering by user, desk number, parking space number, or date range
+- Hover/tooltip for booking details; click to view/edit
+- Separate and combined views for desks and parking
+- Export functionality (CSV)
+- Admin-only access
+
+### Global Application Shell and Blue Theme
+
+- Collapsible left sidebar navigation with active-state highlighting
+- Collapsible account menu (top right): Log in / Register when anonymous; user details and Log out when authenticated
+- Admin sections use vertical left sidebar (replacing former horizontal tabs)
+- Blue primary colour scheme with complementary palette
+- Consistent layout applied to all pages (including login, registration, profile completion)
+
+### Deployment Version and Release History
+
+- The running version is read from **`data/config.json`**: object **`deployment_info`**, field **`version`**, using semantic versioning with four numeric segments (default **1.0.0.0**).
+- The footer shows **Version:** as a link to **Release history** (`/pages/release-history.html`), which loads text from **`data/release_history.txt`** via a public API.
+- When committing a releasable change, bump **`deployment_info.version`** and append a line to **`release_history.txt`** with that version and a short change summary (see **`AGENTS.md`**).
 
 ## User Guide
 
@@ -71,6 +149,7 @@ Welcome to Office Manager. The sections below describe how to use desk bookings,
 - **Left sidebar (collapsible):** Main links for most pages: **Home**, **Desk Booking**, **Parking**, **Overtime** (when you are signed in), **My Bookings**, **Booking Matrix**, **Admin**. Use the menu button to collapse or expand the sidebar; your choice is remembered for the session.
 - **Account menu (collapsible):** Click **Account** on the right. If you are not signed in, choose **Log in** or **Register**. If you are signed in, the menu shows your name and details and a **Log out** action.
 - **Admin:** Admin areas use the same shell; sections (configuration, bookings, users, and so on) are listed **vertically in the left sidebar**. **Main site** at the top of that sidebar returns to the standard app pages.
+- **Footer:** The **Version** value is a link. Click it to open **Release history**, which shows the contents of **`data/release_history.txt`**.
 
 ### Desk Booking
 
@@ -244,6 +323,7 @@ If you have admin privileges:
 2. Open the **User Management** tab
 3. Use **Delete** on a user row (you will be asked to confirm)
 4. The **last** admin user cannot be deleted; that row shows delete disabled with an explanation
+5. You cannot delete your **own** account; your row shows delete disabled. Another administrator must perform the removal if required
 
 #### Resource Configuration
 
@@ -291,13 +371,17 @@ For additional support, contact your system administrator.
 
 For detailed API documentation and the full product specification, see `docs/spec.md`.
 
-## Recent Implementation Updates
+## Implementation Summary
 
-- Phase 19: Minimal admin provisioning (email + name only), time-limited invitation token, **Complete your profile** page for password and office location, server-side blocking of protected APIs until profile is complete; see `docs/technical-notes-phase19-provisioning.md`
-- Phase 17: Admin user deletion covered by frontend JavaScript tests (`admin-user-deletion.test.js`) and integration API tests (`usecase17-admin-user-deletion.test.js`), including last-admin protection and cascade cleanup of related data
-- Phase 1-6: Complete implementation of core features (desk booking, parking tracking, overtime tracking, admin functionality, integration and polish)
-- All core booking and reservation features are fully functional
-- Admin dashboard with comprehensive management capabilities
-- User dashboard with unified booking view
-- Search and filtering across all features
-- Notification system for user feedback
+All features listed in "Currently Implemented Features" above are fully functional. Key implementation phases:
+
+- **Phases 1-6:** Core infrastructure, desk booking, parking reservations, overtime tracking, admin functionality, integration and polish
+- **Phases 7-10:** Enhanced admin resource configuration (flexible numbering), user authentication and management, booking matrix screen, booking validation rules
+- **Phase 11:** Comprehensive test coverage (unit, integration, and use case tests)
+- **Phases 12-13:** Enhanced user management (profiles, password reset, office locations), availability display enhancement
+- **Phase 14:** First user admin registration (first user becomes admin, startup cleanup)
+- **Phases 15-16:** Multi-select desk/parking booking, removed booking confirmation modal
+- **Phase 17:** Admin user deletion with last-admin protection and cascade handling
+- **Phases 18, 22:** Version tracking with semantic versioning, config-driven deployment version, release history page
+- **Phase 19:** Minimal admin provisioning (email + name only), profile completion on first login
+- **Phase 20:** Global application shell with collapsible navigation and blue theme

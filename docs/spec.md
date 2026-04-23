@@ -6,7 +6,7 @@ This file (`docs/spec.md`) is the **product specification**. It describes the **
 
 ## Project Overview
 
-Office Manager is a web application designed to manage office operations and resources. The application provides tools for tracking and managing various aspects of office life, including desk bookings, parking spaces, and overtime hours.
+Office Manager is a web application designed to manage office operations and resources. The application provides tools for tracking and managing **desk bookings** and **parking space reservations**. **Overtime tracking is no longer in scope** and is to be **removed** from the product (see **Not Yet Implemented, section 16**).
 
 ## Purpose
 
@@ -14,7 +14,8 @@ The primary purpose of Office Manager is to provide a centralized system for man
 
 - Track and manage desk bookings to optimize office space utilization
 - Monitor parking space availability and assignments
-- Record and manage employee overtime hours
+
+Overtime recording was previously supported but is **scheduled for removal**; the specification no longer treats it as a core capability.
 
 ## Technology Stack
 
@@ -138,18 +139,11 @@ Complete parking space reservation system with half-day support:
 
 **Related Use Cases:** Use Case 2 (Employee Books Desk and Parking Space for Half Day)
 
-### Phase 4: Overtime Tracking Feature (Completed)
+### Phase 4: Overtime Tracking Feature (Completed in code; **superseded by removal**)
 
-Complete overtime tracking system with automatic hour calculation:
+This phase was implemented historically. **Intended product direction:** remove the overtime feature entirely from the application (APIs, UI, navigation, dashboard, My Bookings, admin, matrix integrations, and tests) per **Not Yet Implemented, section 16**. Data in `overtime_records` may be archived or dropped per migration tasks in `docs/todo.md`.
 
-- **Database Schema**: `overtime_records` table with approval workflow support
-- **Models & Repositories**: OvertimeRecord model with automatic total hours calculation
-- **Business Logic**: OvertimeService with validation and approval workflow
-- **API Endpoints**: RESTful endpoints for overtime record management, history, and reports
-- **Frontend UI**: Complete overtime entry form with real-time hour calculation and history display
-- **Testing**: Unit tests, integration tests, and use case validation tests
-
-**Related Use Cases:** Use Case 7 (Employee Books Desk, Parking Space, and Records Overtime)
+**Related Use Cases:** Former Use Case 7; use cases and tests are to be updated when overtime is removed.
 
 ### Phase 5: Admin Functionality (Completed)
 
@@ -159,7 +153,7 @@ Complete administrative features for resource and booking management:
 - **Models & Repositories**: AdminConfiguration model and repository
 - **Business Logic**: AdminService with validation to prevent reducing counts below active bookings
 - **API Endpoints**: RESTful endpoints for configuration management and admin booking operations
-- **Frontend UI**: Admin dashboard with tabs for configuration, bookings, parking, and overtime management
+- **Frontend UI**: Admin dashboard with configuration, bookings, parking, and (until removed) overtime management
 - **Authentication**: Role-based access control with admin authorization checks
 - **Testing**: Unit tests, integration tests, and use case validation tests
 
@@ -171,10 +165,10 @@ Complete administrative features for resource and booking management:
 
 Integration and polish features:
 
-- **User Dashboard**: Home page dashboard showing summary statistics (active bookings, reservations, overtime hours)
-- **Search & Filtering**: Search and filter functionality across all bookings, reservations, and overtime records
+- **User Dashboard**: Home page dashboard showing summary statistics (active bookings, reservations; overtime summary **to be removed** with overtime feature)
+- **Search & Filtering**: Search and filter functionality across bookings and reservations (overtime **to be removed**)
 - **Notification System**: Client-side notification system for success, error, info, and warning messages
-- **Unified My Bookings View**: Integrated view showing all desk bookings, parking reservations, and overtime records
+- **Unified My Bookings View**: Integrated view showing desk bookings and parking reservations (overtime **to be removed**)
 - **Navigation**: Consistent navigation across all pages
 - **Documentation**: API and product specification in this file (`docs/spec.md`); end-user documentation in root `README.md` (User Guide section)
 
@@ -245,6 +239,8 @@ This feature will provide a complete user management system with proper user pro
 
 ### 4b. First User Admin Registration
 
+**Status:** Implemented (Phase 14). See root `README.md` user guide and the Currently Implemented overview. Remaining optional items: end-to-end coverage via Playwright, deferred where Playwright is not in CI (API-level end-to-end coverage exists under `tests/integration/authentication.test.js`).
+
 Initial user registration system where the first user to register automatically becomes an admin:
 
 - **First User Admin**: The first user to register in the system automatically receives admin privileges (IsAdmin flag set to true)
@@ -252,8 +248,8 @@ Initial user registration system where the first user to register automatically 
 - **Application Startup Cleanup**: When the application starts, it automatically runs cleanup logic that:
   - Removes the admin/password123 test user if it exists
   - If the "admin" user exists, flushes all users from the system (clean slate for production)
-- **Registration Flow**: When no users exist, users are presented with a registration screen instead of login screen. When any user already exists, self-registration is **not** available; visitors are directed to log in and are informed that an administrator must add them.
-- **Automatic Admin Assignment**: The first registered user is automatically assigned admin privileges without manual intervention
+- **Registration Flow**: When no users exist, users are presented with a registration screen instead of login screen. When any user already exists, self-registration is **not** available; the registration API returns **403 `REGISTRATION_CLOSED`** and the registration page hides the form and shows an informational message directing visitors to log in or contact an administrator.
+- **Automatic Admin Assignment**: The first registered user is automatically assigned admin privileges without manual intervention; subsequent users provisioned by an administrator are created as non-admin by default unless the administrator explicitly flags them as admin.
 
 This feature will provide a clean initialization process where the first user becomes the admin, removing the need for manual admin setup scripts in production.
 
@@ -320,6 +316,8 @@ Enhanced booking interface allowing users to select and book multiple desks or p
 - **Selection Persistence**: Selected items remain selected when scrolling or navigating the list
 - **Clear Selection**: Ability to clear all selections or deselect individual items
 
+**Alignment with section 19:** When an item is **selected**, the immediate **Book/Reserve** control for that item must **not** appear; uniform button sizing applies across Select, Book, Reserve, and Book selected.
+
 This feature will improve efficiency for users who need to book multiple resources at once, while maintaining the existing single-booking functionality.
 
 ### 9. Remove Booking Confirmation Modal
@@ -344,7 +342,7 @@ Administrative functionality to **add** and **remove** users, with mandatory saf
   - Deleting **another** admin is allowed only when **at least one** admin will remain afterward.
 - **Regular users**: Admins may delete non-admin users subject to cascade and business rules below.
 - **Error Handling**: Clear error messages when deletion is prevented (self-deletion, last admin, or other validation failures).
-- **Cascade Handling**: Determine how to handle bookings, reservations, and overtime records associated with deleted users (e.g., mark as cancelled, reassign, or prevent deletion if active bookings exist)
+- **Cascade Handling**: Determine how to handle bookings and reservations associated with deleted users (e.g., mark as cancelled, reassign, or prevent deletion if active bookings exist). Overtime cascade rules **to be removed** with overtime feature (section 16).
 
 This feature provides administrators with user lifecycle management while enforcing **no self-deletion** and the **minimum one admin** rule.
 
@@ -381,17 +379,17 @@ This feature will ensure the application maintains high quality standards and re
 
 ### 12. Version Tracking and Management
 
-Automatic version tracking system that increments on each deployment/commit:
+Automatic version tracking aligned with deployment configuration and history:
 
-- **Semantic Versioning**: Version numbers follow semantic versioning format (MAJOR.MINOR.PATCH, e.g., 1.2.3)
-- **Automatic Increment**: Each commit/deployment automatically increments the version number
-- **Database Storage**: Version number is stored in a database table
-- **Startup Version Update**: The first thing the application does on startup is attempt to update the version number in the database
-- **Error Handling**: If the version number cannot be updated in the database, an error is displayed on the screen
-- **Client Configuration**: Version number is also stored in a client-side configuration table/file
-- **Version Display**: Version number should be accessible and displayable in the application
+- **Semantic versioning**: Version numbers use **MAJOR.MINOR.PATCH** or **MAJOR.MINOR.PATCH.REVISION** (four numeric segments). The canonical displayed form uses four segments (e.g. `1.2.3.0`). Default when unset: **1.0.0.0**.
+- **Source of truth**: The running version shown in the UI and returned by **GET /api/version** comes from **`data/config.json`** under **`deployment_info.version`**. Admin version update APIs also write this value so the file and database stay aligned.
+- **Database storage**: Version metadata remains in the database table for auditing and startup sync when the config value differs from the stored row.
+- **Startup version update**: On startup, if the config version differs from the latest database row, the database is updated to match the config.
+- **Error handling**: If version initialization fails, the error is logged and a safe default version is used; the application continues to start where implemented.
+- **Release history**: Human-readable release notes are maintained in **`data/release_history.txt`**. A public **Release history** page loads this file via **GET /api/release-history** and displays its contents.
+- **Footer**: The version shown in the footer is a link to the Release history page.
 
-This feature will provide version tracking for deployments and help identify which version of the application is running.
+Process expectation: when preparing a commit that should ship as a new build, maintainers bump **`deployment_info.version`** appropriately and append an entry to **`release_history.txt`** (see project `AGENTS.md` for the full workflow).
 
 ### 13. Minimal Admin User Provisioning and First-Login Profile Completion
 
@@ -406,7 +404,7 @@ Intended behavior for bringing new users into the system with minimal admin effo
   - **Office location** (and any other required profile fields defined elsewhere in this specification)
   - Optional: confirm or adjust **name** if the implementation allows the user to correct how they are displayed
 
-- **Access until complete**: Users with an incomplete profile must **not** have full access to actions that require a complete identity (e.g. making desk or parking bookings, recording overtime, or other protected features as defined during implementation). Viewing limited public or informational screens may be allowed if appropriate; the goal is to force completion before normal use.
+- **Access until complete**: Users with an incomplete profile must **not** have full access to actions that require a complete identity (e.g. making desk or parking bookings, or other protected features as defined during implementation). Viewing limited public or informational screens may be allowed if appropriate; the goal is to force completion before normal use.
 
 - **Security and abuse**: Setup and reset tokens are **time-limited** and unguessable. The product may assume a trusted network or admin-controlled distribution of optional setup URLs. **Outbound email is not used** for invitations or password reset in the current product scope.
 
@@ -454,6 +452,65 @@ A durable **audit log** of significant user and system-facing actions for compli
 - **Integrity**: Records should be **append-only** from the application (no user-facing edit or delete of audit rows in normal operation). Any administrative purge should itself be auditable or strictly controlled.
 
 This feature supports accountability across **all** roles and makes support and investigations practical without exposing the log to non-admins.
+
+**Note:** When **overtime is removed** (section 16 below), audit event types and UI copy referencing overtime must be updated accordingly.
+
+### 16. Removal of Overtime Feature
+
+The overtime capability is **removed from the product**. After this work:
+
+- **No overtime UI**: No Overtime page, no overtime card on the home dashboard, no overtime rows in My Bookings, no overtime section in admin, no overtime link in navigation or shell.
+- **No public overtime APIs**: Overtime routes are removed or permanently disabled with a documented response; clients must not depend on them.
+- **Data**: Existing `overtime_records` (and related schema) are handled via migration: either **drop** with documented backup expectation for operators, or **archive** to a static export (product decision recorded in task notes). Admin report endpoints that only served overtime are removed.
+- **Cross-features**: Booking matrix, dashboard summaries, authentication "incomplete profile" restrictions, and any tests or use cases that mention overtime are updated so the product is consistent.
+- **Documentation**: `README.md`, `docs/usecases.md`, and this specification are aligned with the removal.
+
+### 17. Floor Plan Map for Desk and Parking Selection
+
+Visual **map** (floor plan) support for choosing desks and parking spaces:
+
+- **Two contexts**: A **desk** map on the desk booking flow and a **carpark** map on the parking reservation flow. Each context has its own **floor plan image** and map metadata (they may show the same physical image only if the product is configured that way).
+- **Square map area (2a)**: The map is displayed in a **square** viewport (equal width and height, e.g. `aspect-ratio: 1 / 1` with responsive width). The floor plan image **fits inside** the square (e.g. `object-fit: contain`) so the diagram is not distorted.
+- **Floor plan image (2d)**: Admins can **upload** a replacement floor plan as **PNG or JPG** only (validate MIME/extension and a reasonable maximum file size). Stored server-side in a documented location (e.g. under `data/` or configured storage); prior image replaced or versioned per implementation notes.
+- **Landmarks (2b, 2c)**: Admins can place **landmark markers** on the map (types such as **toilet**, **lift**, **stairs**, **exit**, **kitchen**, plus optional **custom label**). Landmarks are **for orientation only**: they **must not** intercept or block clicks on **desk** or **parking** markers (e.g. lower z-index, pointer-events, or hit-test rules). End users **see** landmarks but **cannot** edit them. **Only administrators** can add, move, edit, or delete landmarks and upload or replace the floor plan (2c).
+- **Resource markers**: Desks and parking spaces appear on the map at **admin-defined positions** (normalized coordinates, e.g. fractions of image width/height) so they stay aligned when the square viewport scales. Selecting or booking from the map must stay consistent with list-based flows and existing validation rules.
+- **Accessibility**: Map interactions should have a non-map fallback (existing list) where practical; keyboard focus order documented where implemented.
+
+### 18. Undo Desk Booking Cancellation
+
+When a user **cancels** their own desk booking:
+
+- The UI shows an **immediate Undo** affordance (e.g. banner or toast with an **Undo** action).
+- **Undo** restores the booking **only if** still allowed: within a **short time window** (specific duration is an implementation choice, e.g. 15--30 seconds, documented in README) and the desk remains **available** for those dates (no conflicting booking created in the meantime).
+- If Undo expires or is not possible, the user sees a clear message and the booking remains cancelled.
+- Admin cancellation of another user's booking **does not** require this Undo pattern unless product later extends it (initial scope: **user self-cancel** only).
+
+### 19. Consistent Booking Action Buttons and Selection Mode
+
+On desk booking and parking reservation screens that use **Select** plus **immediate Book/Reserve**:
+
+- **Uniform button sizing (4)**: **Select**, **Book**, **Reserve**, and **Book selected** (and equivalent primary actions in that flow) use **consistent** dimensions (same min-height and min-width or shared button class) so the layout is not confusing.
+- **Selection vs immediate action (4)**: When a desk or parking space is **currently selected** for multi-select, the **per-item immediate Book/Reserve** control for that item is **hidden** (or disabled with no duplicate primary action). The user books via **Book selected** / bulk action only for selected items. Items that are **not** selected continue to show the immediate Book/Reserve control as today.
+
+This supersedes ambiguous UX where mixed button sizes and simultaneous "selected" plus "book this one" compete.
+
+### 20. Numeric Sorting of Desks and Parking Spaces
+
+Desk and parking space lists must be sorted in **natural numeric order**, not alphabetic (string) order. The current behaviour sorts numeric identifiers as strings, producing an incorrect sequence (e.g. `1, 10, 11, 2, 3` instead of `1, 2, 3, 10, 11`).
+
+- **Required order**: Purely numeric identifiers are ordered by **numeric value** (`1, 2, 3, ..., 9, 10, 11, ...`). Identifiers that mix letters and numbers (possible under manual assignment) use **natural sort** so that embedded numeric runs are compared as numbers (e.g. `A1, A2, A10, B1`).
+- **Scope of application**: The numeric ordering applies **everywhere** a desk or parking space is listed or displayed, including:
+  - Desk selection list on the desk booking page
+  - Parking space selection list on the parking reservation page
+  - Admin **Desk Configuration** and **Parking Configuration** views (listing all desks / spaces and their numbers)
+  - Admin **All Bookings** and **All Parking Reservations** views when grouped or sorted by resource number
+  - **Booking Matrix** resource axis labels
+  - **My Bookings** listings of desk bookings and parking reservations
+  - Any dropdowns, selectors, or filter controls that list desks or parking spaces
+- **Consistency**: The same ordering is produced whether the sort is performed **server-side** (SQL) or **client-side** (JavaScript). Implementations must not mix sort strategies that yield different orders across views.
+- **Stability**: Ties (e.g. identical numeric parts) fall back to a deterministic secondary order (e.g. original string comparison, creation date, or id) so results are stable between requests.
+
+This feature ensures resource lists are presented in an intuitive, human-friendly order across the entire application.
 
 ## API Endpoints
 
@@ -504,6 +561,8 @@ Authorization: Bearer admin_1
 
 ### Overtime Records
 
+**Planned removal:** These endpoints are to be removed with the overtime feature (see **Not Yet Implemented, section 16**).
+
 - `GET /api/overtime/my-overtime` - Get current user's overtime records
 - `GET /api/overtime/reports` - Generate overtime report (query params: startDate, endDate)
 - `GET /api/overtime/:id` - Get overtime record by ID
@@ -518,7 +577,7 @@ Authorization: Bearer admin_1
 - `PUT /api/admin/configuration/parking-count` - Update parking count (admin only, body: parkingCount)
 - `GET /api/admin/bookings` - Get all bookings (admin only)
 - `GET /api/admin/parking-reservations` - Get all parking reservations (admin only)
-- `GET /api/admin/overtime-records` - Get all overtime records (admin only)
+- `GET /api/admin/overtime-records` - Get all overtime records (admin only) (**planned removal** with section 16)
 - `DELETE /api/admin/bookings/:id` - Cancel any booking (admin only, body: reason)
 - `DELETE /api/admin/parking-reservations/:id` - Cancel any reservation (admin only, body: reason)
 
@@ -603,3 +662,4 @@ Use cases cover scenarios including:
 - Docker support added: All services run in Docker containers, including dedicated test environment
 - Use cases documented: Seven detailed use cases covering all major user workflows (see `docs/usecases.md`)
 - Feature requests added: Enhanced admin resource configuration with flexible numbering options, improved desk number display in booking interface, admin screen display of allocated desk numbers, comprehensive user authentication and management system, enhanced user management with profiles and password reset, first user admin registration system, admin user deletion with minimum admin constraint, booking matrix screen for visualizing bookings by people and dates, booking validation rules to prevent conflicts, availability display enhancement showing remaining spaces, multi-select desk and parking booking functionality, remove booking confirmation modal for streamlined UX, comprehensive test coverage requirements, and version tracking with semantic versioning
+- **Specification update (planned work captured):** Removal of overtime; floor plan maps for desk and parking with admin-uploaded PNG/JPG and admin-only landmarks; undo after user desk cancel; consistent booking button sizes and hide immediate book when an item is selected (see Not Yet Implemented sections 16--19)

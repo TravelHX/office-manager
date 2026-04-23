@@ -688,7 +688,11 @@ async function displayAllUsers(users) {
     
     // Count admin users to determine if we can delete admins
     const adminCount = users.filter(u => u.isAdmin).length;
-    
+
+    // Current admin's own ID — used to hide the delete button on their own row
+    const currentUser = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+    const currentUserId = currentUser ? currentUser.id : null;
+
     const usersHTML = `
         <table>
             <thead>
@@ -707,11 +711,20 @@ async function displayAllUsers(users) {
             <tbody>
                 ${users.map(user => {
                     const isLastAdmin = user.isAdmin && adminCount === 1;
-                    const displayName = user.firstName && user.lastName 
-                        ? `${user.firstName} ${user.lastName}` 
+                    const isSelf = currentUserId !== null && user.id === currentUserId;
+                    const displayName = user.firstName && user.lastName
+                        ? `${user.firstName} ${user.lastName}`
                         : user.firstName || user.lastName || 'N/A';
+                    let actionsCell;
+                    if (isSelf) {
+                        actionsCell = '<span class="text-muted self-user" title="You cannot delete your own account; another administrator must perform this action">Delete Disabled</span>';
+                    } else if (isLastAdmin) {
+                        actionsCell = '<span class="text-muted" title="Cannot delete the last admin user">Delete Disabled</span>';
+                    } else {
+                        actionsCell = `<button class="btn-danger delete-user-btn" data-user-id="${user.id}" data-username="${user.username}">Delete</button>`;
+                    }
                     return `
-                    <tr class="${isLastAdmin ? 'last-admin-user' : ''}">
+                    <tr class="${isLastAdmin ? 'last-admin-user' : ''}${isSelf ? ' self-user-row' : ''}">
                         <td>${user.id}</td>
                         <td><strong>${user.username}</strong></td>
                         <td>${displayName}</td>
@@ -731,10 +744,7 @@ async function displayAllUsers(users) {
                             ${user.isAdmin ? '<span class="status-badge status-approved">Yes</span>' : '<span class="status-badge status-pending">No</span>'}
                         </td>
                         <td>
-                            ${isLastAdmin 
-                                ? '<span class="text-muted" title="Cannot delete the last admin user">Delete Disabled</span>' 
-                                : `<button class="btn-danger delete-user-btn" data-user-id="${user.id}" data-username="${user.username}">Delete</button>`
-                            }
+                            ${actionsCell}
                         </td>
                     </tr>
                 `;
@@ -771,7 +781,9 @@ async function deleteUser(userId, username) {
         messageDiv.innerHTML = '<div class="success">User deleted successfully!</div>';
         loadAllUsers();
     } catch (error) {
-        if (error.message.includes('last admin user')) {
+        if (error.message.includes('cannot delete your own account')) {
+            messageDiv.innerHTML = `<div class="error">${error.message}</div>`;
+        } else if (error.message.includes('last admin user')) {
             messageDiv.innerHTML = `<div class="error">Cannot delete user: ${error.message}</div>`;
         } else if (error.message.includes('not found')) {
             messageDiv.innerHTML = `<div class="error">User not found. It may have already been deleted.</div>`;

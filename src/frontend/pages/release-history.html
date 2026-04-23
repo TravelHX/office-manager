@@ -3,8 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Overtime Tracking - Office Manager</title>
+    <title>Release history - Office Manager</title>
     <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .release-history-panel {
+            max-width: 52rem;
+            margin: 0 auto;
+        }
+        .release-history-panel pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            padding: 1rem 1.25rem;
+            background: var(--surface-elevated, #f5f5f5);
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle, #e0e0e0);
+        }
+    </style>
 </head>
 <body class="app-shell">
     <header class="app-topbar">
@@ -29,46 +46,10 @@
         </aside>
         <div class="app-content-wrap">
             <main class="app-main">
-                <div class="container">
-            <h2>Overtime Tracking</h2>
-            <p>Record and track your overtime hours.</p>
-            
-            <div class="booking-form">
-                <h3>Record Overtime</h3>
-                <div class="form-group">
-                    <label for="recordDate">Date:</label>
-                    <input type="date" id="recordDate" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="startTime">Start Time:</label>
-                    <input type="time" id="startTime" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="endTime">End Time:</label>
-                    <input type="time" id="endTime" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="totalHours">Total Hours (calculated automatically):</label>
-                    <input type="text" id="totalHours" readonly>
-                </div>
-                
-                <div class="form-group">
-                    <label for="description">Description (optional):</label>
-                    <textarea id="description" rows="3"></textarea>
-                </div>
-                
-                <button id="submitOvertimeBtn" class="btn-primary">Record Overtime</button>
-            </div>
-
-            <div id="overtime-message" class="mt-2"></div>
-            
-            <div id="overtime-history-container" class="mt-2">
-                <h3>Overtime History</h3>
-                <p>Loading overtime records...</p>
-            </div>
+                <div class="container release-history-panel">
+                    <h1>Release history</h1>
+                    <p class="text-muted" style="margin-bottom: 1rem;">Deployed versions and changes are recorded in <code>data/release_history.txt</code>.</p>
+                    <pre id="release-history-content" aria-live="polite">Loading...</pre>
                 </div>
             </main>
         </div>
@@ -80,8 +61,18 @@
     </footer>
 
     <script src="/js/main.js"></script>
-    <script src="/js/notifications.js"></script>
-    <script src="/js/overtime.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const el = document.getElementById('release-history-content');
+            try {
+                const res = await fetch('/api/release-history');
+                if (!res.ok) throw new Error('Failed to load release history');
+                const data = await res.json();
+                el.textContent = typeof data.content === 'string' ? data.content : '';
+            } catch (e) {
+                el.textContent = 'Could not load release history. Please try again later.';
+            }
+        });
+    </script>
 </body>
 </html>
-

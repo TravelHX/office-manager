@@ -139,6 +139,10 @@ describe('Registration Screen - No Users Exist', () => {
 
       loadRegisterPage();
 
+      // Let the async DOMContentLoaded handler finish the check-users fetch so
+      // that the submit listener is attached to the form before we dispatch.
+      await new Promise(resolve => setTimeout(resolve, 50));
+
       const form = document.getElementById('register-form');
       const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
       form.dispatchEvent(submitEvent);
@@ -198,6 +202,10 @@ describe('Registration Screen - No Users Exist', () => {
 
       loadRegisterPage();
 
+      // Let the async DOMContentLoaded handler finish the check-users fetch so
+      // that the submit listener is attached to the form before we dispatch.
+      await new Promise(resolve => setTimeout(resolve, 50));
+
       const form = document.getElementById('register-form');
       const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
       form.dispatchEvent(submitEvent);
@@ -209,10 +217,7 @@ describe('Registration Screen - No Users Exist', () => {
       expect(errorDiv.textContent).toContain('Email already exists');
     });
 
-    it('should redirect to login when users already exist', async () => {
-      delete window.location;
-      window.location = { href: '' };
-
+    it('should hide the registration form and show the closed-registration message when users already exist (Phase 14.35)', async () => {
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ hasUsers: true }),
@@ -223,12 +228,25 @@ describe('Registration Screen - No Users Exist', () => {
           <input type="email" id="email" name="email" value="x@test.com">
           <button type="submit" id="register-button">Create Administrator Account</button>
         </form>
+        <div id="registration-closed-message" style="display: none;">
+          <p>Self-service registration is not available.</p>
+          <a id="registration-closed-login-link" href="/pages/login.html?needsAdmin=1">Log in</a>
+        </div>
       `;
 
       loadRegisterPage();
       await new Promise((resolve) => setTimeout(resolve, 80));
 
-      expect(window.location.href).toBe('/pages/login.html?needsAdmin=1');
+      const form = document.getElementById('register-form');
+      const closedMessage = document.getElementById('registration-closed-message');
+      const loginLink = document.getElementById('registration-closed-login-link');
+
+      expect(form.style.display).toBe('none');
+      expect(closedMessage.style.display).not.toBe('none');
+      expect(loginLink).not.toBeNull();
+      expect(loginLink.getAttribute('href')).toContain('/pages/login.html');
+      // Must NOT redirect away from the registration page
+      expect(window.location.href).toBe('');
     });
   });
 });

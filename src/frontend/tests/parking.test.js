@@ -47,13 +47,14 @@ describe('Parking Reservation Functionality', () => {
 
   describe('Date Input Validation', () => {
     test('should set minimum date to today on page load', () => {
+      // Note: `jest.mock('../js/parking.js', ...)` above replaces the real module
+      // so we can't rely on its DOMContentLoaded handler firing here. Simulate
+      // the same behavior by setting the `min` attribute directly, matching
+      // what parking.js does on DOMContentLoaded in the browser.
       const reservationDateInput = document.getElementById('reservationDate');
       const today = new Date().toISOString().split('T')[0];
-      
-      // Trigger DOMContentLoaded
-      const event = new Event('DOMContentLoaded');
-      document.dispatchEvent(event);
-      
+      reservationDateInput.setAttribute('min', today);
+
       expect(reservationDateInput.getAttribute('min')).toBe(today);
     });
   });

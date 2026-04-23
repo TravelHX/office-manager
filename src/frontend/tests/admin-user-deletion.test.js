@@ -11,17 +11,28 @@ beforeAll(() => {
 /**
  * Mirrors admin.js displayUsers table logic for assertions (contract with admin UI).
  */
-function renderUsersTableHTML(users) {
+function renderUsersTableHTML(users, currentUserId = null) {
   const adminCount = users.filter((u) => u.isAdmin).length;
   return users
     .map((user) => {
       const isLastAdmin = user.isAdmin && adminCount === 1;
+      const isSelf = currentUserId !== null && user.id === currentUserId;
       const displayName =
         user.firstName && user.lastName
           ? `${user.firstName} ${user.lastName}`
           : user.firstName || user.lastName || 'N/A';
+      let actionsCell;
+      if (isSelf) {
+        actionsCell =
+          '<span class="text-muted self-user" title="You cannot delete your own account; another administrator must perform this action">Delete Disabled</span>';
+      } else if (isLastAdmin) {
+        actionsCell =
+          '<span class="text-muted" title="Cannot delete the last admin user">Delete Disabled</span>';
+      } else {
+        actionsCell = `<button class="btn-danger delete-user-btn" data-user-id="${user.id}" data-username="${user.username}">Delete</button>`;
+      }
       return `
-      <tr class="${isLastAdmin ? 'last-admin-user' : ''}">
+      <tr class="${isLastAdmin ? 'last-admin-user' : ''}${isSelf ? ' self-user-row' : ''}">
         <td>${user.id}</td>
         <td><strong>${user.username}</strong></td>
         <td>${displayName}</td>
@@ -30,11 +41,7 @@ function renderUsersTableHTML(users) {
         <td><span class="status-badge">${user.role}</span></td>
         <td>${user.isAdmin ? '<span class="status-badge status-approved">Yes</span>' : '<span class="status-badge status-pending">No</span>'}</td>
         <td>
-          ${
-            isLastAdmin
-              ? '<span class="text-muted" title="Cannot delete the last admin user">Delete Disabled</span>'
-              : `<button class="btn-danger delete-user-btn" data-user-id="${user.id}" data-username="${user.username}">Delete</button>`
-          }
+          ${actionsCell}
         </td>
       </tr>`;
     })
@@ -75,10 +82,13 @@ describe('Phase 17: Admin user deletion UI', () => {
   });
 
   describe('Delete button visibility (17.24, 17.15, 17.16)', () => {
-    test('shows Delete button for regular user when an admin exists', () => {
+    test('shows Delete button for regular user when other admins exist', () => {
+      // Two admins so neither admin is "last admin"; regular user should get a
+      // delete button, and no row should be marked Delete Disabled.
       const users = [
         { id: 1, username: 'admin1', email: 'a@test.com', role: 'admin', isAdmin: true, firstName: 'A', lastName: 'Admin' },
         { id: 2, username: 'user1', email: 'u@test.com', role: 'user', isAdmin: false, firstName: 'U', lastName: 'User' },
+        { id: 3, username: 'admin2', email: 'a2@test.com', role: 'admin', isAdmin: true, firstName: 'B', lastName: 'Admin' },
       ];
       const html = renderUsersTableHTML(users);
       document.getElementById('users-container').innerHTML = `<table><tbody>${html}</tbody></table>`;
@@ -185,6 +195,69 @@ describe('Phase 17: Admin user deletion UI', () => {
       const messageDiv = document.getElementById('users-message');
       expect(messageDiv.innerHTML).toContain('success');
       expect(messageDiv.innerHTML).toContain('User deleted successfully');
+    });
+  });
+
+  describe('Self-deletion prevention (17.39)', () => {
+    test('does not render a delete button for the current admin user\'s own row', () => {
+      // Two admins, so the last-admin rule does NOT apply; the only reason to hide
+      // the button on the current user's row is the self-deletion rule.
+      const users = [
+        { id: 42, username: 'meadmin', email: 'me@test.com', role: 'admin', isAdmin: true },
+        { id: 7, username: 'otheradmin', email: 'other@test.com', role: 'admin', isAdmin: true },
+      ];
+      const html = renderUsersTableHTML(users, 42);
+      document.getElementById('users-container').innerHTML = `<table><tbody>${html}</tbody></table>`;
+
+      // The current user's row must have Delete Disabled and no delete button.
+      expect(html).toContain('data-user-id="7"');
+      expect(html).not.toContain('data-user-id="42"'); // no delete button on self row
+      expect(html).toContain('self-user-row');
+      expect(html).toContain('cannot delete your own account');
+
+      const container = document.getElementById('users-container');
+      const buttons = container.querySelectorAll('.delete-user-btn');
+      expect(buttons.length).toBe(1);
+      expect(buttons[0].getAttribute('data-user-id')).toBe('7');
+    });
+
+    test('self-deletion rule takes precedence over last-admin rule for sole admin viewing own row', () => {
+      // When the current user is also the sole admin, the row is still disabled
+      // (either rule is sufficient); importantly, no delete button is rendered.
+      const users = [
+        { id: 1, username: 'onlyadmin', email: 'o@test.com', role: 'admin', isAdmin: true },
+      ];
+      const html = renderUsersTableHTML(users, 1);
+      expect(html).not.toContain('delete-user-btn');
+      expect(html).toContain('Delete Disabled');
+    });
+
+    test('shows self-deletion error message when API rejects with CANNOT_DELETE_SELF message', async () => {
+      window.confirm = jest.fn(() => true);
+      global.apiRequest.mockRejectedValue(
+        new Error('You cannot delete your own account; another administrator must perform this action')
+      );
+
+      // simulateDeleteUser mirrors admin.js error handling; ensure it displays the
+      // self-delete message (not the generic "Failed to delete user" fallback).
+      const confirmMessage = `Are you sure you want to delete user "meadmin" (ID: 42)?\n\nThis will also delete all associated bookings, reservations, and overtime records.`;
+      window.confirm(confirmMessage);
+      const messageDiv = document.getElementById('users-message');
+      messageDiv.innerHTML = '<p>Deleting user...</p>';
+
+      try {
+        await window.apiRequest('/api/auth/users/42', { method: 'DELETE' });
+      } catch (error) {
+        if (error.message.includes('cannot delete your own account')) {
+          messageDiv.innerHTML = `<div class="error">${error.message}</div>`;
+        } else {
+          messageDiv.innerHTML = `<div class="error">Failed to delete user: ${error.message}</div>`;
+        }
+      }
+
+      expect(messageDiv.innerHTML).toContain('error');
+      expect(messageDiv.innerHTML).toContain('cannot delete your own account');
+      expect(messageDiv.innerHTML).not.toContain('Failed to delete user');
     });
   });
 });

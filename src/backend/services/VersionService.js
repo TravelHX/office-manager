@@ -1,8 +1,7 @@
 const VersionRepository = require('../repositories/VersionRepository');
 const Version = require('../models/Version');
-const { parseVersion, incrementVersion, isValidVersion } = require('../utils/semantic-version');
-const fs = require('fs');
-const path = require('path');
+const { incrementVersion, isValidVersion, normalizeVersion } = require('../utils/semantic-version');
+const { readDeploymentVersion, writeDeploymentVersion, DEFAULT_DEPLOYMENT_VERSION } = require('../utils/deployment-config');
 
 class VersionService {
   constructor() {
@@ -10,40 +9,43 @@ class VersionService {
   }
 
   /**
-   * Get current version from database
-   * @returns {Promise<Version>} Current version
+   * Current displayed version is read from data/config.json (deployment_info.version).
+   * Database row supplies metadata (deployment_info text, timestamps) when present.
+   * @returns {Promise<Version>}
    */
   async getCurrentVersion() {
-    const version = await this.versionRepository.getCurrent();
-    if (!version) {
-      // Return default version if none exists
-      return new Version({
-        version_number: '0.1.0',
-        deployment_info: null,
-      });
-    }
-    return version;
+    const configVersion = readDeploymentVersion();
+    const dbVersion = await this.versionRepository.getCurrent();
+    return new Version({
+      id: dbVersion ? dbVersion.id : undefined,
+      version_number: configVersion,
+      deployment_info: dbVersion ? dbVersion.deploymentInfo : null,
+      created_at: dbVersion ? dbVersion.createdAt : undefined,
+      updated_at: dbVersion ? dbVersion.updatedAt : undefined,
+    });
   }
 
   /**
-   * Update version in database
-   * @param {string} versionNumber - New version number
-   * @param {string} deploymentInfo - Optional deployment information
-   * @returns {Promise<Version>} Updated version
+   * @param {string} versionNumber
+   * @param {string|null} deploymentInfo
+   * @returns {Promise<Version>}
    */
   async updateVersion(versionNumber, deploymentInfo = null) {
     if (!isValidVersion(versionNumber)) {
-      throw new Error(`Invalid version format: ${versionNumber}. Expected format: MAJOR.MINOR.PATCH (e.g., 1.2.3)`);
+      throw new Error(
+        `Invalid version format: ${versionNumber}. Expected MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH.REVISION (e.g. 1.2.3 or 1.0.0.0)`
+      );
     }
 
-    return await this.versionRepository.updateCurrentVersion(versionNumber, deploymentInfo);
+    const normalized = normalizeVersion(versionNumber);
+    writeDeploymentVersion(normalized);
+    return await this.versionRepository.updateCurrentVersion(normalized, deploymentInfo);
   }
 
   /**
-   * Increment version and update in database
-   * @param {string} incrementType - Type of increment: 'major', 'minor', or 'patch' (default: 'patch')
-   * @param {string} deploymentInfo - Optional deployment information
-   * @returns {Promise<Version>} Updated version
+   * @param {string} incrementType
+   * @param {string|null} deploymentInfo
+   * @returns {Promise<Version>}
    */
   async incrementAndUpdateVersion(incrementType = 'patch', deploymentInfo = null) {
     const current = await this.getCurrentVersion();
@@ -52,109 +54,59 @@ class VersionService {
   }
 
   /**
-   * Read version from package.json or version file
-   * @returns {Promise<string>} Version string
+   * Authoritative version for startup sync (from config).
+   * @returns {Promise<string>}
    */
   async readVersionFromFile() {
-    // Try to read from package.json first
-    const packageJsonPath = path.resolve(__dirname, '../../../package.json');
-    if (fs.existsSync(packageJsonPath)) {
-      try {
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-        if (packageJson.version) {
-          return packageJson.version;
-        }
-      } catch (error) {
-        // Ignore errors reading package.json
-      }
-    }
-
-    // Try to read from version.txt file
-    const versionFilePath = path.resolve(__dirname, '../../../version.txt');
-    if (fs.existsSync(versionFilePath)) {
-      try {
-        const version = fs.readFileSync(versionFilePath, 'utf8').trim();
-        if (isValidVersion(version)) {
-          return version;
-        }
-      } catch (error) {
-        // Ignore errors reading version.txt
-      }
-    }
-
-    // Return default version
-    return '0.1.0';
+    return readDeploymentVersion();
   }
 
   /**
-   * Write version to file (package.json or version.txt)
-   * @param {string} versionNumber - Version to write
+   * @param {string} versionNumber
    * @returns {Promise<void>}
    */
   async writeVersionToFile(versionNumber) {
     if (!isValidVersion(versionNumber)) {
       throw new Error(`Invalid version format: ${versionNumber}`);
     }
-
-    // Try to write to package.json first
-    const packageJsonPath = path.resolve(__dirname, '../../../package.json');
-    if (fs.existsSync(packageJsonPath)) {
-      try {
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-        packageJson.version = versionNumber;
-        fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8');
-        return;
-      } catch (error) {
-        // Fall back to version.txt if package.json write fails
-      }
-    }
-
-    // Write to version.txt
-    const versionFilePath = path.resolve(__dirname, '../../../version.txt');
-    fs.writeFileSync(versionFilePath, versionNumber + '\n', 'utf8');
+    writeDeploymentVersion(normalizeVersion(versionNumber));
   }
 
   /**
-   * Initialize version on application startup
-   * Reads version from file, updates database, and logs version
-   * @returns {Promise<Version>} Current version
+   * @returns {Promise<Version>}
    */
   async initializeVersionOnStartup() {
     const logger = require('../utils/logger');
-    
+
     try {
-      // Read version from file
       const fileVersion = await this.readVersionFromFile();
-      
-      // Get current version from database
-      const dbVersion = await this.getCurrentVersion();
-      
-      // If file version is different from database version, update database
-      if (fileVersion !== dbVersion.versionNumber) {
-        logger.info(`Version mismatch detected. File: ${fileVersion}, Database: ${dbVersion.versionNumber}. Updating database...`);
-        await this.updateVersion(fileVersion, `Updated on startup: ${new Date().toISOString()}`);
+      const dbVersion = await this.versionRepository.getCurrent();
+      const dbNum = dbVersion ? dbVersion.versionNumber : null;
+
+      if (fileVersion !== dbNum) {
+        logger.info(
+          `Version mismatch detected. Config: ${fileVersion}, Database: ${dbNum ?? '(none)'}. Updating database...`
+        );
+        await this.versionRepository.updateCurrentVersion(fileVersion, `Updated on startup: ${new Date().toISOString()}`);
         logger.info(`Version updated in database to: ${fileVersion}`);
       } else {
         logger.info(`Application version: ${fileVersion}`);
       }
-      
+
       const currentVersion = await this.getCurrentVersion();
       logger.info(`Current application version: ${currentVersion.versionNumber}`);
-      
+
       return currentVersion;
     } catch (error) {
       logger.error('Failed to initialize version on startup:', error.message);
       logger.error('Stack trace:', error.stack);
-      // Don't throw - allow application to start even if version update fails
-      // But log the error prominently
       logger.error('========================================');
       logger.error('WARNING: Version tracking initialization failed');
       logger.error('The application will continue to run, but version tracking may be inaccurate.');
       logger.error('========================================');
-      
-      // Return default version
+
       return new Version({
-        version_number: '0.1.0',
+        version_number: DEFAULT_DEPLOYMENT_VERSION,
         deployment_info: 'Version initialization failed',
       });
     }

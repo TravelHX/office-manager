@@ -5,16 +5,34 @@
 describe('Version Display', () => {
   let mockFetch;
 
+  async function loadApplicationVersion() {
+    try {
+      const response = await fetch('/api/version');
+      if (!response.ok) {
+        throw new Error('Failed to fetch version');
+      }
+      const data = await response.json();
+      const versionElement = document.getElementById('version-number');
+      if (versionElement && data && data.versionNumber) {
+        versionElement.textContent = data.versionNumber;
+        localStorage.setItem('appVersion', data.versionNumber);
+      }
+    } catch (error) {
+      console.error('Failed to load application version:', error);
+      const versionElement = document.getElementById('version-number');
+      if (versionElement) {
+        versionElement.textContent = 'Unknown';
+      }
+    }
+  }
+
   beforeEach(() => {
-    // Mock fetch API
     mockFetch = jest.fn();
     global.fetch = mockFetch;
-    
-    // Mock localStorage
+
     Storage.prototype.getItem = jest.fn();
     Storage.prototype.setItem = jest.fn();
-    
-    // Reset DOM
+
     document.body.innerHTML = '';
   });
 
@@ -23,77 +41,38 @@ describe('Version Display', () => {
   });
 
   test('should load and display version from API', async () => {
-    // Setup DOM
     document.body.innerHTML = `
       <footer>
-        <p id="app-version">Version: <span id="version-number">-</span></p>
+        <p id="app-version">Version: <a id="version-link" href="/pages/release-history.html"><span id="version-number">-</span></a></p>
       </footer>
     `;
 
-    // Mock API response
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        versionNumber: '1.2.3',
+        versionNumber: '1.2.3.0',
         deploymentInfo: 'Test deployment',
       }),
     });
 
-    // Load version function (from main.js)
-    const loadApplicationVersion = async () => {
-      try {
-        const response = await fetch('/api/version');
-        const data = await response.json();
-        const versionElement = document.getElementById('version-number');
-        if (versionElement && data && data.versionNumber) {
-          versionElement.textContent = data.versionNumber;
-          localStorage.setItem('appVersion', data.versionNumber);
-        }
-      } catch (error) {
-        console.error('Failed to load application version:', error);
-        const versionElement = document.getElementById('version-number');
-        if (versionElement) {
-          versionElement.textContent = 'Unknown';
-        }
-      }
-    };
-
     await loadApplicationVersion();
 
     const versionElement = document.getElementById('version-number');
-    expect(versionElement.textContent).toBe('1.2.3');
-    expect(localStorage.setItem).toHaveBeenCalledWith('appVersion', '1.2.3');
+    expect(versionElement.textContent).toBe('1.2.3.0');
+    expect(localStorage.setItem).toHaveBeenCalledWith('appVersion', '1.2.3.0');
     expect(mockFetch).toHaveBeenCalledWith('/api/version');
+    const link = document.getElementById('version-link');
+    expect(link.getAttribute('href')).toBe('/pages/release-history.html');
   });
 
   test('should display "Unknown" on API error', async () => {
-    // Setup DOM
     document.body.innerHTML = `
       <footer>
-        <p id="app-version">Version: <span id="version-number">-</span></p>
+        <p id="app-version">Version: <a id="version-link" href="/pages/release-history.html"><span id="version-number">-</span></a></p>
       </footer>
     `;
 
-    // Mock API error
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-    const loadApplicationVersion = async () => {
-      try {
-        const response = await fetch('/api/version');
-        const data = await response.json();
-        const versionElement = document.getElementById('version-number');
-        if (versionElement && data && data.versionNumber) {
-          versionElement.textContent = data.versionNumber;
-          localStorage.setItem('appVersion', data.versionNumber);
-        }
-      } catch (error) {
-        console.error('Failed to load application version:', error);
-        const versionElement = document.getElementById('version-number');
-        if (versionElement) {
-          versionElement.textContent = 'Unknown';
-        }
-      }
-    };
 
     await loadApplicationVersion();
 
@@ -103,7 +82,7 @@ describe('Version Display', () => {
 
   test('should get version from localStorage if available', async () => {
     Storage.prototype.getItem = jest.fn((key) => {
-      if (key === 'appVersion') return '1.2.3';
+      if (key === 'appVersion') return '1.2.3.0';
       return null;
     });
 
@@ -112,7 +91,7 @@ describe('Version Display', () => {
       if (cachedVersion) {
         return cachedVersion;
       }
-      
+
       try {
         const response = await fetch('/api/version');
         const data = await response.json();
@@ -123,13 +102,13 @@ describe('Version Display', () => {
       } catch (error) {
         console.error('Failed to get application version:', error);
       }
-      
+
       return 'Unknown';
     };
 
     const version = await getApplicationVersion();
 
-    expect(version).toBe('1.2.3');
+    expect(version).toBe('1.2.3.0');
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
@@ -139,7 +118,7 @@ describe('Version Display', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        versionNumber: '1.2.3',
+        versionNumber: '1.2.3.0',
       }),
     });
 
@@ -148,7 +127,7 @@ describe('Version Display', () => {
       if (cachedVersion) {
         return cachedVersion;
       }
-      
+
       try {
         const response = await fetch('/api/version');
         const data = await response.json();
@@ -159,14 +138,14 @@ describe('Version Display', () => {
       } catch (error) {
         console.error('Failed to get application version:', error);
       }
-      
+
       return 'Unknown';
     };
 
     const version = await getApplicationVersion();
 
-    expect(version).toBe('1.2.3');
+    expect(version).toBe('1.2.3.0');
     expect(mockFetch).toHaveBeenCalledWith('/api/version');
-    expect(localStorage.setItem).toHaveBeenCalledWith('appVersion', '1.2.3');
+    expect(localStorage.setItem).toHaveBeenCalledWith('appVersion', '1.2.3.0');
   });
 });

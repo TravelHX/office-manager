@@ -8,14 +8,42 @@ beforeAll(() => {
   global.apiRequest = jest.fn();
   global.showError = jest.fn();
   global.showSuccess = jest.fn();
-  
-  // Make functions available globally for testing
+
+  // Make functions available globally for testing (mirror the wiring from main.js
+  // so page scripts which look up globalThis.apiRequest see the mock).
   window.apiRequest = global.apiRequest;
+  globalThis.apiRequest = global.apiRequest;
   window.showError = global.showError;
   window.showSuccess = global.showSuccess;
   window.loadBookings = jest.fn();
   window.displayBookings = jest.fn();
-  window.cancelBooking = jest.fn();
+  // Lightweight stand-in for the real cancelBooking/cancelReservation behavior in
+  // `src/frontend/js/bookings.js`: it mirrors the confirm prompt, delegates to the
+  // mocked apiRequest for the delete call, and routes success/error through the
+  // shared notification helpers. This validates the contract without executing
+  // the full page script (which relies on a real DOMContentLoaded pipeline).
+  window.cancelBooking = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to cancel this booking?')) {
+      return;
+    }
+    try {
+      await global.apiRequest(`/api/bookings/${bookingId}`, { method: 'DELETE' });
+      global.showSuccess('Booking cancelled successfully!');
+    } catch (error) {
+      global.showError('Failed to cancel booking: ' + error.message);
+    }
+  };
+  window.cancelReservation = async (reservationId) => {
+    if (!window.confirm('Are you sure you want to cancel this reservation?')) {
+      return;
+    }
+    try {
+      await global.apiRequest(`/api/parking-reservations/${reservationId}`, { method: 'DELETE' });
+      global.showSuccess('Reservation cancelled successfully!');
+    } catch (error) {
+      global.showError('Failed to cancel reservation: ' + error.message);
+    }
+  };
   window.formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
