@@ -613,14 +613,33 @@ tr:hover {
     align-items: stretch;
 }
 
+/*
+ * Phase 23.12 / spec section 19: uniform button sizing across Select, Book
+ * (desk), Select, Reserve (parking), plus the aggregate Book Selected /
+ * Reserve Selected controls below.
+ */
 .desk-card-buttons .select-desk-btn,
-.desk-card-buttons .book-desk-btn {
+.desk-card-buttons .book-desk-btn,
+.desk-card-buttons .select-space-btn,
+.desk-card-buttons .book-space-btn {
     flex: 1;
     height: auto;
     min-height: 2.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/*
+ * Phase 23.12 / spec section 19: when a card is in the multi-select
+ * selection, the immediate Book/Reserve control for that item must not
+ * appear (Book Selected / Reserve Selected takes its place). The JS
+ * toggles `hidden` on the button; this rule ensures the flex display
+ * above does not override the default [hidden] display:none behaviour.
+ */
+.desk-card-buttons .book-desk-btn[hidden],
+.desk-card-buttons .book-space-btn[hidden] {
+    display: none;
 }
 
 .btn-secondary {

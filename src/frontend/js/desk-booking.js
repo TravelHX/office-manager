@@ -121,7 +121,7 @@ function displayDesks(desks, startDate, endDate) {
                         <button class="btn-secondary select-desk-btn" data-desk-id="${desk.id}" data-desk-number="${desk.deskNumber}">
                             ${isSelected ? 'Deselect' : 'Select'}
                         </button>
-                        <button class="btn-primary book-desk-btn" data-desk-id="${desk.id}" data-desk-number="${desk.deskNumber}">Book</button>
+                        <button class="btn-primary book-desk-btn"${isSelected ? ' hidden' : ''} data-desk-id="${desk.id}" data-desk-number="${desk.deskNumber}">Book</button>
                     </div>
                 </div>
             `;
@@ -191,12 +191,17 @@ function toggleDeskSelection(deskId, startDate, endDate) {
                 deskCard.insertBefore(indicator, deskCard.querySelector('h4'));
             }
             if (selectBtn) selectBtn.textContent = 'Deselect';
+            // Phase 23.12 / spec section 19: hide the per-card Book button when
+            // the desk is in the multi-select selection; Book Selected takes
+            // its place for selected items.
+            if (bookBtn) bookBtn.hidden = true;
         } else {
             // Mark as not selected
             deskCard.classList.remove('selected');
             const indicator = deskCard.querySelector('.selection-indicator');
             if (indicator) indicator.remove();
             if (selectBtn) selectBtn.textContent = 'Select';
+            if (bookBtn) bookBtn.hidden = false;
         }
     }
     
@@ -214,6 +219,9 @@ function clearSelection() {
         if (indicator) indicator.remove();
         const selectBtn = card.querySelector('.select-desk-btn');
         if (selectBtn) selectBtn.textContent = 'Select';
+        // Phase 23.12: un-hide the per-card Book button when selection is cleared.
+        const bookBtn = card.querySelector('.book-desk-btn');
+        if (bookBtn) bookBtn.hidden = false;
     });
     
     // Update selection UI

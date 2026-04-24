@@ -123,6 +123,82 @@ describe('Parking multi-select (Phase 15.38, 15.40)', () => {
     expect(window.selectedParkingSpaceIds.size).toBe(0);
   });
 
+  test('hides the per-card Reserve button when the parking space is selected (23.12)', () => {
+    window.selectedParkingSpaceIds.clear();
+    window.displayParkingSpaces(
+      [{ id: 1, spaceNumber: 'P001', location: 'Lot A' }],
+      '2025-12-15',
+      'morning'
+    );
+
+    const container = document.getElementById('parking-spaces-container');
+    const reserveBtn = container.querySelector('.book-space-btn');
+    expect(reserveBtn.hidden).toBe(false);
+
+    container.querySelector('.select-space-btn').click();
+
+    // Phase 23.12 / spec section 19: the per-item Reserve control must not
+    // appear for a selected item.
+    expect(reserveBtn.hidden).toBe(true);
+  });
+
+  test('shows the per-card Reserve button again when the parking space is deselected (23.12)', () => {
+    window.selectedParkingSpaceIds.clear();
+    window.displayParkingSpaces(
+      [{ id: 1, spaceNumber: 'P001', location: 'Lot A' }],
+      '2025-12-15',
+      'morning'
+    );
+
+    const container = document.getElementById('parking-spaces-container');
+    const selectBtn = container.querySelector('.select-space-btn');
+    const reserveBtn = container.querySelector('.book-space-btn');
+
+    selectBtn.click();
+    expect(reserveBtn.hidden).toBe(true);
+
+    selectBtn.click();
+    expect(reserveBtn.hidden).toBe(false);
+  });
+
+  test('renders the Reserve button already hidden when the space is in the selection at render time (23.12)', () => {
+    window.selectedParkingSpaceIds.clear();
+    window.selectedParkingSpaceIds.add('3');
+    window.displayParkingSpaces(
+      [{ id: 3, spaceNumber: 'P003', location: 'Lot B' }],
+      '2025-12-15',
+      'afternoon'
+    );
+
+    const container = document.getElementById('parking-spaces-container');
+    const reserveBtn = container.querySelector('.book-space-btn');
+    expect(reserveBtn.hasAttribute('hidden')).toBe(true);
+  });
+
+  test('clearParkingSelection un-hides every per-card Reserve button (23.12)', () => {
+    window.selectedParkingSpaceIds.clear();
+    window.displayParkingSpaces(
+      [
+        { id: 1, spaceNumber: 'P001' },
+        { id: 2, spaceNumber: 'P002' },
+      ],
+      '2025-12-15',
+      'full_day'
+    );
+
+    const container = document.getElementById('parking-spaces-container');
+    container.querySelectorAll('.select-space-btn').forEach((btn) => btn.click());
+    container.querySelectorAll('.book-space-btn').forEach((btn) => {
+      expect(btn.hidden).toBe(true);
+    });
+
+    document.getElementById('clear-parking-selection-btn').click();
+
+    container.querySelectorAll('.book-space-btn').forEach((btn) => {
+      expect(btn.hidden).toBe(false);
+    });
+  });
+
   test('parking selection persists across a scroll event on the spaces container (15.40)', () => {
     const spaces = [
       { id: 1, spaceNumber: 'P001', location: 'Lot A' },

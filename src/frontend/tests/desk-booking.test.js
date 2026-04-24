@@ -127,6 +127,90 @@ describe('Desk Booking', () => {
       });
     });
 
+    test('hides the per-card Book button when the desk is selected (23.12)', () => {
+      const container = document.getElementById('desks-container');
+      window.selectedDeskIds.clear();
+      window.displayDesks(
+        [{ id: 1, deskNumber: 'D001', location: 'Floor 1' }],
+        '2025-12-15',
+        '2025-12-16'
+      );
+
+      const bookBtn = container.querySelector('.book-desk-btn');
+      // Pre-condition: nothing selected, Book button visible.
+      expect(bookBtn.hidden).toBe(false);
+
+      // Click Select.
+      container.querySelector('.select-desk-btn').click();
+
+      // Phase 23.12 / spec section 19: the per-item Book control must not
+      // appear for a selected item; Book Selected takes its place.
+      expect(bookBtn.hidden).toBe(true);
+    });
+
+    test('shows the per-card Book button again when the desk is deselected (23.12)', () => {
+      const container = document.getElementById('desks-container');
+      window.selectedDeskIds.clear();
+      window.displayDesks(
+        [{ id: 1, deskNumber: 'D001', location: 'Floor 1' }],
+        '2025-12-15',
+        '2025-12-16'
+      );
+
+      const selectBtn = container.querySelector('.select-desk-btn');
+      const bookBtn = container.querySelector('.book-desk-btn');
+
+      selectBtn.click();
+      expect(bookBtn.hidden).toBe(true);
+
+      selectBtn.click();
+      expect(bookBtn.hidden).toBe(false);
+    });
+
+    test('renders the Book button already hidden when the desk is in the selection at render time (23.12)', () => {
+      // Seed the Set BEFORE render so the template reflects the selected
+      // state on initial paint (e.g. after scroll / filter change).
+      window.selectedDeskIds.clear();
+      window.selectedDeskIds.add('7');
+      window.displayDesks(
+        [{ id: 7, deskNumber: 'D007', location: 'Floor 1' }],
+        '2025-12-15',
+        '2025-12-16'
+      );
+
+      const container = document.getElementById('desks-container');
+      const bookBtn = container.querySelector('.book-desk-btn');
+      // The `hidden` attribute must be present on the rendered markup so the
+      // button is not briefly visible before any JS toggle runs.
+      expect(bookBtn.hasAttribute('hidden')).toBe(true);
+    });
+
+    test('clearSelection un-hides every per-card Book button (23.12)', () => {
+      const container = document.getElementById('desks-container');
+      window.selectedDeskIds.clear();
+      window.displayDesks(
+        [
+          { id: 1, deskNumber: 'D001' },
+          { id: 2, deskNumber: 'D002' },
+        ],
+        '2025-12-15',
+        '2025-12-16'
+      );
+
+      // Select both.
+      container.querySelectorAll('.select-desk-btn').forEach((btn) => btn.click());
+      container.querySelectorAll('.book-desk-btn').forEach((btn) => {
+        expect(btn.hidden).toBe(true);
+      });
+
+      // Click Clear Selection.
+      document.getElementById('clear-selection-btn').click();
+
+      container.querySelectorAll('.book-desk-btn').forEach((btn) => {
+        expect(btn.hidden).toBe(false);
+      });
+    });
+
     test('selection persists across a scroll event on the desks container (15.40)', () => {
       // Render two desks via the module's own display function so the real
       // event listeners and DOM structure are in place.

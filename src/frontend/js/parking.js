@@ -113,7 +113,7 @@ function displayParkingSpaces(spaces, reservationDate, timePeriod) {
                         <button class="btn-secondary select-space-btn" data-space-id="${space.id}" data-space-number="${space.spaceNumber}">
                             ${isSelected ? 'Deselect' : 'Select'}
                         </button>
-                        <button class="btn-primary book-space-btn" data-space-id="${space.id}" data-space-number="${space.spaceNumber}">Reserve</button>
+                        <button class="btn-primary book-space-btn"${isSelected ? ' hidden' : ''} data-space-id="${space.id}" data-space-number="${space.spaceNumber}">Reserve</button>
                     </div>
                 </div>
             `;
@@ -183,12 +183,17 @@ function toggleParkingSpaceSelection(spaceId, reservationDate, timePeriod) {
                 spaceCard.insertBefore(indicator, spaceCard.querySelector('h4'));
             }
             if (selectBtn) selectBtn.textContent = 'Deselect';
+            // Phase 23.12 / spec section 19: hide the per-card Reserve button
+            // when the space is in the multi-select selection; Reserve Selected
+            // takes its place for selected items.
+            if (reserveBtn) reserveBtn.hidden = true;
         } else {
             // Mark as not selected
             spaceCard.classList.remove('selected');
             const indicator = spaceCard.querySelector('.selection-indicator');
             if (indicator) indicator.remove();
             if (selectBtn) selectBtn.textContent = 'Select';
+            if (reserveBtn) reserveBtn.hidden = false;
         }
     }
     
@@ -206,6 +211,9 @@ function clearParkingSelection() {
         if (indicator) indicator.remove();
         const selectBtn = card.querySelector('.select-space-btn');
         if (selectBtn) selectBtn.textContent = 'Select';
+        // Phase 23.12: un-hide the per-card Reserve button when selection is cleared.
+        const reserveBtn = card.querySelector('.book-space-btn');
+        if (reserveBtn) reserveBtn.hidden = false;
     });
     
     // Update selection UI
