@@ -88,6 +88,7 @@ Office Manager is a web application designed to manage office operations and res
 - Manage office resources
 - User management: provision users (email + name only), share profile setup links, view profile status, delete users (confirmation required)
 - Last admin user cannot be deleted; related bookings and parking reservations are removed with a deleted user
+- **Audit log**: append-only record of every meaningful action (logins, bookings, reservations, admin operations, user-management events) with actor, timestamp, target, summary, and payload; case-insensitive substring search; paginated list. Admin-only.
 
 ### User Dashboard
 
@@ -302,6 +303,36 @@ If you have admin privileges:
 3. View all parking reservations for all users
 4. Cancel any reservation with a reason if needed
 
+#### Audit log (admin only)
+
+The **Audit** tab records every meaningful action taken in the system — by admins and regular users alike — so you can review what happened, by whom, and when. The log is **append-only**: rows cannot be edited or deleted through the UI.
+
+**What is logged:**
+- Authentication: successful logins, logouts, and failed login attempts (wrong password or unknown email; the attempted email appears in the event payload)
+- Desk bookings: create, self-cancel, admin-cancel, bulk create
+- Parking reservations: create, self-cancel, admin-cancel, bulk create
+- User management: account created (self-registration or admin-provisioned), account deleted, password changed (self-service or via an admin-issued reset link), profile completion after provisioning
+- Admin configuration: desk / parking count changes, bulk desk or parking-space creation, manual renaming of individual desks or parking spaces
+
+**Opening the log:**
+
+1. Open the **Admin** page
+2. Open the **Audit** tab in the sidebar (visible to admins only)
+3. Rows load newest-first, 50 at a time. Use **Previous** / **Next** to page through history.
+
+**Searching:**
+
+1. Type into the search box and click **Search**. The match is a case-insensitive substring over the action type, the actor email, the summary, and the JSON payload — so `USER_CREATED`, a specific email, or a specific desk number all work.
+2. Click **Clear** to reset back to the full list.
+
+Each row shows:
+- **When** the event occurred (server time)
+- **Actor** — the user's email, or *system* for unauthenticated events like a login attempt with an unknown address
+- **Action** — a stable code such as `DESK_BOOKING_CREATED`
+- **Target** — the affected entity (e.g. `booking #42`)
+- **Summary** — a short human-readable description
+- **Payload** — structured context (never contains passwords or tokens)
+
 ### Support
 
 For additional support, contact your system administrator.
@@ -332,3 +363,4 @@ All features listed in "Currently Implemented Features" above are fully function
 - **Phases 18, 22:** Version tracking with semantic versioning, config-driven deployment version, release history page
 - **Phase 19:** Minimal admin provisioning (email + name only), profile completion on first login
 - **Phase 20:** Global application shell with collapsible navigation and blue theme
+- **Phase 21:** Administrative audit trail — append-only `audit_events` table, admin-only `GET /api/admin/audit-events` list/search API, admin UI tab, and emission from every mutating flow (authentication, bookings, parking, admin config, user management, bulk create)

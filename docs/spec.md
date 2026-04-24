@@ -428,31 +428,30 @@ Consistent layout and styling across every page of the application.
 
 ### 15. Administrative Audit Trail
 
+**Status:** Implemented (Phase 21). The audit event store (schema, model, repository, service) shipped in Phase 21a; the admin-only list/search API in Phase 21b; the admin UI (sidebar + table + search + pagination) in Phase 21c; emission from all mutating flows in Phase 21d. See `docs/audit-events.md` for the authoritative event catalogue, and root `README.md` (User Guide → Admin Features → Audit log) for the administrator flow.
+
 A durable **audit log** of significant user and system-facing actions for compliance, support, and security review.
 
-- **Admin-only access**: A dedicated **Audit** area is available **only to administrators**. Non-admin users must not see audit UI or call audit APIs (enforce on server; UI hidden or absent for non-admins).
+- **Admin-only access**: A dedicated **Audit** tab is available in the admin dashboard and is **only visible to administrators**. The server enforces admin-only access on `GET /api/admin/audit-events` (401 when unauthenticated, 403 for non-admin callers). The frontend hides the Audit sidebar link until `serverAllowsUserManagement()` confirms the caller is admin.
 
-- **Scope of tracking**: **Every meaningful user-driven action** in the application should produce an audit record. This includes at minimum (extend as features grow):
-  - **Authentication**: successful login, logout; optional failed login attempts if technically and policy-wise appropriate
-  - **Desk bookings**: create booking, cancel own booking; **admin** cancel desk booking (with reason if captured)
-  - **Parking**: create reservation, cancel own reservation; **admin** cancel reservation
-  - **Admin configuration**: save desk/parking counts and related resource settings; desk/parking numbering changes
-  - **User management**: create user, delete user, password changes initiated by admin or self-service where applicable; profile completion after provisioning
-  - **Bulk or matrix-related actions** that change data (e.g. bulk desk booking) as separate event types where distinct from single-item actions
+- **Scope of tracking**: The catalogue in `docs/audit-events.md` is the single source of truth. Current live emission sites:
+  - **Authentication**: `AUTH_LOGIN_SUCCESS`, `AUTH_LOGIN_FAILURE` (captures both wrong-password and unknown-user attempts), `AUTH_LOGOUT`.
+  - **Desk bookings**: `DESK_BOOKING_CREATED`, `DESK_BOOKING_CANCELLED_BY_USER`, `DESK_BOOKING_CANCELLED_BY_ADMIN`, `DESK_BOOKING_BULK_CREATED`.
+  - **Parking**: `PARKING_RESERVATION_CREATED`, `PARKING_RESERVATION_CANCELLED_BY_USER`, `PARKING_RESERVATION_CANCELLED_BY_ADMIN`, `PARKING_RESERVATION_BULK_CREATED`.
+  - **Admin configuration**: `ADMIN_CONFIG_UPDATED` (desk/parking count + bulk creation), `DESK_CONFIG_UPDATED` and `PARKING_CONFIG_UPDATED` (manual renames of individual resources).
+  - **User management**: `USER_CREATED` (self-registration and admin provisioning), `USER_DELETED`, `USER_PASSWORD_CHANGED` (self-service and admin-issued reset), `USER_PROFILE_COMPLETED`.
 
-- **Actors**: The audit trail records **who** performed each action. **All users including administrators** are subject to logging; admin actions use the same schema and are visible in the same trail.
+- **Actors**: Every event records `actor_id` and a snapshot of `actor_email` at the time of the action, so a user deleted later is still identifiable. System events (e.g. login failures for unknown users) record `actor_id = NULL` and place the attempted identifier in the payload.
 
-- **Event model** (conceptual): Each entry should include at least: **timestamp** (UTC or documented timezone), **actor user id** (and display identifier such as email where stored for readability), **action type** (stable machine-readable code, e.g. `DESK_BOOKING_CREATED`), **summary or payload** (JSON or text sufficient to reconstruct context without storing secrets: no passwords, no full tokens), optional **target entity type and id** (e.g. booking id, desk id), and **IP address or client hint** if available and allowed by policy.
+- **Event model**: Columns: `id`, `occurred_at` (server-issued `TIMESTAMP`, default `CURRENT_TIMESTAMP`), `actor_id`, `actor_email`, `action_type` (catalogue code, e.g. `DESK_BOOKING_CREATED`), `target_type`, `target_id`, `summary` (short human-readable), `payload` (JSON, secret-free), `ip_address`. See `src/sql/08-audit-events-schema.sql`.
 
-- **Search (admin UI)**: Admins can **search** the audit trail via a **simple search box** (single field). Search should match common fields such as action type, actor email/name, free-text summary, and relevant ids exposed in the stored payload, with behavior documented after implementation (e.g. case-insensitive substring, date filters as a follow-up if not in initial scope).
+- **Search (admin UI)**: The Audit tab has a single search box plus limit/offset pagination. Search is a **case-insensitive substring match** across `action_type`, `actor_email`, `summary`, and the stringified `payload`. Date-range and action-type filters are deferred; a follow-up task can add them without schema changes.
 
-- **Performance and retention**: Implementation should use an **indexed** store (database table with appropriate indexes for time and actor). **Retention policy** (how long events are kept) may be configurable or documented as a later task if not in the first delivery.
+- **Performance and retention**: The `audit_events` table has indexes on `occurred_at`, `actor_id`, and `action_type`. Retention is currently unbounded; the catalogue file documents the expected follow-up (configurable purge job) and the operator-run SQL escape hatch.
 
-- **Planned API** (admin only, to be added under Admin endpoints when implemented): e.g. `GET /api/admin/audit-events` with query parameters for **search** text, **pagination** (limit/offset or cursor), and optional filters (date range, actor, action type) if added beyond the minimum search box.
+- **API**: `GET /api/admin/audit-events?limit=&offset=&search=` (admin only). `limit` defaults to 50, caps at 500; `offset` defaults to 0. Response: `{ events, limit, offset }`, events as camelCase JSON. See the **Admin Endpoints** section below.
 
-- **Integrity**: Records should be **append-only** from the application (no user-facing edit or delete of audit rows in normal operation). Any administrative purge should itself be auditable or strictly controlled.
-
-This feature supports accountability across **all** roles and makes support and investigations practical without exposing the log to non-admins.
+- **Integrity**: Records are **append-only** at the repository level — `update` and `delete` on `AuditEventRepository` throw explicit errors. There is no API path, UI path, or service path to edit or remove an audit row. Direct SQL access (operator tooling) is the only mechanism, and such administrative purge is expected to itself be auditable when added.
 
 ### 16. Removal of Overtime Feature (Delivered in Phase 23a)
 
@@ -567,6 +566,7 @@ Authorization: Bearer admin_1
 - `GET /api/admin/parking-reservations` - Get all parking reservations (admin only)
 - `DELETE /api/admin/bookings/:id` - Cancel any booking (admin only, body: reason)
 - `DELETE /api/admin/parking-reservations/:id` - Cancel any reservation (admin only, body: reason)
+- `GET /api/admin/audit-events` - List and search the audit trail (admin only, query: `limit` default 50 / max 500, `offset` default 0, `search` substring match over action_type / actor_email / summary / payload). Response shape: `{ events: [...], limit, offset }` with events in newest-first order.
 
 ### Error Responses
 

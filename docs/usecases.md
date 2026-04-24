@@ -317,3 +317,32 @@ The previous Use Case 7 covered combined desk, parking, and overtime actions. Ov
 7. Repeat steps 2-6 on the **Parking** page using **Reserve Selected** and `POST /api/parking-reservations/bulk` / `POST /api/parking-reservations`
 
 ---
+
+## Use Case 11: Admin Reviews and Searches the Audit Log
+
+**Description:** An administrator needs to see who did what, when. They open the admin area, switch to the **Audit** tab, and either scroll the paginated list of recent events or use the search box to find a specific event by action type, actor email, summary text, or payload fragment (for example, a desk number or another user's email). The log is append-only: there is no edit or delete control in the UI or the API.
+
+**Steps:**
+1. Admin signs in (any admin account)
+2. Admin opens the **Admin** page and clicks the **Audit** item in the sidebar. The item is visible only to admins — regular users never see it.
+3. The page calls `GET /api/admin/audit-events?limit=50&offset=0` and renders the response as a table of **When / Actor / Action / Target / Summary / Payload**. Events are ordered **newest first**.
+4. To page through history, admin clicks **Previous** or **Next**. The indicator shows `Showing N-M` for the current page; **Previous** is disabled on the first page and **Next** is disabled once a page returns fewer rows than the limit.
+5. To find a specific event, admin types into the search box and clicks **Search**. The server does a case-insensitive substring match across the action type, the actor email, the summary, and the serialised payload. Examples that work: `USER_CREATED`, `alice@company.com`, `Booked desk 12`, or any other unique fragment that appears in any of those columns.
+6. To return to the unfiltered view, admin clicks **Clear** (which empties the search box and re-issues the unfiltered fetch starting at offset 0).
+7. Admin observes the log is **read-only**: there is no edit, no delete, no bulk-action control. Audit rows can only be removed via direct database tooling at the operator's discretion; the application itself never mutates an audit row after it is written.
+
+**Expected Result:** The admin can review all meaningful actions taken by all users (including other admins) across authentication, desk bookings, parking reservations, admin configuration, user management, and bulk create flows. Search narrows the result set server-side. Non-admin callers receive `403 FORBIDDEN` on the API and never see the Audit tab.
+
+**Manual Testing Path:**
+1. Sign in as an admin
+2. Provision a new user via **User Management** (this emits a `USER_CREATED` event)
+3. Sign out, then sign in as a regular user and cancel one of your own desk bookings (this emits `DESK_BOOKING_CANCELLED_BY_USER`)
+4. Sign back in as admin; open **Admin** → **Audit**
+5. Verify the most recent events at the top of the list include the two actions you just performed, with correct **Actor** (each action's initiator) and meaningful **Summary** / **Payload** text
+6. In the search box, type the new user's email from step 2 and click **Search**. Confirm the list narrows to the `USER_CREATED` event for that email. Click **Clear** to reset.
+7. Repeat with a search for `DESK_BOOKING_CANCELLED_BY_USER` (action-type substring match) and confirm the cancel event from step 3 appears.
+8. As a regular (non-admin) user, attempt `GET /api/admin/audit-events` with their Bearer token using a tool such as `curl`. Confirm the response is `403` with code `FORBIDDEN` and the **Audit** sidebar item does not appear for them in the UI.
+
+**Automated coverage:** `tests/integration/audit.test.js` (GET API: authorisation, listing, search, pagination); `tests/integration/audit-emissions.test.js` (every catalogue action type lands in the table); `src/frontend/tests/admin-audit.test.js` (UI rendering, XSS escaping, pagination bounds, search wiring); `tests/e2e/audit.spec.js` (Playwright — admin opens Audit, searches, sees seeded event).
+
+---
