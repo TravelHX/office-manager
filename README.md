@@ -10,7 +10,7 @@ This file (`README.md`) lives **only in the project root**. It documents **funct
 
 ## Project Overview
 
-Office Manager is a web application designed to manage office operations and resources. The application provides tools for tracking and managing desk bookings, parking spaces, and overtime hours.
+Office Manager is a web application designed to manage office operations and resources. The application provides tools for tracking and managing desk bookings and parking reservations.
 
 ## Currently Implemented Features
 
@@ -73,14 +73,6 @@ Office Manager is a web application designed to manage office operations and res
 - Selection persists when scrolling; "Clear Selection" to deselect all
 - Existing single "Book" button functionality maintained
 
-### Overtime Tracking (scheduled for removal)
-
-- Record overtime hours with automatic calculation
-- View overtime history
-- Generate overtime reports
-- Admin can view all overtime records
-- **Note:** Overtime is scheduled for removal from the product (see spec.md section 16)
-
 ### Enhanced Admin Resource Configuration
 
 - Auto-generate sequential desk numbers (e.g. setting 10 desks creates desks numbered 1-10)
@@ -91,17 +83,17 @@ Office Manager is a web application designed to manage office operations and res
 ### Admin Dashboard
 
 - Configure number of desks and parking spaces (with flexible numbering)
-- View all bookings, reservations, and overtime records
+- View all bookings and reservations
 - Cancel any user's bookings or reservations with reason
 - Manage office resources
 - User management: provision users (email + name only), share profile setup links, view profile status, delete users (confirmation required)
-- Last admin user cannot be deleted; related bookings, parking reservations, and overtime records are removed with a deleted user
+- Last admin user cannot be deleted; related bookings and parking reservations are removed with a deleted user
 
 ### User Dashboard
 
-- View summary statistics (active bookings, reservations, overtime hours)
+- View summary statistics (active bookings, reservations)
 - Quick access to booking and reservation features
-- Unified "My Bookings" view showing all personal bookings, reservations, and overtime records
+- Unified "My Bookings" view showing all personal bookings and reservations
 - Search and filtering across all booking types
 
 ### Booking Matrix Screen
@@ -133,7 +125,7 @@ Office Manager is a web application designed to manage office operations and res
 
 ### Introduction
 
-Welcome to Office Manager. The sections below describe how to use desk bookings, parking reservations, and overtime tracking.
+Welcome to Office Manager. The sections below describe how to use desk bookings and parking reservations.
 
 ### Getting Started
 
@@ -146,7 +138,7 @@ Welcome to Office Manager. The sections below describe how to use desk bookings,
 #### Navigation and layout
 
 - **Top bar:** App title (link to Home) on the left, **menu** button to show or hide the sidebar, and **Account** on the right.
-- **Left sidebar (collapsible):** Main links for most pages: **Home**, **Desk Booking**, **Parking**, **Overtime** (when you are signed in), **My Bookings**, **Booking Matrix**, **Admin**. Use the menu button to collapse or expand the sidebar; your choice is remembered for the session.
+- **Left sidebar (collapsible):** Main links for most pages: **Home**, **Desk Booking**, **Parking**, **My Bookings**, **Booking Matrix**, **Admin**. Use the menu button to collapse or expand the sidebar; your choice is remembered for the session.
 - **Account menu (collapsible):** Click **Account** on the right. If you are not signed in, choose **Log in** or **Register**. If you are signed in, the menu shows your name and details and a **Log out** action.
 - **Admin:** Admin areas use the same shell; sections (configuration, bookings, users, and so on) are listed **vertically in the left sidebar**. **Main site** at the top of that sidebar returns to the standard app pages.
 - **Footer:** The **Version** value is a link. Click it to open **Release history**, which shows the contents of **`data/release_history.txt`**.
@@ -205,43 +197,13 @@ Welcome to Office Manager. The sections below describe how to use desk bookings,
 3. Click **Cancel**
 4. Confirm the cancellation
 
-### Overtime Tracking
-
-#### Recording Overtime
-
-1. Click **Overtime** in the navigation menu
-2. Fill in the form:
-   - **Date** - The date you worked overtime
-   - **Start Time** - When overtime began (e.g. 17:00)
-   - **End Time** - When overtime ended (e.g. 18:00)
-   - **Description** - Optional description of work performed
-3. Total hours are calculated automatically
-4. Click **Record Overtime** to save
-
-**Note:** You can only record overtime for past dates, not future dates.
-
-#### Viewing Overtime History
-
-1. Click **My Bookings** in the navigation menu
-2. Your overtime records appear in the "Overtime Records" section
-3. Each record shows date, start and end times, total hours, description, and status (pending, approved, or rejected)
-
-#### Editing Overtime Records
-
-1. Go to the **Overtime** page
-2. View your overtime history
-3. Click **Edit** on the record you want to change
-4. Update the details and save
-
-**Note:** You can only edit records with "pending" status.
-
 ### My Bookings Page
 
-The **My Bookings** page is a unified view of all your reservations and records.
+The **My Bookings** page is a unified view of all your desk bookings and parking reservations.
 
-- **Search** - Search across bookings, reservations, and overtime records
-- **Filter by Status** - Active, cancelled, pending, or approved
-- **Filter by Type** - Desk bookings, parking reservations, or overtime records
+- **Search** - Search across bookings and reservations
+- **Filter by Status** - Active or cancelled
+- **Filter by Type** - Desk bookings or parking reservations
 - **Quick Actions** - Cancel bookings and reservations from the list
 
 #### Using Search and Filters
@@ -257,7 +219,6 @@ The **Home** page shows:
 
 - **Active Desk Bookings** - Count of upcoming desk bookings
 - **Parking Reservations** - Count of active parking reservations
-- **Overtime Hours** - Total approved overtime hours for the current month
 - **Upcoming Items** - Your next five upcoming bookings and reservations
 
 ### Tips and Best Practices
@@ -265,8 +226,7 @@ The **Home** page shows:
 1. **Plan ahead** - Book desks and parking in advance when possible
 2. **Check availability** - Use Check Availability before booking
 3. **Cancel early** - Release resources you no longer need
-4. **Record overtime promptly** - Enter hours soon after working
-5. **Use search** - Search and filters help you find items quickly
+4. **Use search** - Search and filters help you find items quickly
 
 ### Troubleshooting
 
@@ -282,12 +242,6 @@ The **Home** page shows:
 - If status is "Cancelled", it is already cancelled
 - Contact an administrator if you still need help
 
-#### My overtime record shows "pending"
-
-- Overtime may require administrator approval
-- Pending records can often be edited or deleted
-- Once approved or rejected, records may not be editable
-
 #### Authentication errors
 
 - Use the correct application URL
@@ -302,7 +256,7 @@ If an administrator created your account, you cannot log in until you finish set
 3. Choose **office location**, enter and confirm your **password**, then submit
 4. When setup succeeds, sign in on the **Login** page with your **email** and the password you chose
 
-Until profile setup is complete, protected features (bookings, parking, overtime, and similar) are not available.
+Until profile setup is complete, protected features (bookings, parking, and similar) are not available.
 
 ### Admin Features
 
@@ -348,13 +302,6 @@ If you have admin privileges:
 3. View all parking reservations for all users
 4. Cancel any reservation with a reason if needed
 
-#### Viewing Overtime Records
-
-1. Open **Admin**
-2. Open the **All Overtime Records** tab
-3. View all overtime records for all users
-4. Review and approve or reject overtime records
-
 ### Support
 
 For additional support, contact your system administrator.
@@ -375,7 +322,7 @@ For detailed API documentation and the full product specification, see `docs/spe
 
 All features listed in "Currently Implemented Features" above are fully functional. Key implementation phases:
 
-- **Phases 1-6:** Core infrastructure, desk booking, parking reservations, overtime tracking, admin functionality, integration and polish
+- **Phases 1-6:** Core infrastructure, desk booking, parking reservations, admin functionality, integration and polish (overtime tracking built in Phase 4 was removed end-to-end in Phase 23a)
 - **Phases 7-10:** Enhanced admin resource configuration (flexible numbering), user authentication and management, booking matrix screen, booking validation rules
 - **Phase 11:** Comprehensive test coverage (unit, integration, and use case tests)
 - **Phases 12-13:** Enhanced user management (profiles, password reset, office locations), availability display enhancement

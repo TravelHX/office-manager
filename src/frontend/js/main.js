@@ -139,7 +139,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const protectedPages = [
         '/pages/desk-booking.html',
         '/pages/parking.html',
-        '/pages/overtime.html',
         '/pages/bookings.html',
         '/pages/admin.html',
         '/pages/matrix.html',
@@ -167,7 +166,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateUserIndicator();
     initSidebarToggle();
     initSidebarActiveNav();
-    updateOvertimeSidebarVisibility();
 
     // Load and display application version
     loadApplicationVersion();
@@ -219,16 +217,6 @@ function initSidebarActiveNav() {
             /* ignore */
         }
     });
-}
-
-function updateOvertimeSidebarVisibility() {
-    const item = document.getElementById('overtime-sidebar-item');
-    if (!item) return;
-    if (typeof isAuthenticated !== 'undefined' && isAuthenticated()) {
-        item.style.display = '';
-    } else {
-        item.style.display = 'none';
-    }
 }
 
 function bindAccountDropdown(trigger, panel) {
@@ -594,7 +582,6 @@ if (typeof module !== 'undefined' && module.exports) {
         loadApplicationVersion,
         initSidebarToggle,
         initSidebarActiveNav,
-        updateOvertimeSidebarVisibility,
     };
 }
 

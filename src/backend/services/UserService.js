@@ -669,7 +669,7 @@ class UserService {
   /**
    * Delete a user (admin only)
    * Prevents deletion if it would leave zero admin users
-   * Associated data (bookings, reservations, overtime) is automatically deleted via CASCADE
+   * Associated data (bookings, reservations) is automatically deleted via CASCADE
    * @param {number} userId - User ID to delete
    * @param {number} deletedBy - ID of admin performing the deletion
    * @returns {Promise<void>}

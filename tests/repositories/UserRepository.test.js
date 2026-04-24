@@ -12,7 +12,6 @@ describe('UserRepository', () => {
   beforeEach(async () => {
     await executeQuery('DELETE FROM bookings');
     await executeQuery('DELETE FROM parking_reservations');
-    await executeQuery('DELETE FROM overtime_records');
     await executeQuery('DELETE FROM users');
   });
 

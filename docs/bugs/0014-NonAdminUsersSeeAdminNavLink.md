@@ -6,7 +6,7 @@ Users who are **not** administrators can see an **Admin** entry in the applicati
 
 **Expected Behavior:** The Admin link (or equivalent route to `admin.html`) appears **only** for users who have admin privileges (`isAdmin` / `role: admin` as enforced by the application). Non-admin users should have no visible admin menu item.
 
-**Actual Behavior:** The Admin link is present in static HTML for multiple pages (for example home, desk booking, parking, bookings, overtime, matrix), so any user who can load those pages sees the link. Backend APIs may still reject non-admins, but the UI exposes admin navigation incorrectly.
+**Actual Behavior:** The Admin link is present in static HTML for multiple pages (for example home, desk booking, parking, bookings, matrix), so any user who can load those pages sees the link. Backend APIs may still reject non-admins, but the UI exposes admin navigation incorrectly.
 
 ## Current Status
 

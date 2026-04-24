@@ -92,7 +92,6 @@ describe('Authentication State Management', () => {
       const protectedPages = [
         '/pages/desk-booking.html',
         '/pages/parking.html',
-        '/pages/overtime.html',
         '/pages/bookings.html',
         '/pages/admin.html',
       ];
@@ -122,61 +121,6 @@ describe('Authentication State Management', () => {
       }
 
       expect(window.location.href).toBe('');
-    });
-  });
-
-  describe('Feature Visibility Based on Authentication', () => {
-    it('should hide overtime features for non-authenticated users', () => {
-      global.isAuthenticated.mockReturnValue(false);
-
-      document.body.innerHTML = `
-        <div id="overtime-card" style="display: block;">
-          <h3>Overtime</h3>
-        </div>
-        <a href="/pages/overtime.html" id="overtime-nav-link" style="display: block;">Overtime</a>
-      `;
-
-      // Simulate conditional display logic
-      if (typeof isAuthenticated !== 'undefined' && isAuthenticated()) {
-        const overtimeCard = document.getElementById('overtime-card');
-        const overtimeNavLink = document.getElementById('overtime-nav-link');
-        if (overtimeCard) overtimeCard.style.display = 'block';
-        if (overtimeNavLink) overtimeNavLink.style.display = 'block';
-      } else {
-        const overtimeCard = document.getElementById('overtime-card');
-        const overtimeNavLink = document.getElementById('overtime-nav-link');
-        if (overtimeCard) overtimeCard.style.display = 'none';
-        if (overtimeNavLink) overtimeNavLink.style.display = 'none';
-      }
-
-      const overtimeCard = document.getElementById('overtime-card');
-      const overtimeNavLink = document.getElementById('overtime-nav-link');
-      expect(overtimeCard.style.display).toBe('none');
-      expect(overtimeNavLink.style.display).toBe('none');
-    });
-
-    it('should show overtime features for authenticated users', () => {
-      global.isAuthenticated.mockReturnValue(true);
-
-      document.body.innerHTML = `
-        <div id="overtime-card" style="display: none;">
-          <h3>Overtime</h3>
-        </div>
-        <a href="/pages/overtime.html" id="overtime-nav-link" style="display: none;">Overtime</a>
-      `;
-
-      // Simulate conditional display logic
-      if (typeof isAuthenticated !== 'undefined' && isAuthenticated()) {
-        const overtimeCard = document.getElementById('overtime-card');
-        const overtimeNavLink = document.getElementById('overtime-nav-link');
-        if (overtimeCard) overtimeCard.style.display = 'block';
-        if (overtimeNavLink) overtimeNavLink.style.display = 'block';
-      }
-
-      const overtimeCard = document.getElementById('overtime-card');
-      const overtimeNavLink = document.getElementById('overtime-nav-link');
-      expect(overtimeCard.style.display).toBe('block');
-      expect(overtimeNavLink.style.display).toBe('block');
     });
   });
 

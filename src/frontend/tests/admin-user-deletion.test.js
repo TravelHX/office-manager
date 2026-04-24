@@ -49,7 +49,7 @@ function renderUsersTableHTML(users, currentUserId = null) {
 }
 
 async function simulateDeleteUser(userId, username, confirmResult) {
-  const confirmMessage = `Are you sure you want to delete user "${username}" (ID: ${userId})?\n\nThis will also delete all associated bookings, reservations, and overtime records.`;
+  const confirmMessage = `Are you sure you want to delete user "${username}" (ID: ${userId})?\n\nThis will also delete all associated bookings and reservations.`;
   window.confirm = jest.fn(() => confirmResult);
   const messageDiv = document.getElementById('users-message');
   messageDiv.innerHTML = '';
@@ -142,7 +142,7 @@ describe('Phase 17: Admin user deletion UI', () => {
 
       const messageDiv = document.getElementById('users-message');
       const msg =
-        'Are you sure you want to delete user "bob" (ID: 99)?\n\nThis will also delete all associated bookings, reservations, and overtime records.';
+        'Are you sure you want to delete user "bob" (ID: 99)?\n\nThis will also delete all associated bookings and reservations.';
       if (!window.confirm(msg)) {
         // no-op
       }
@@ -240,7 +240,7 @@ describe('Phase 17: Admin user deletion UI', () => {
 
       // simulateDeleteUser mirrors admin.js error handling; ensure it displays the
       // self-delete message (not the generic "Failed to delete user" fallback).
-      const confirmMessage = `Are you sure you want to delete user "meadmin" (ID: 42)?\n\nThis will also delete all associated bookings, reservations, and overtime records.`;
+      const confirmMessage = `Are you sure you want to delete user "meadmin" (ID: 42)?\n\nThis will also delete all associated bookings and reservations.`;
       window.confirm(confirmMessage);
       const messageDiv = document.getElementById('users-message');
       messageDiv.innerHTML = '<p>Deleting user...</p>';

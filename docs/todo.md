@@ -16,7 +16,7 @@ This file (`docs/todo.md`) lists **remaining code and test work** so the codebas
 
 **Estimated Effort:** 6-10 days
 
-**Sequencing note:** Complete Phase 23 overtime removal before this phase so audit events are not wired for code that will be deleted.
+**Sequencing note:** Phase 23a overtime removal is complete (see Phase 23 tasks 23.1-23.5), so audit events are no longer at risk of being wired for deleted code.
 
 ### Tasks
 
@@ -24,7 +24,7 @@ This file (`docs/todo.md`) lists **remaining code and test work** so the codebas
 - [x] 21.2 Design database schema for audit events (table name, columns, indexes for time, actor_user_id, action_type, full-text or composite strategy for search)
 - [x] 21.3 Add migration creating audit table; document retention approach (default unlimited or documented cap) (`src/sql/08-audit-events-schema.sql`; retention deferred, documented in `docs/audit-events.md`)
 - [x] 21.4 Implement AuditEvent model and repository (append-only insert; admin-only list/search with parameterized queries) (`src/backend/models/AuditEvent.js`, `src/backend/repositories/AuditEventRepository.js` — `update`/`delete` throw append-only errors)
-- [x] 21.5 Implement AuditService (or equivalent) to record events with consistent shape; add helper used by routes/services (`src/backend/services/AuditService.js` — no emission sites wired yet; that is Phase 21d, to follow Phase 23 overtime removal)
+- [x] 21.5 Implement AuditService (or equivalent) to record events with consistent shape; add helper used by routes/services (`src/backend/services/AuditService.js` — no emission sites wired yet; that is Phase 21d, unblocked now that Phase 23a overtime removal is complete)
 - [ ] 21.6 Wire audit emission for **authentication**: login success, logout (and failed login if included)
 - [ ] 21.7 Wire audit emission for **desk bookings**: create, user cancel, admin cancel
 - [ ] 21.8 Wire audit emission for **parking**: create reservation, user cancel, admin cancel
@@ -55,27 +55,27 @@ This file (`docs/todo.md`) lists **remaining code and test work** so the codebas
 
 ### Tasks
 
-- [ ] 22.1 Add Playwright end-to-end test: footer version link opens release history and content loads
+- [x] 22.1 Add Playwright end-to-end test: footer version link opens release history and content loads (`tests/e2e/release-history.spec.js`; run with `npm run test:e2e` from repo root while the app stack is up)
 
 ---
 
-## Phase 23: Remove Overtime; Floor Plan Maps; Undo Cancel; Booking Button UX
+## Phase 23: Floor Plan Maps; Undo Cancel; Booking Button UX
 
-**Objective:** Align the product with `docs/spec.md` **Not Yet Implemented** sections **16--19**: remove overtime end-to-end; add **square** desk and carpark **map** UIs with **admin-uploaded** PNG/JPG floor plans and **admin-only** landmark editing (landmarks non-blocking for resource clicks); **Undo** after user desk cancel within a short window; **uniform** Select / Book / Reserve / Book selected button sizing and **hide immediate Book/Reserve** when that resource is in the multi-select selection.
+**Objective:** Align the product with `docs/spec.md` **Not Yet Implemented** sections **17--19**: add **square** desk and carpark **map** UIs with **admin-uploaded** PNG/JPG floor plans and **admin-only** landmark editing (landmarks non-blocking for resource clicks); **Undo** after user desk cancel within a short window; **uniform** Select / Book / Reserve / Book selected button sizing and **hide immediate Book/Reserve** when that resource is in the multi-select selection.
 
 **Dependencies:** Phase 2 (desk), Phase 3 (parking), Phase 5 (admin), Phase 15 (multi-select) as implemented today; Phase 20 (shell) for navigation changes.
 
 **Priority:** High (UX and scope change)
 
-**Estimated Effort:** 10-18 days (depends on map editor depth and migration choice for overtime data)
+**Estimated Effort:** 10-18 days (depends on map editor depth)
 
 ### Tasks
 
-- [ ] 23.1 Finalize overtime removal strategy: drop vs archive `overtime_records`; document operator backup expectations in technical notes
-- [ ] 23.2 Remove overtime API routes, services, middleware references, and integration tests; adjust OpenAPI or spec tables if present
-- [ ] 23.3 Remove overtime frontend: `overtime.html`, scripts, dashboard cards, My Bookings overtime section, admin overtime UI, matrix overtime hooks, sidebar/footer links; update `main.js` protected routes and shell
-- [ ] 23.4 Database migration: remove or archive overtime table and foreign keys; remove overtime seed data from SQL init scripts used by Docker/tests
-- [ ] 23.5 Update auth / profile-complete restrictions to drop overtime references; grep codebase for `overtime` and clean remaining references
+- [x] 23.1 Finalize overtime removal strategy: drop vs archive `overtime_records`; document operator backup expectations in technical notes (`docs/technical-notes-phase23-overtime-removal.md`)
+- [x] 23.2 Remove overtime API routes, services, middleware references, and integration tests; adjust OpenAPI or spec tables if present
+- [x] 23.3 Remove overtime frontend: `overtime.html`, scripts, dashboard cards, My Bookings overtime section, admin overtime UI, matrix overtime hooks, sidebar/footer links; update `main.js` protected routes and shell
+- [x] 23.4 Database migration: remove or archive overtime table and foreign keys; remove overtime seed data from SQL init scripts used by Docker/tests (idempotent `DROP TABLE IF EXISTS overtime_records` added to `src/backend/database/migrations.js`; `src/sql/05-overtime-schema.sql` deleted)
+- [x] 23.5 Update auth / profile-complete restrictions to drop overtime references; grep codebase for `overtime` and clean remaining references
 - [ ] 23.6 Design map data model: per-context floor plan image path, image version, landmark list (type, optional label, normalized x/y), desk and parking space map coordinates; document in `docs/spec.md` API subsection when endpoints exist
 - [ ] 23.7 Admin API: secure upload for desk and parking floor plans (PNG/JPG only, size limit); GET map configuration for each context; admin CRUD for landmarks and for resource coordinates
 - [ ] 23.8 Admin UI: map editor (square viewport) to upload/replace image, place or adjust desk/parking markers, add/edit/delete landmarks (preset types + custom label)
@@ -86,8 +86,8 @@ This file (`docs/todo.md`) lists **remaining code and test work** so the codebas
 - [ ] 23.13 Integration tests: map config endpoints (admin auth, file upload), undo cancel happy path and expiry, booking list still works without map if no image configured
 - [ ] 23.14 Frontend Jest tests: map rendering with mock config, button visibility when selected, undo UI
 - [ ] 23.15 Playwright end-to-end test: admin uploads plan and places landmark; user sees map on desk or parking page; user cancels desk and undoes within window
-- [ ] 23.16 Update `docs/usecases.md`: remove overtime flows; add map orientation and undo flows; update multi-select manual paths for buttons
-- [ ] 23.17 Update root `README.md` (remove overtime user guide; document maps, undo, button behavior)
+- [ ] 23.16 Update `docs/usecases.md`: add map orientation and undo flows; update multi-select manual paths for buttons
+- [ ] 23.17 Update root `README.md`: document maps, undo, button behavior
 - [ ] 23.18 Update `docs/spec.md` **Currently Implemented** and API lists after delivery
 
 ---
@@ -132,7 +132,7 @@ This file (`docs/todo.md`) lists **remaining code and test work** so the codebas
 
 **Objective:** Deliver the end-to-end coverage commitment in `docs/spec.md` section 11: every documented use case in `docs/usecases.md` and every implemented feature has at least one Playwright end-to-end test. Fill gaps left by feature phases where Playwright was deferred (first-user admin registration, startup cleanup, multi-select desk and parking booking, version tracking in deployment).
 
-**Dependencies:** Phase 23 (so tests are not written against overtime code slated for removal).
+**Dependencies:** Phase 23a overtime removal is complete; remaining Phase 23 map/undo/button work may land before or after this phase.
 
 **Priority:** Medium
 

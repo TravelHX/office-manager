@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadAllParkingSpaces();
     loadAllBookings();
     loadAllParkingReservations();
-    loadAllOvertimeRecords();
 
     if (typeof globalThis.updateUserIndicator === 'function') {
         globalThis.updateUserIndicator();
@@ -321,78 +320,9 @@ async function cancelReservationAsAdmin(reservationId) {
     }
 }
 
-async function loadAllOvertimeRecords() {
-    const container = document.getElementById('all-overtime-container');
-    container.innerHTML = '<p>Loading overtime records...</p>';
-    
-    try {
-        const records = await apiRequest('/api/admin/overtime-records');
-        
-        if (records.length === 0) {
-            container.innerHTML = '<p>No overtime records found.</p>';
-            return;
-        }
-        
-        displayAllOvertimeRecords(records);
-    } catch (error) {
-        showError('Failed to load overtime records: ' + error.message, 'all-overtime-container');
-        container.innerHTML = '<p>Failed to load overtime records.</p>';
-    }
-}
-
-function displayAllOvertimeRecords(records) {
-    const container = document.getElementById('all-overtime-container');
-    
-    const recordsHTML = `
-        <table>
-            <thead>
-                <tr>
-                    <th>User</th>
-                    <th>Date</th>
-                    <th>Start Time</th>
-                    <th>End Time</th>
-                    <th>Total Hours</th>
-                    <th>Description</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${records.map(record => `
-                    <tr>
-                        <td>${record.username || 'N/A'}</td>
-                        <td>${formatDate(record.recordDate)}</td>
-                        <td>${formatTime(record.startTime)}</td>
-                        <td>${formatTime(record.endTime)}</td>
-                        <td>${record.totalHours} hours</td>
-                        <td>${record.description || 'N/A'}</td>
-                        <td>
-                            <span class="status-badge status-${record.status}">${record.status}</span>
-                        </td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-    
-    container.innerHTML = recordsHTML;
-}
-
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function formatTime(timeString) {
-    if (!timeString) return 'N/A';
-    const parts = timeString.split(':');
-    if (parts.length < 2) return timeString;
-    
-    const hours = parseInt(parts[0], 10);
-    const minutes = parts[1];
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    
-    return `${displayHours}:${minutes} ${ampm}`;
 }
 
 function formatTimePeriod(period) {
@@ -766,7 +696,7 @@ async function displayAllUsers(users) {
 }
 
 async function deleteUser(userId, username) {
-    if (!confirm(`Are you sure you want to delete user "${username}" (ID: ${userId})?\n\nThis will also delete all associated bookings, reservations, and overtime records.`)) {
+    if (!confirm(`Are you sure you want to delete user "${username}" (ID: ${userId})?\n\nThis will also delete all associated bookings and reservations.`)) {
         return;
     }
     

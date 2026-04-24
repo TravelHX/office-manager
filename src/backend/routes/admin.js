@@ -92,15 +92,6 @@ router.get('/parking-reservations', authenticate, requireCompleteProfile, author
   }
 });
 
-router.get('/overtime-records', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
-  try {
-    const records = await adminService.getAllOvertimeRecords();
-    res.json(records);
-  } catch (error) {
-    next(error);
-  }
-});
-
 router.get('/desks', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const desks = await adminService.getAllDesks();

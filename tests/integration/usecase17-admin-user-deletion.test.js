@@ -12,10 +12,8 @@ const DeskRepository = require('../../src/backend/repositories/DeskRepository');
 const BookingRepository = require('../../src/backend/repositories/BookingRepository');
 const ParkingSpaceRepository = require('../../src/backend/repositories/ParkingSpaceRepository');
 const ParkingReservationRepository = require('../../src/backend/repositories/ParkingReservationRepository');
-const OvertimeRecordRepository = require('../../src/backend/repositories/OvertimeRecordRepository');
 const Booking = require('../../src/backend/models/Booking');
 const ParkingReservation = require('../../src/backend/models/ParkingReservation');
-const OvertimeRecord = require('../../src/backend/models/OvertimeRecord');
 const Desk = require('../../src/backend/models/Desk');
 const ParkingSpace = require('../../src/backend/models/ParkingSpace');
 
@@ -105,12 +103,11 @@ describe('Phase 17: Admin user deletion (integration)', () => {
   });
 
   describe('17.34: Associated data removed when user is deleted (cascade)', () => {
-    test('bookings, parking reservations, and overtime records are removed', async () => {
+    test('bookings and parking reservations are removed', async () => {
       const deskRepo = new DeskRepository();
       const bookingRepo = new BookingRepository();
       const spaceRepo = new ParkingSpaceRepository();
       const resRepo = new ParkingReservationRepository();
-      const otRepo = new OvertimeRecordRepository();
 
       const victim = await createProvisionedUserWithPassword(seedAdmin.id, {
         email: `p17_c_${suffix}@test.com`,
@@ -160,21 +157,8 @@ describe('Phase 17: Admin user deletion (integration)', () => {
         })
       );
 
-      await otRepo.create(
-        new OvertimeRecord({
-          user_id: victim.id,
-          record_date: '2027-06-04',
-          start_time: '18:00:00',
-          end_time: '20:00:00',
-          total_hours: 2,
-          description: 'phase 17 cascade test',
-          status: 'pending',
-        })
-      );
-
       expect((await bookingRepo.findByUserId(victim.id)).length).toBeGreaterThan(0);
       expect((await resRepo.findByUserId(victim.id)).length).toBeGreaterThan(0);
-      expect((await otRepo.findByUserId(victim.id)).length).toBeGreaterThan(0);
 
       const delRes = await request(app)
         .delete(`/api/auth/users/${victim.id}`)
@@ -184,7 +168,6 @@ describe('Phase 17: Admin user deletion (integration)', () => {
 
       expect((await bookingRepo.findByUserId(victim.id)).length).toBe(0);
       expect((await resRepo.findByUserId(victim.id)).length).toBe(0);
-      expect((await otRepo.findByUserId(victim.id)).length).toBe(0);
     });
   });
 });

@@ -6,7 +6,7 @@ This file (`docs/spec.md`) is the **product specification**. It describes the **
 
 ## Project Overview
 
-Office Manager is a web application designed to manage office operations and resources. The application provides tools for tracking and managing **desk bookings** and **parking space reservations**. **Overtime tracking is no longer in scope** and is to be **removed** from the product (see **Not Yet Implemented, section 16**).
+Office Manager is a web application designed to manage office operations and resources. The application provides tools for tracking and managing **desk bookings** and **parking space reservations**. Overtime tracking was previously part of the product and was removed end-to-end in Phase 23a; see section 16 below.
 
 ## Purpose
 
@@ -15,7 +15,7 @@ The primary purpose of Office Manager is to provide a centralized system for man
 - Track and manage desk bookings to optimize office space utilization
 - Monitor parking space availability and assignments
 
-Overtime recording was previously supported but is **scheduled for removal**; the specification no longer treats it as a core capability.
+Overtime recording was previously supported and was removed end-to-end in Phase 23a; it is no longer a capability of the product.
 
 ## Technology Stack
 
@@ -139,11 +139,9 @@ Complete parking space reservation system with half-day support:
 
 **Related Use Cases:** Use Case 2 (Employee Books Desk and Parking Space for Half Day)
 
-### Phase 4: Overtime Tracking Feature (Completed in code; **superseded by removal**)
+### Phase 4: Overtime Tracking Feature (Removed in Phase 23a)
 
-This phase was implemented historically. **Intended product direction:** remove the overtime feature entirely from the application (APIs, UI, navigation, dashboard, My Bookings, admin, matrix integrations, and tests) per **Not Yet Implemented, section 16**. Data in `overtime_records` may be archived or dropped per migration tasks in `docs/todo.md`.
-
-**Related Use Cases:** Former Use Case 7; use cases and tests are to be updated when overtime is removed.
+Overtime tracking was built historically and **removed end-to-end** in Phase 23a: API routes, services, repositories, models, frontend pages, admin tab, dashboard cards, My Bookings sections, database table, and all related tests are deleted. Operators who need a historical copy of `overtime_records` must capture a database backup before upgrading past the Phase 23a release; see `docs/technical-notes-phase23-overtime-removal.md`.
 
 ### Phase 5: Admin Functionality (Completed)
 
@@ -153,7 +151,7 @@ Complete administrative features for resource and booking management:
 - **Models & Repositories**: AdminConfiguration model and repository
 - **Business Logic**: AdminService with validation to prevent reducing counts below active bookings
 - **API Endpoints**: RESTful endpoints for configuration management and admin booking operations
-- **Frontend UI**: Admin dashboard with configuration, bookings, parking, and (until removed) overtime management
+- **Frontend UI**: Admin dashboard with configuration, bookings, and parking management
 - **Authentication**: Role-based access control with admin authorization checks
 - **Testing**: Unit tests, integration tests, and use case validation tests
 
@@ -165,10 +163,10 @@ Complete administrative features for resource and booking management:
 
 Integration and polish features:
 
-- **User Dashboard**: Home page dashboard showing summary statistics (active bookings, reservations; overtime summary **to be removed** with overtime feature)
-- **Search & Filtering**: Search and filter functionality across bookings and reservations (overtime **to be removed**)
+- **User Dashboard**: Home page dashboard showing summary statistics (active bookings, reservations)
+- **Search & Filtering**: Search and filter functionality across bookings and reservations
 - **Notification System**: Client-side notification system for success, error, info, and warning messages
-- **Unified My Bookings View**: Integrated view showing desk bookings and parking reservations (overtime **to be removed**)
+- **Unified My Bookings View**: Integrated view showing desk bookings and parking reservations
 - **Navigation**: Consistent navigation across all pages
 - **Documentation**: API and product specification in this file (`docs/spec.md`); end-user documentation in root `README.md` (User Guide section)
 
@@ -216,7 +214,7 @@ Complete user authentication and management system with role-based access contro
 - **User Indicator**: Icon at top left of screen displays logged-in user information
 - **Access Control**: 
   - Logged-in users: Full access to all features except **user management** (adding and removing users; **admin only**)
-  - Not logged-in users: Can only view available desks/spaces, cannot access overtime screen or make bookings
+  - Not logged-in users: Can only view available desks/spaces and cannot make bookings
 - **Login Redirect**: Unauthenticated users attempting to book desks/spaces are redirected to login screen
 
 This feature will provide secure user authentication and proper access control throughout the application.
@@ -344,7 +342,7 @@ Administrative functionality to **add** and **remove** users, with mandatory saf
   - Deleting **another** admin is allowed only when **at least one** admin will remain afterward.
 - **Regular users**: Admins may delete non-admin users subject to cascade and business rules below.
 - **Error Handling**: Clear error messages when deletion is prevented (self-deletion, last admin, or other validation failures).
-- **Cascade Handling**: Determine how to handle bookings and reservations associated with deleted users (e.g., mark as cancelled, reassign, or prevent deletion if active bookings exist). Overtime cascade rules **to be removed** with overtime feature (section 16).
+- **Cascade Handling**: Determine how to handle bookings and reservations associated with deleted users (e.g., mark as cancelled, reassign, or prevent deletion if active bookings exist).
 
 This feature provides administrators with user lifecycle management while enforcing **no self-deletion** and the **minimum one admin** rule.
 
@@ -438,7 +436,6 @@ A durable **audit log** of significant user and system-facing actions for compli
   - **Authentication**: successful login, logout; optional failed login attempts if technically and policy-wise appropriate
   - **Desk bookings**: create booking, cancel own booking; **admin** cancel desk booking (with reason if captured)
   - **Parking**: create reservation, cancel own reservation; **admin** cancel reservation
-  - **Overtime**: create, update, delete own record; **admin** approve/reject (if applicable)
   - **Admin configuration**: save desk/parking counts and related resource settings; desk/parking numbering changes
   - **User management**: create user, delete user, password changes initiated by admin or self-service where applicable; profile completion after provisioning
   - **Bulk or matrix-related actions** that change data (e.g. bulk desk booking) as separate event types where distinct from single-item actions
@@ -457,17 +454,15 @@ A durable **audit log** of significant user and system-facing actions for compli
 
 This feature supports accountability across **all** roles and makes support and investigations practical without exposing the log to non-admins.
 
-**Note:** When **overtime is removed** (section 16 below), audit event types and UI copy referencing overtime must be updated accordingly.
+### 16. Removal of Overtime Feature (Delivered in Phase 23a)
 
-### 16. Removal of Overtime Feature
+The overtime capability was **removed end-to-end from the product** in Phase 23a:
 
-The overtime capability is **removed from the product**. After this work:
-
-- **No overtime UI**: No Overtime page, no overtime card on the home dashboard, no overtime rows in My Bookings, no overtime section in admin, no overtime link in navigation or shell.
-- **No public overtime APIs**: Overtime routes are removed or permanently disabled with a documented response; clients must not depend on them.
-- **Data**: Existing `overtime_records` (and related schema) are handled via migration: either **drop** with documented backup expectation for operators, or **archive** to a static export (product decision recorded in task notes). Admin report endpoints that only served overtime are removed.
-- **Cross-features**: Booking matrix, dashboard summaries, authentication "incomplete profile" restrictions, and any tests or use cases that mention overtime are updated so the product is consistent.
-- **Documentation**: `README.md`, `docs/usecases.md`, and this specification are aligned with the removal.
+- **No overtime UI**: The Overtime page, the overtime dashboard card, overtime rows in My Bookings, the admin overtime tab, and overtime links in navigation and shell are all deleted.
+- **No overtime APIs**: `/api/overtime/*` routes and the admin `/api/admin/overtime-records` endpoint are removed; requests return 404.
+- **Data**: The `overtime_records` table is dropped by an idempotent step in `src/backend/database/migrations.js`. Operators who need a historical copy must back up the table before upgrading past Phase 23a (see `docs/technical-notes-phase23-overtime-removal.md`).
+- **Cross-features**: Booking matrix, dashboard summaries, the profile-complete restrictions, and every test that previously referenced overtime have been updated.
+- **Documentation**: `README.md`, `docs/usecases.md`, `docs/audit-events.md`, and this specification have been aligned with the removal.
 
 ### 17. Floor Plan Map for Desk and Parking Selection
 
@@ -563,17 +558,6 @@ Authorization: Bearer admin_1
 - `POST /api/parking-reservations` - Create a new reservation (body: parkingSpaceId, reservationDate, timePeriod)
 - `DELETE /api/parking-reservations/:id` - Cancel a reservation
 
-### Overtime Records
-
-**Planned removal:** These endpoints are to be removed with the overtime feature (see **Not Yet Implemented, section 16**).
-
-- `GET /api/overtime/my-overtime` - Get current user's overtime records
-- `GET /api/overtime/reports` - Generate overtime report (query params: startDate, endDate)
-- `GET /api/overtime/:id` - Get overtime record by ID
-- `POST /api/overtime` - Create a new overtime record (body: recordDate, startTime, endTime, description)
-- `PUT /api/overtime/:id` - Update an overtime record
-- `DELETE /api/overtime/:id` - Delete an overtime record
-
 ### Admin Endpoints
 
 - `GET /api/admin/configuration` - Get current configuration (admin only)
@@ -581,7 +565,6 @@ Authorization: Bearer admin_1
 - `PUT /api/admin/configuration/parking-count` - Update parking count (admin only, body: parkingCount)
 - `GET /api/admin/bookings` - Get all bookings (admin only)
 - `GET /api/admin/parking-reservations` - Get all parking reservations (admin only)
-- `GET /api/admin/overtime-records` - Get all overtime records (admin only) (**planned removal** with section 16)
 - `DELETE /api/admin/bookings/:id` - Cancel any booking (admin only, body: reason)
 - `DELETE /api/admin/parking-reservations/:id` - Cancel any reservation (admin only, body: reason)
 
@@ -661,9 +644,9 @@ Use cases cover scenarios including:
   - Frontend structure with HTML/CSS/JavaScript foundation
   - Authentication, error handling, and logging infrastructure
 - Initial project documentation created
-- Defined three core features: desk booking, parking tracking, and overtime tracking
+- Defined the core features: desk booking and parking tracking (overtime tracking was built historically in Phase 4 and removed end-to-end in Phase 23a)
 - Technology stack selected: Node.js backend, MySQL database, raw SQL data access layer, HTML/CSS/JS frontend
 - Docker support added: All services run in Docker containers, including dedicated test environment
 - Use cases documented: Seven detailed use cases covering all major user workflows (see `docs/usecases.md`)
 - Feature requests added: Enhanced admin resource configuration with flexible numbering options, improved desk number display in booking interface, admin screen display of allocated desk numbers, comprehensive user authentication and management system, enhanced user management with profiles and password reset, first user admin registration system, admin user deletion with minimum admin constraint, booking matrix screen for visualizing bookings by people and dates, booking validation rules to prevent conflicts, availability display enhancement showing remaining spaces, multi-select desk and parking booking functionality, remove booking confirmation modal for streamlined UX, comprehensive test coverage requirements, and version tracking with semantic versioning
-- **Specification update (planned work captured):** Removal of overtime; floor plan maps for desk and parking with admin-uploaded PNG/JPG and admin-only landmarks; undo after user desk cancel; consistent booking button sizes and hide immediate book when an item is selected (see Not Yet Implemented sections 16--19)
+- **Specification update:** Overtime removal delivered in Phase 23a (see section 16 above). Floor plan maps for desk and parking with admin-uploaded PNG/JPG and admin-only landmarks, undo after user desk cancel, and consistent booking button sizes are still planned (see sections 17--19)

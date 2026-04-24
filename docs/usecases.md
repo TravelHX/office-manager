@@ -227,49 +227,9 @@ Primary navigation is a **collapsible left sidebar** on standard pages. **Admin*
 
 ---
 
-## Use Case 7: Employee Books Desk, Parking Space, and Records Overtime
+## Use Case 7: (Removed in Phase 23a)
 
-**Description:** An employee books a desk and parking space, then works overtime and needs to record the overtime hours.
-
-**Steps:**
-1. Employee logs into the Office Manager application
-2. Employee navigates to Desk Booking section
-3. Employee selects date and time period, views available desks, selects a desk, and confirms booking
-4. Employee navigates to Parking section
-5. Employee selects the same date and time period, views available parking spaces, selects a parking space, and confirms reservation
-6. Employee works overtime (e.g., one additional hour)
-7. Employee navigates to Overtime Tracking section
-8. Employee clicks "Record Overtime" or "Add Overtime"
-9. Employee enters the date, start time, end time, and total hours worked
-10. Employee enters description/notes (optional)
-11. Employee submits the overtime record
-12. System validates the overtime record (date, time, hours)
-13. System saves the overtime record
-14. System displays confirmation
-
-**Expected Result:** All three actions are completed successfully: desk booking confirmed, parking reservation confirmed, and overtime hours recorded. All three appear in the employee's dashboard/bookings.
-
-**Manual Testing Path:**
-1. Open the application in a web browser
-2. Log in as an employee user
-3. Navigate to "Desk Booking" and book a desk for today
-4. Verify desk booking confirmation
-5. Navigate to "Parking" and reserve a parking space for the same date
-6. Verify parking reservation confirmation
-7. Navigate to "Overtime Tracking" section
-8. Click "Record Overtime" or "Add Overtime Entry"
-9. Enter today's date
-10. Enter start time (e.g., 5:00 PM) and end time (e.g., 6:00 PM)
-11. Verify total hours calculated correctly (1 hour)
-12. Enter optional description: "Extended work on project"
-13. Click "Submit" or "Save"
-14. Verify success message appears
-15. Navigate to dashboard or "My Bookings" and verify all three items are displayed:
-    - Desk booking for today
-    - Parking reservation for today
-    - Overtime record showing 1 hour
-16. Verify overtime appears in overtime history
-17. Verify overtime can be viewed in reports (if report feature is available)
+The previous Use Case 7 covered combined desk, parking, and overtime actions. Overtime was removed end-to-end in Phase 23a (see `docs/spec.md` section 16). Desk and parking flows are covered individually by Use Cases 1, 2, 3, and 6. The use case number is retained to preserve stable cross-references.
 
 ---
 
@@ -287,7 +247,7 @@ Primary navigation is a **collapsible left sidebar** on standard pages. **Admin*
 7. New user selects office location, enters and confirms password, and submits
 8. System stores password and office, marks profile complete, and clears the invitation token
 9. New user logs in with email and password
-10. New user can access desk booking, parking, overtime, and other protected features as allowed by role
+10. New user can access desk booking, parking, and other protected features as allowed by role
 
 **Expected Result:** The new user is active with a complete profile. Users who have not completed setup cannot perform protected actions until they finish the flow.
 

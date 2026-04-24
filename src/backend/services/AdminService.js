@@ -235,12 +235,6 @@ class AdminService {
     return await this.reservationRepository.findAll();
   }
 
-  async getAllOvertimeRecords() {
-    const OvertimeRecordRepository = require('../repositories/OvertimeRecordRepository');
-    const overtimeRepository = new OvertimeRecordRepository();
-    return await overtimeRepository.findAll();
-  }
-
   async getAllDesks() {
     return await this.deskRepository.findAll();
   }

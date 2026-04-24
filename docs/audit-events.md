@@ -67,7 +67,7 @@ Legend for **Actor**: *self* = the authenticated user performing their own actio
 
 ### Explicitly out of scope for Phase 21
 
-- **Overtime events.** Overtime is being removed in Phase 23; no `OVERTIME_*` events are listed. If Phase 23 slips and overtime remains, add `OVERTIME_CREATED` / `OVERTIME_UPDATED` / `OVERTIME_DELETED` / `OVERTIME_APPROVED` / `OVERTIME_REJECTED` here before wiring emission.
+- **Overtime events.** The overtime feature was removed end-to-end in Phase 23a (spec section 16). No `OVERTIME_*` events exist or are planned.
 - **Read-only access.** Viewing bookings, viewing the matrix, and similar read operations do **not** emit audit events. Only state-changing actions are captured.
 
 ## Retention

@@ -20,7 +20,6 @@
                     <li><a href="/">Home</a></li>
                     <li><a href="/pages/desk-booking.html">Desk Booking</a></li>
                     <li><a href="/pages/parking.html">Parking</a></li>
-                    <li id="overtime-sidebar-item" style="display: none;"><a href="/pages/overtime.html">Overtime</a></li>
                     <li><a href="/pages/bookings.html">My Bookings</a></li>
                     <li><a href="/pages/matrix.html">Booking Matrix</a></li>
                     <li><a href="/pages/admin.html">Admin</a></li>
@@ -31,23 +30,20 @@
             <main class="app-main">
                 <div class="container">
             <h2>My Bookings</h2>
-            <p>View and manage your desk bookings, parking reservations, and overtime records.</p>
-            
+            <p>View and manage your desk bookings and parking reservations.</p>
+
             <div class="bookings-controls">
                 <div class="search-filter-group">
-                    <input type="text" id="search-input" placeholder="Search bookings, reservations, or overtime..." class="search-input">
+                    <input type="text" id="search-input" placeholder="Search bookings or reservations..." class="search-input">
                     <select id="status-filter" class="filter-select">
                         <option value="">All Statuses</option>
                         <option value="active">Active</option>
                         <option value="cancelled">Cancelled</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
                     </select>
                     <select id="type-filter" class="filter-select">
                         <option value="">All Types</option>
                         <option value="booking">Desk Bookings</option>
                         <option value="reservation">Parking Reservations</option>
-                        <option value="overtime">Overtime Records</option>
                     </select>
                 </div>
             </div>

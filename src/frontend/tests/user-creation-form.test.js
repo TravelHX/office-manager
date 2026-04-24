@@ -61,7 +61,6 @@ describe('User provisioning form (Phase 19)', () => {
           <button class="tab-btn" data-tab="parking-spaces">Parking Spaces</button>
           <button class="tab-btn" data-tab="bookings">All Bookings</button>
           <button class="tab-btn" data-tab="parking">All Parking Reservations</button>
-          <button class="tab-btn" data-tab="overtime">All Overtime Records</button>
           <button class="tab-btn" data-tab="matrix">Booking Matrix</button>
           <button class="tab-btn" data-tab="users" id="users-tab-btn" style="display: none;">User Management</button>
           <button class="tab-btn" data-tab="password">Change Password</button>
@@ -80,7 +79,6 @@ describe('User provisioning form (Phase 19)', () => {
         <div id="parking-spaces-tab" class="tab-content"><div id="all-parking-spaces-container"></div></div>
         <div id="bookings-tab" class="tab-content"><div id="all-bookings-container"></div></div>
         <div id="parking-tab" class="tab-content"><div id="all-parking-container"></div></div>
-        <div id="overtime-tab" class="tab-content"><div id="all-overtime-container"></div></div>
         <div id="matrix-tab" class="tab-content"></div>
         <div id="users-tab" class="tab-content">
           <div id="all-users-container"></div>

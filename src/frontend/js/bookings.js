@@ -10,7 +10,6 @@ const apiRequest = (endpoint, options) => {
 
 let allBookings = [];
 let allReservations = [];
-let allOvertimeRecords = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     loadBookings();
@@ -35,16 +34,14 @@ async function loadBookings() {
     container.innerHTML = '<p>Loading bookings...</p>';
     
     try {
-        const [bookings, reservations, overtimeRecords] = await Promise.all([
+        const [bookings, reservations] = await Promise.all([
             apiRequest('/api/bookings/my-bookings'),
             apiRequest('/api/parking-reservations/my-reservations'),
-            apiRequest('/api/overtime/my-overtime'),
         ]);
-        
+
         allBookings = bookings;
         allReservations = reservations;
-        allOvertimeRecords = overtimeRecords;
-        
+
         filterBookings();
     } catch (error) {
         showError('Failed to load bookings: ' + error.message);
@@ -59,58 +56,44 @@ function filterBookings() {
     
     let filteredBookings = allBookings;
     let filteredReservations = allReservations;
-    let filteredOvertimeRecords = allOvertimeRecords;
-    
+
     if (statusFilter) {
         filteredBookings = filteredBookings.filter(b => b.status === statusFilter);
         filteredReservations = filteredReservations.filter(r => r.status === statusFilter);
-        filteredOvertimeRecords = filteredOvertimeRecords.filter(o => o.status === statusFilter);
     }
-    
+
     if (typeFilter === 'booking') {
         filteredReservations = [];
-        filteredOvertimeRecords = [];
     } else if (typeFilter === 'reservation') {
         filteredBookings = [];
-        filteredOvertimeRecords = [];
-    } else if (typeFilter === 'overtime') {
-        filteredBookings = [];
-        filteredReservations = [];
     }
-    
+
     if (searchTerm) {
-        filteredBookings = filteredBookings.filter(b => 
+        filteredBookings = filteredBookings.filter(b =>
             (b.deskNumber && b.deskNumber.toLowerCase().includes(searchTerm)) ||
             (b.location && b.location.toLowerCase().includes(searchTerm)) ||
             (b.startDate && b.startDate.includes(searchTerm)) ||
             (b.endDate && b.endDate.includes(searchTerm))
         );
-        
+
         filteredReservations = filteredReservations.filter(r =>
             (r.spaceNumber && r.spaceNumber.toLowerCase().includes(searchTerm)) ||
             (r.location && r.location.toLowerCase().includes(searchTerm)) ||
             (r.reservationDate && r.reservationDate.includes(searchTerm)) ||
             (r.timePeriod && r.timePeriod.toLowerCase().includes(searchTerm))
         );
-        
-        filteredOvertimeRecords = filteredOvertimeRecords.filter(o =>
-            (o.recordDate && o.recordDate.includes(searchTerm)) ||
-            (o.description && o.description.toLowerCase().includes(searchTerm)) ||
-            (o.startTime && o.startTime.includes(searchTerm)) ||
-            (o.endTime && o.endTime.includes(searchTerm))
-        );
     }
-    
-    if (filteredBookings.length === 0 && filteredReservations.length === 0 && filteredOvertimeRecords.length === 0) {
+
+    if (filteredBookings.length === 0 && filteredReservations.length === 0) {
         const container = document.getElementById('bookings-container');
         container.innerHTML = '<p>No items match your search criteria.</p>';
         return;
     }
-    
-    displayBookings(filteredBookings, filteredReservations, filteredOvertimeRecords);
+
+    displayBookings(filteredBookings, filteredReservations);
 }
 
-function displayBookings(bookings, reservations, overtimeRecords) {
+function displayBookings(bookings, reservations) {
     const container = document.getElementById('bookings-container');
     
     let html = '<h3>My Bookings</h3>';
@@ -191,38 +174,6 @@ function displayBookings(bookings, reservations, overtimeRecords) {
         `;
     }
     
-    if (overtimeRecords.length > 0) {
-        html += `
-            <h4 style="margin-top: 2rem;">Overtime Records</h4>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Start Time</th>
-                        <th>End Time</th>
-                        <th>Total Hours</th>
-                        <th>Description</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${overtimeRecords.map(record => `
-                        <tr>
-                            <td>${formatDate(record.recordDate)}</td>
-                            <td>${formatTime(record.startTime)}</td>
-                            <td>${formatTime(record.endTime)}</td>
-                            <td>${record.totalHours} hours</td>
-                            <td>${record.description || 'N/A'}</td>
-                            <td>
-                                <span class="status-badge status-${record.status}">${record.status}</span>
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        `;
-    }
-    
     container.innerHTML = html;
     
     document.querySelectorAll('.cancel-booking-btn').forEach(btn => {
@@ -238,19 +189,6 @@ function displayBookings(bookings, reservations, overtimeRecords) {
             cancelReservation(reservationId);
         });
     });
-}
-
-function formatTime(timeString) {
-    if (!timeString) return 'N/A';
-    const parts = timeString.split(':');
-    if (parts.length < 2) return timeString;
-    
-    const hours = parseInt(parts[0], 10);
-    const minutes = parts[1];
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    
-    return `${displayHours}:${minutes} ${ampm}`;
 }
 
 async function cancelBooking(bookingId) {

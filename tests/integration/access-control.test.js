@@ -104,13 +104,6 @@ describe('Access Control', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should require authentication for overtime endpoints', async () => {
-      const response = await request(app)
-        .get('/api/overtime/my-overtime');
-
-      expect(response.status).toBe(401);
-    });
-
     it('should allow authenticated users to access protected endpoints', async () => {
       const response = await request(app)
         .get('/api/bookings/my-bookings')
@@ -180,17 +173,6 @@ describe('Access Control', () => {
       });
     });
 
-    it('should allow users to access their own overtime records', async () => {
-      const response = await request(app)
-        .get('/api/overtime/my-overtime')
-        .set('Authorization', `Bearer ${userToken}`);
-
-      expect(response.status).toBe(200);
-      // All records returned should belong to the authenticated user
-      response.body.forEach(record => {
-        expect(record.userId).toBe(regularUser.id);
-      });
-    });
   });
 });
 

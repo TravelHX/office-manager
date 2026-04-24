@@ -19,7 +19,7 @@ Login uses email as username (normalized to lowercase in the database for new pr
 
 ## Access control
 
-Authenticated users with `profile_complete = FALSE` cannot call booking, desk, parking, overtime, admin, matrix, or version-mutation APIs. They are not issued a JWT until they complete the invitation flow (password set), so this state is mainly defensive for inconsistent data.
+Authenticated users with `profile_complete = FALSE` cannot call booking, desk, parking, admin, matrix, or version-mutation APIs. They are not issued a JWT until they complete the invitation flow (password set), so this state is mainly defensive for inconsistent data.
 
 ## Migration
 

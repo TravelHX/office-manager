@@ -248,6 +248,17 @@ async function _runMigrationsImpl() {
       }
     }
 
+    // Phase 23a: drop the overtime_records table if it exists.
+    // The feature has been removed end-to-end; operators should take their own
+    // backup of this table (see docs/technical-notes-phase23-overtime-removal.md)
+    // before upgrading past this release if historical rows need preserving.
+    try {
+      await executeQuery('DROP TABLE IF EXISTS overtime_records');
+      logger.info('overtime_records table dropped or already absent');
+    } catch (error) {
+      logger.warn(`Failed to drop overtime_records table: ${error.message}`);
+    }
+
     // Phase 21a: audit_events table. Ensures the append-only audit log
     // exists in every environment, independent of whether the Docker init
     // script src/sql/08-audit-events-schema.sql ran (it only runs on first
