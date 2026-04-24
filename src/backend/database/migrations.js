@@ -42,11 +42,26 @@ async function columnExists(columnName) {
   }
 }
 
+// Cache the in-flight migration so concurrent callers (e.g. server startup and
+// test setup) share one execution instead of racing to ADD COLUMN.
+let currentMigration = null;
+
 /**
  * Run database migrations to ensure schema is up to date
  * This ensures that columns added in later schema versions are present
  */
 async function runMigrations() {
+  if (currentMigration) {
+    return currentMigration;
+  }
+  currentMigration = _runMigrationsImpl().catch((err) => {
+    currentMigration = null;
+    throw err;
+  });
+  return currentMigration;
+}
+
+async function _runMigrationsImpl() {
   logger.info('========================================');
   logger.info('Starting database schema migration check');
   logger.info('========================================');
@@ -231,6 +246,38 @@ async function runMigrations() {
       if (!idxErr.message.includes('Duplicate')) {
         logger.warn(`idx_invitation_token: ${idxErr.message}`);
       }
+    }
+
+    // Phase 21a: audit_events table. Ensures the append-only audit log
+    // exists in every environment, independent of whether the Docker init
+    // script src/sql/08-audit-events-schema.sql ran (it only runs on first
+    // MySQL container init; does not apply to already-initialised DBs).
+    try {
+      await executeQuery('SELECT 1 FROM audit_events LIMIT 1');
+      logger.info('audit_events table exists');
+    } catch (error) {
+      logger.info('Creating audit_events table...');
+      const auditTableSQL = `
+        CREATE TABLE IF NOT EXISTS audit_events (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+          occurred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          actor_id INT NULL,
+          actor_email VARCHAR(255) NULL,
+          action_type VARCHAR(64) NOT NULL,
+          target_type VARCHAR(64) NULL,
+          target_id INT NULL,
+          summary VARCHAR(512) NULL,
+          payload JSON NULL,
+          ip_address VARCHAR(45) NULL,
+          INDEX idx_occurred_at (occurred_at),
+          INDEX idx_actor_id (actor_id),
+          INDEX idx_action_type (action_type),
+          INDEX idx_actor_occurred (actor_id, occurred_at),
+          INDEX idx_target (target_type, target_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `;
+      await executeQuery(auditTableSQL);
+      logger.info('audit_events table created');
     }
 
   } catch (error) {
