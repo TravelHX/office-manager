@@ -115,19 +115,34 @@ describe('AuditEventRepository', () => {
   });
 
   describe('findAll (paginated)', () => {
+    // LIMIT / OFFSET are interpolated into the SQL string after sanitising to
+    // non-negative integers; binding them as prepared parameters trips
+    // mysql2's connection.execute() path with
+    // "Incorrect arguments to mysqld_stmt_execute". See the repository
+    // sanitisePagination() helper.
     test('selects with default pagination ordered newest first', async () => {
       executeQuery.mockResolvedValueOnce([]);
       await repository.findAll();
       const [sql, params] = executeQuery.mock.calls[0];
       expect(sql).toMatch(/ORDER BY occurred_at DESC/);
-      expect(sql).toMatch(/LIMIT \? OFFSET \?/);
-      expect(params).toEqual([50, 0]);
+      expect(sql).toMatch(/LIMIT 50 OFFSET 0/);
+      expect(params).toEqual([]);
     });
 
     test('respects explicit limit and offset', async () => {
       executeQuery.mockResolvedValueOnce([]);
       await repository.findAll({ limit: 10, offset: 20 });
-      expect(executeQuery.mock.calls[0][1]).toEqual([10, 20]);
+      const [sql, params] = executeQuery.mock.calls[0];
+      expect(sql).toMatch(/LIMIT 10 OFFSET 20/);
+      expect(params).toEqual([]);
+    });
+
+    test('falls back to defaults when limit/offset are not valid non-negative integers', async () => {
+      executeQuery.mockResolvedValueOnce([]);
+      // sanitisePagination rejects NaN / negative values and restores defaults.
+      await repository.findAll({ limit: -5, offset: 'abc' });
+      const [sql] = executeQuery.mock.calls[0];
+      expect(sql).toMatch(/LIMIT 50 OFFSET 0/);
     });
 
     test('maps each row to an AuditEvent', async () => {
@@ -159,10 +174,10 @@ describe('AuditEventRepository', () => {
       // One LIKE per searchable column.
       const likeCount = (sql.match(/LIKE \?/g) || []).length;
       expect(likeCount).toBe(4);
-      // The same %alice% bound value is reused for each LIKE placeholder;
-      // params end with [limit, offset].
-      expect(params.slice(0, 4)).toEqual(['%alice%', '%alice%', '%alice%', '%alice%']);
-      expect(params.slice(4)).toEqual([25, 0]);
+      // LIKE patterns remain parameterised; LIMIT / OFFSET are interpolated
+      // as sanitised integers (see findAll notes above).
+      expect(params).toEqual(['%alice%', '%alice%', '%alice%', '%alice%']);
+      expect(sql).toMatch(/LIMIT 25 OFFSET 0/);
     });
 
     test('trims whitespace around the search query', async () => {
