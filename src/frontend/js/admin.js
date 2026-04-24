@@ -40,6 +40,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             usersTabBtn.style.display = 'block';
             loadAllUsers();
         }
+        // Audit is admin-only; same gate as User Management.
+        const auditTabBtn = document.getElementById('audit-tab-btn');
+        if (auditTabBtn) {
+            auditTabBtn.style.display = 'block';
+        }
+        if (typeof globalThis.initAuditTabControls === 'function') {
+            globalThis.initAuditTabControls();
+        }
     }
     
     document.getElementById('saveConfigurationBtn').addEventListener('click', saveConfiguration);
@@ -76,6 +84,10 @@ function setupTabs() {
             // Reload users when users tab is opened
             if (targetTab === 'users' && userManagementEnabled) {
                 loadAllUsers();
+            }
+            // Load audit events when audit tab is opened (admin-only).
+            if (targetTab === 'audit' && userManagementEnabled && typeof globalThis.loadAuditEvents === 'function') {
+                globalThis.loadAuditEvents(0, '');
             }
         });
     });

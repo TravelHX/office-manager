@@ -25,6 +25,7 @@
                     <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="parking">All Parking Reservations</button></li>
                     <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="matrix">Booking Matrix</button></li>
                     <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="users" id="users-tab-btn" style="display: none;">User Management</button></li>
+                    <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="audit" id="audit-tab-btn" style="display: none;">Audit</button></li>
                     <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="password">Change Password</button></li>
                 </ul>
             </nav>
@@ -160,6 +161,29 @@
                     </div>
                 </div>
                 
+                <div id="audit-tab" class="tab-content">
+                    <h3>Audit Log (Admin Only)</h3>
+                    <div class="card">
+                        <p class="help-text" style="color: #555; margin-bottom: 1rem;">
+                            Append-only log of meaningful actions taken by all users, including administrators. Search matches action type, actor email, summary, and payload.
+                        </p>
+                        <div class="search-filter-group" style="margin-bottom: 1rem;">
+                            <input type="text" id="audit-search-input" class="search-input" placeholder="Search action, actor, summary, or payload...">
+                            <button id="audit-search-btn" class="btn-primary">Search</button>
+                            <button id="audit-clear-search-btn" class="btn-secondary">Clear</button>
+                        </div>
+                        <div id="audit-events-container">
+                            <p>Loading audit events...</p>
+                        </div>
+                        <div class="audit-pagination" style="margin-top: 1rem; display: flex; align-items: center; gap: 1rem;">
+                            <button id="audit-prev-btn" class="btn-secondary" disabled>Previous</button>
+                            <span id="audit-page-indicator"></span>
+                            <button id="audit-next-btn" class="btn-secondary" disabled>Next</button>
+                        </div>
+                        <div id="audit-message" class="mt-2"></div>
+                    </div>
+                </div>
+
                 <div id="password-tab" class="tab-content">
                     <h3>Change Password</h3>
                     <div class="card">
@@ -192,6 +216,7 @@
 
     <script src="/js/main.js"></script>
     <script src="/js/notifications.js"></script>
+    <script src="/js/admin-audit.js"></script>
     <script src="/js/admin.js"></script>
 </body>
 </html>
