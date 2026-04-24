@@ -20,11 +20,11 @@ This file (`docs/todo.md`) lists **remaining code and test work** so the codebas
 
 ### Tasks
 
-- [ ] 21.1 Finalize event type catalog and field list from `docs/spec.md` section 15; list each HTTP route or service method that must emit an event
-- [ ] 21.2 Design database schema for audit events (table name, columns, indexes for time, actor_user_id, action_type, full-text or composite strategy for search)
-- [ ] 21.3 Add migration creating audit table; document retention approach (default unlimited or documented cap)
-- [ ] 21.4 Implement AuditEvent model and repository (append-only insert; admin-only list/search with parameterized queries)
-- [ ] 21.5 Implement AuditService (or equivalent) to record events with consistent shape; add helper used by routes/services
+- [x] 21.1 Finalize event type catalog and field list from `docs/spec.md` section 15; list each HTTP route or service method that must emit an event (see `docs/audit-events.md`)
+- [x] 21.2 Design database schema for audit events (table name, columns, indexes for time, actor_user_id, action_type, full-text or composite strategy for search)
+- [x] 21.3 Add migration creating audit table; document retention approach (default unlimited or documented cap) (`src/sql/08-audit-events-schema.sql`; retention deferred, documented in `docs/audit-events.md`)
+- [x] 21.4 Implement AuditEvent model and repository (append-only insert; admin-only list/search with parameterized queries) (`src/backend/models/AuditEvent.js`, `src/backend/repositories/AuditEventRepository.js` — `update`/`delete` throw append-only errors)
+- [x] 21.5 Implement AuditService (or equivalent) to record events with consistent shape; add helper used by routes/services (`src/backend/services/AuditService.js` — no emission sites wired yet; that is Phase 21d, to follow Phase 23 overtime removal)
 - [ ] 21.6 Wire audit emission for **authentication**: login success, logout (and failed login if included)
 - [ ] 21.7 Wire audit emission for **desk bookings**: create, user cancel, admin cancel
 - [ ] 21.8 Wire audit emission for **parking**: create reservation, user cancel, admin cancel
@@ -33,7 +33,7 @@ This file (`docs/todo.md`) lists **remaining code and test work** so the codebas
 - [ ] 21.11 Wire audit emission for **bulk booking** and any other mutating flows not yet covered
 - [ ] 21.12 Implement `GET /api/admin/audit-events` (admin only): pagination, `search` query matching documented fields; return safe JSON (no secrets)
 - [ ] 21.13 Add **Audit** item to admin UI (sidebar); build page or tab with table and **search box**; restrict visibility to admins
-- [ ] 21.14 Add unit tests for AuditService and repository (append-only, search behavior)
+- [x] 21.14 Add unit tests for AuditService and repository (append-only, search behavior) (`tests/models/AuditEvent.test.js`, `tests/repositories/AuditEventRepository.test.js`, `tests/services/AuditService.test.js` — 31 tests passing)
 - [ ] 21.15 Add integration tests for audit API (403 for non-admin, 200 with events for admin, search returns expected rows)
 - [ ] 21.16 Add integration or frontend tests proving representative actions create audit rows
 - [ ] 21.17 Add Playwright end-to-end test: admin opens Audit, searches, sees expected event after a seeded action
