@@ -1,6 +1,11 @@
 module.exports = {
   rootDir: process.cwd(),
   testEnvironment: 'node',
+  // Restrict haste-map/module scanning so Jest does not see both /package.json and
+  // /src/frontend/package.json (identical names cause a haste collision when the test
+  // container volume-mounts src/frontend on top of the Dockerfile's renamed copy).
+  roots: ['<rootDir>/tests', '<rootDir>/src/backend'],
+  modulePathIgnorePatterns: ['<rootDir>/src/frontend/'],
   // Only the repo-root tests/ tree (not src/frontend/tests; those run via frontend Jest)
   testMatch: ['<rootDir>/tests/**/*.test.js'],
   collectCoverageFrom: [

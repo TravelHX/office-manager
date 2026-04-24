@@ -70,17 +70,28 @@ async function startServer() {
     // Only initialize if explicitly needed (can be removed in production)
     // The first user to register will automatically become admin
 
-    app.listen(config.server.port, () => {
-      logger.info(`Server running on port ${config.server.port}`);
-      logger.info(`Environment: ${config.env}`);
-    });
+    // Only bind the HTTP port when this file was launched directly (e.g. `node server.js`).
+    // Tests import server.js purely for the Express `app` handle (used via supertest),
+    // so skipping listen() avoids EADDRINUSE when multiple test files load the module.
+    if (require.main === module) {
+      app.listen(config.server.port, () => {
+        logger.info(`Server running on port ${config.server.port}`);
+        logger.info(`Environment: ${config.env}`);
+      });
+    }
   } catch (error) {
     logger.error('Failed to start server:', error);
-    process.exit(1);
+    if (require.main === module) {
+      process.exit(1);
+    } else {
+      throw error;
+    }
   }
 }
 
-startServer();
+const startupPromise = startServer();
 
 module.exports = app;
+module.exports.startServer = startServer;
+module.exports.startupPromise = startupPromise;
 

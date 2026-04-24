@@ -22,6 +22,7 @@ services:
       - ./tests:/app/tests
       - ./utils:/app/utils
       - ./src/frontend:/app/src/frontend
+      - ./docs:/app/docs:ro
     networks:
       - test-network
     command: sh -c "tail -f /dev/null"
