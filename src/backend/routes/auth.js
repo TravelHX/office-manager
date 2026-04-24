@@ -4,6 +4,7 @@ const UserService = require('../services/UserService');
 const { authenticate, authorize, requireCompleteProfile } = require('../middleware/auth');
 const { generateToken } = require('../utils/token');
 const { isValidEmail } = require('../utils/email-validator');
+const audit = require('../utils/audit-helper');
 
 const userService = new UserService();
 
@@ -36,6 +37,20 @@ router.post('/complete-profile', async (req, res, next) => {
     const { token, password, office_location } = req.body || {};
     const user = await userService.completeProfileByInvitationToken(token, password, office_location);
     const sessionToken = generateToken(user);
+
+    // Phase 21d (21.10): profile completion. Actor is the user themselves
+    // (self-service, authenticated implicitly by the invitation token).
+    // Password is never included in the payload.
+    await audit.emit(req, {
+      actionType: 'USER_PROFILE_COMPLETED',
+      actorId: user.id,
+      actorEmail: user.email || user.username,
+      targetType: 'user',
+      targetId: user.id,
+      summary: 'Completed profile setup',
+      payload: { office_location: user.officeLocation || null },
+    });
+
     res.json({
       message: 'Profile complete.',
       user: user.toJSON(),
@@ -90,6 +105,24 @@ router.post('/register', async (req, res, next) => {
     const token = generateToken(user);
 
     logger.info(`Registration successful for email: ${email}, isAdmin: ${user.isAdmin}`);
+
+    // Phase 21d (21.10): record USER_CREATED for self-registration. Actor is
+    // the newly-created user (the only "self" we can attribute here — the
+    // request was anonymous until this row existed).
+    await audit.emit(req, {
+      actionType: 'USER_CREATED',
+      actorId: user.id,
+      actorEmail: user.email || user.username,
+      targetType: 'user',
+      targetId: user.id,
+      summary: `Self-registered${user.isAdmin ? ' as first admin' : ''}`,
+      payload: {
+        created_user_id: user.id,
+        created_email: user.email || user.username,
+        is_admin: !!user.isAdmin,
+        path: 'self_registration',
+      },
+    });
 
     res.status(201).json({
       token,
@@ -148,6 +181,16 @@ router.post('/login', async (req, res, next) => {
     const result = await userService.performLogin(username, password);
 
     if (result.type === 'unknown_user') {
+      // Phase 21d (21.6): record the failed login attempt. Actor is `system`
+      // because no valid user was identified; the attempted email goes in
+      // the payload so an admin can see what was tried.
+      await audit.emit(req, {
+        actionType: 'AUTH_LOGIN_FAILURE',
+        actorId: null,
+        actorEmail: null,
+        summary: 'Login failed: unknown user',
+        payload: { attempted_email: username, reason: 'unknown_user' },
+      });
       return res.status(401).json({
         error: {
           message:
@@ -179,6 +222,15 @@ router.post('/login', async (req, res, next) => {
     }
 
     if (result.type === 'invalid_credentials') {
+      // Phase 21d (21.6): record wrong-password attempts as AUTH_LOGIN_FAILURE.
+      // Actor is `system`; the attempted email goes in the payload.
+      await audit.emit(req, {
+        actionType: 'AUTH_LOGIN_FAILURE',
+        actorId: null,
+        actorEmail: null,
+        summary: 'Login failed: invalid credentials',
+        payload: { attempted_email: username, reason: 'invalid_credentials' },
+      });
       return res.status(401).json({
         error: {
           message: 'Invalid username or password',
@@ -189,6 +241,16 @@ router.post('/login', async (req, res, next) => {
 
     const token = generateToken(result.user);
     logger.info(`Login successful for username: ${username}`);
+
+    // Phase 21d (21.6): record the successful login with the user as actor.
+    // `req.user` is not populated on a login request (no auth middleware
+    // runs here), so we override actorId/actorEmail explicitly.
+    await audit.emit(req, {
+      actionType: 'AUTH_LOGIN_SUCCESS',
+      actorId: result.user.id,
+      actorEmail: result.user.email || result.user.username,
+      summary: 'Login succeeded',
+    });
 
     res.json({
       token,
@@ -203,8 +265,15 @@ router.post('/login', async (req, res, next) => {
 
 // Logout endpoint (client-side token removal, but we can track sessions if needed)
 router.post('/logout', authenticate, async (req, res) => {
-  // In a stateless JWT system, logout is handled client-side by removing the token
-  // If we need server-side session invalidation, we'd need a token blacklist
+  // Phase 21d (21.6): record the logout. Actor is pulled from req.user by
+  // the helper. No payload — the summary alone is enough.
+  await audit.emit(req, {
+    actionType: 'AUTH_LOGOUT',
+    summary: 'Logged out',
+  });
+
+  // In a stateless JWT system, logout is handled client-side by removing the token.
+  // If we need server-side session invalidation, we'd need a token blacklist.
   res.json({
     message: 'Logged out successfully',
   });
@@ -250,6 +319,22 @@ router.post('/users', authenticate, requireCompleteProfile, authorize(['admin'])
       req.user.id
     );
 
+    // Phase 21d (21.10): admin-provisioned USER_CREATED. Actor is the admin
+    // performing the provisioning; target is the newly-created user. The
+    // invitation token itself is NEVER stored in payload (secret-equivalent).
+    await audit.emit(req, {
+      actionType: 'USER_CREATED',
+      targetType: 'user',
+      targetId: user.id,
+      summary: `Admin provisioned user ${user.email || user.username}`,
+      payload: {
+        created_user_id: user.id,
+        created_email: user.email || user.username,
+        is_admin: !!user.isAdmin,
+        path: 'admin_provision',
+      },
+    });
+
     const tokenEnc = encodeURIComponent(invitationToken);
     res.status(201).json({
       ...user.toJSON(),
@@ -293,7 +378,58 @@ router.post('/users', authenticate, requireCompleteProfile, authorize(['admin'])
   }
 });
 
+// Change password endpoint
+// NOTE: This route MUST be declared before `PUT /users/:id` below, because
+// Express matches routes in declaration order and `/users/:id` would
+// otherwise capture `/users/password` with `:id = 'password'`, producing a
+// spurious 404 from the generic update path.
+router.put('/users/password', authenticate, async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        error: {
+          message: 'Current password and new password are required',
+          code: 'MISSING_FIELDS',
+        },
+      });
+    }
+
+    await userService.changePassword(
+      req.user.id,
+      currentPassword,
+      newPassword
+    );
+
+    // Phase 21d (21.10): self-service password change. Neither password
+    // (old or new) is in the payload — only the target and the initiator.
+    await audit.emit(req, {
+      actionType: 'USER_PASSWORD_CHANGED',
+      targetType: 'user',
+      targetId: req.user.id,
+      summary: 'User changed their own password',
+      payload: { target_user_id: req.user.id, initiator: 'self' },
+    });
+
+    res.json({
+      message: 'Password changed successfully',
+    });
+  } catch (error) {
+    if (error.message.includes('incorrect') || error.message.includes('not found')) {
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'INVALID_PASSWORD',
+        },
+      });
+    }
+    next(error);
+  }
+});
+
 // Update user endpoint (admin can update any user, users can update themselves)
+// NOTE: Must stay below `PUT /users/password` (see comment on that route).
 router.put('/users/:id', authenticate, async (req, res, next) => {
   try {
     const userId = parseInt(req.params.id);
@@ -348,42 +484,6 @@ router.get('/users', authenticate, requireCompleteProfile, authorize(['admin']),
   }
 });
 
-// Change password endpoint
-router.put('/users/password', authenticate, async (req, res, next) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({
-        error: {
-          message: 'Current password and new password are required',
-          code: 'MISSING_FIELDS',
-        },
-      });
-    }
-
-    await userService.changePassword(
-      req.user.id,
-      currentPassword,
-      newPassword
-    );
-
-    res.json({
-      message: 'Password changed successfully',
-    });
-  } catch (error) {
-    if (error.message.includes('incorrect') || error.message.includes('not found')) {
-      return res.status(400).json({
-        error: {
-          message: error.message,
-          code: 'INVALID_PASSWORD',
-        },
-      });
-    }
-    next(error);
-  }
-});
-
 // Delete user endpoint (admin only)
 router.delete('/users/:id', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
@@ -399,7 +499,29 @@ router.delete('/users/:id', authenticate, requireCompleteProfile, authorize(['ad
       });
     }
 
+    // Fetch the target's email BEFORE deletion so we can record who was
+    // removed even after the row is gone (actor_id is preserved via the
+    // admin's req.user, but the deleted user's email must be captured now).
+    let deletedEmail = null;
+    try {
+      const target = await userService.getUserById(userId);
+      deletedEmail = (target && (target.email || target.username)) || null;
+    } catch (_) {
+      // Ignore — deletion will fail anyway if the user doesn't exist, and
+      // the audit payload can tolerate a null email.
+    }
+
     await userService.deleteUser(userId, deletedBy);
+
+    // Phase 21d (21.10): USER_DELETED. Admin actor comes from req.user; the
+    // deleted user's id and email are preserved in the payload.
+    await audit.emit(req, {
+      actionType: 'USER_DELETED',
+      targetType: 'user',
+      targetId: userId,
+      summary: `Admin deleted user ${deletedEmail || `#${userId}`}`,
+      payload: { deleted_user_id: userId, deleted_email: deletedEmail },
+    });
 
     res.status(204).send();
   } catch (error) {
@@ -486,7 +608,25 @@ router.post('/reset-password', async (req, res, next) => {
       });
     }
 
-    await userService.resetPassword(token, newPassword);
+    const resetUser = await userService.resetPassword(token, newPassword);
+
+    // Phase 21d (21.10): password reset via admin-issued token. The actor
+    // is recorded as the user themselves (they submit the new password)
+    // but `initiator: 'admin'` marks that an admin started the flow by
+    // issuing the reset token.
+    const resetUserId = resetUser && resetUser.id ? resetUser.id : null;
+    const resetUserEmail = resetUser && (resetUser.email || resetUser.username)
+      ? (resetUser.email || resetUser.username)
+      : null;
+    await audit.emit(req, {
+      actionType: 'USER_PASSWORD_CHANGED',
+      actorId: resetUserId,
+      actorEmail: resetUserEmail,
+      targetType: 'user',
+      targetId: resetUserId,
+      summary: 'Password reset via admin-issued token',
+      payload: { target_user_id: resetUserId, initiator: 'admin' },
+    });
 
     res.json({
       message: 'Password has been reset successfully',

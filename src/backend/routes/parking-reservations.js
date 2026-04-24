@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const ParkingReservationService = require('../services/ParkingReservationService');
 const { authenticate, optionalAuthenticate, requireCompleteProfile, optionalRequireCompleteProfile } = require('../middleware/auth');
+const audit = require('../utils/audit-helper');
 
 const reservationService = new ParkingReservationService();
 
@@ -137,7 +138,21 @@ router.post('/', authenticate, requireCompleteProfile, async (req, res, next) =>
       reservationDate,
       timePeriod
     );
-    
+
+    // Phase 21d (21.8): record the reservation creation with the resource
+    // and schedule so admins can reconstruct what was reserved.
+    await audit.emit(req, {
+      actionType: 'PARKING_RESERVATION_CREATED',
+      targetType: 'parking_reservation',
+      targetId: reservation.id,
+      summary: `Reserved parking space ${reservation.parkingSpaceId} (${timePeriod}) on ${reservationDate}`,
+      payload: {
+        parking_space_id: reservation.parkingSpaceId,
+        reservation_date: reservationDate,
+        time_period: timePeriod,
+      },
+    });
+
     res.status(201).json(reservation.toJSON());
   } catch (error) {
     if (error.message.includes('not available') || error.message.includes('not found')) {
@@ -192,13 +207,29 @@ router.post('/bulk', authenticate, async (req, res, next) => {
       });
     }
 
+    const normalisedIds = parkingSpaceIds.map(id => parseInt(id));
     const results = await reservationService.createBulkReservations(
       userId,
-      parkingSpaceIds.map(id => parseInt(id)),
+      normalisedIds,
       reservationDate,
       timePeriod
     );
-    
+
+    // Phase 21d (21.11): single aggregate audit row for the bulk call.
+    const successfulCount = Array.isArray(results.successful) ? results.successful.length : 0;
+    const failedCount = Array.isArray(results.failed) ? results.failed.length : 0;
+    await audit.emit(req, {
+      actionType: 'PARKING_RESERVATION_BULK_CREATED',
+      summary: `Bulk parking reservation: ${successfulCount} succeeded, ${failedCount} failed`,
+      payload: {
+        parking_space_ids: normalisedIds,
+        reservation_date: reservationDate,
+        time_period: timePeriod,
+        successful_count: successfulCount,
+        failed_count: failedCount,
+      },
+    });
+
     // Return 201 if all succeeded, 207 (Multi-Status) if partial success
     const statusCode = results.failed.length === 0 ? 201 : 207;
     res.status(statusCode).json(results);
@@ -236,7 +267,35 @@ router.post('/bulk', authenticate, async (req, res, next) => {
 router.delete('/:id', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const userId = req.user.id;
-    await reservationService.cancelUserReservation(parseInt(req.params.id), userId);
+    const reservationId = parseInt(req.params.id);
+
+    // Read reservation BEFORE cancellation so we can record the space id /
+    // date / time_period in the audit payload. See the desk-booking cancel
+    // route for the same pattern.
+    let preCancelReservation = null;
+    try {
+      preCancelReservation = await reservationService.getReservationById(reservationId);
+    } catch (_) {
+      // Ignore — the cancel call below will surface the proper 404.
+    }
+
+    await reservationService.cancelUserReservation(reservationId, userId);
+
+    // Phase 21d (21.8): user-driven cancel. Actor is the reservation owner.
+    await audit.emit(req, {
+      actionType: 'PARKING_RESERVATION_CANCELLED_BY_USER',
+      targetType: 'parking_reservation',
+      targetId: reservationId,
+      summary: preCancelReservation
+        ? `Cancelled own parking reservation for space ${preCancelReservation.parkingSpaceId}`
+        : `Cancelled own parking reservation #${reservationId}`,
+      payload: preCancelReservation ? {
+        parking_space_id: preCancelReservation.parkingSpaceId,
+        reservation_date: preCancelReservation.reservationDate,
+        time_period: preCancelReservation.timePeriod,
+      } : { reservation_id: reservationId },
+    });
+
     res.status(204).send();
   } catch (error) {
     if (error.message === 'Reservation not found') {

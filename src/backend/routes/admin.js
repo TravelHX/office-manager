@@ -4,6 +4,7 @@ const AdminService = require('../services/AdminService');
 const BookingService = require('../services/BookingService');
 const ParkingReservationService = require('../services/ParkingReservationService');
 const { authenticate, authorize, requireCompleteProfile } = require('../middleware/auth');
+const audit = require('../utils/audit-helper');
 
 const adminService = new AdminService();
 const bookingService = new BookingService();
@@ -31,7 +32,24 @@ router.put('/configuration/desk-count', authenticate, requireCompleteProfile, au
       });
     }
 
+    const before = await adminService.getConfiguration();
     const config = await adminService.updateDeskCount(parseInt(deskCount), numberingMode, parseInt(startNumber));
+
+    // Phase 21d (21.9): desk count changed. Emit a single aggregate event
+    // rather than per-desk rows — bulk count changes happen rarely but
+    // can create hundreds of desks at once.
+    await audit.emit(req, {
+      actionType: 'ADMIN_CONFIG_UPDATED',
+      targetType: 'admin_config',
+      summary: `Desk count ${before.deskCount} → ${config.deskCount}`,
+      payload: {
+        changed_keys: ['deskCount'],
+        before: { deskCount: before.deskCount },
+        after: { deskCount: config.deskCount },
+        numbering_mode: numberingMode,
+      },
+    });
+
     res.json(config);
   } catch (error) {
     if (error.message.includes('cannot reduce') || error.message.includes('negative') || error.message.includes('integer')) {
@@ -49,7 +67,7 @@ router.put('/configuration/desk-count', authenticate, requireCompleteProfile, au
 router.put('/configuration/parking-count', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
   try {
     const { parkingCount, numberingMode = 'auto', startNumber = 1 } = req.body;
-    
+
     if (parkingCount === undefined || parkingCount === null) {
       return res.status(400).json({
         error: {
@@ -59,7 +77,22 @@ router.put('/configuration/parking-count', authenticate, requireCompleteProfile,
       });
     }
 
+    const before = await adminService.getConfiguration();
     const config = await adminService.updateParkingCount(parseInt(parkingCount), numberingMode, parseInt(startNumber));
+
+    // Phase 21d (21.9): parking count change — same pattern as desk count.
+    await audit.emit(req, {
+      actionType: 'ADMIN_CONFIG_UPDATED',
+      targetType: 'admin_config',
+      summary: `Parking count ${before.parkingCount} → ${config.parkingCount}`,
+      payload: {
+        changed_keys: ['parkingCount'],
+        before: { parkingCount: before.parkingCount },
+        after: { parkingCount: config.parkingCount },
+        numbering_mode: numberingMode,
+      },
+    });
+
     res.json(config);
   } catch (error) {
     if (error.message.includes('cannot reduce') || error.message.includes('negative') || error.message.includes('integer')) {
@@ -114,8 +147,34 @@ router.delete('/bookings/:id', authenticate, requireCompleteProfile, authorize([
   try {
     const adminId = req.user.id;
     const { reason } = req.body;
-    
-    await bookingService.cancelBooking(parseInt(req.params.id), adminId, reason || null);
+    const bookingId = parseInt(req.params.id);
+
+    // Read the booking before cancellation so we can record which user's
+    // booking was removed and for which desk.
+    let preCancelBooking = null;
+    try {
+      preCancelBooking = await bookingService.getBookingById(bookingId);
+    } catch (_) {
+      // Ignore — service call below will surface the 404.
+    }
+
+    await bookingService.cancelBooking(bookingId, adminId, reason || null);
+
+    // Phase 21d (21.7): admin-initiated cancel. Actor is the admin.
+    await audit.emit(req, {
+      actionType: 'DESK_BOOKING_CANCELLED_BY_ADMIN',
+      targetType: 'booking',
+      targetId: bookingId,
+      summary: preCancelBooking
+        ? `Admin cancelled booking #${bookingId} (desk ${preCancelBooking.deskId})`
+        : `Admin cancelled booking #${bookingId}`,
+      payload: {
+        booking_user_id: preCancelBooking ? preCancelBooking.userId : null,
+        desk_id: preCancelBooking ? preCancelBooking.deskId : null,
+        reason: reason || null,
+      },
+    });
+
     res.status(204).send();
   } catch (error) {
     if (error.message === 'Booking not found') {
@@ -142,8 +201,33 @@ router.delete('/parking-reservations/:id', authenticate, requireCompleteProfile,
   try {
     const adminId = req.user.id;
     const { reason } = req.body;
-    
-    await reservationService.cancelReservation(parseInt(req.params.id), adminId, reason || null);
+    const reservationId = parseInt(req.params.id);
+
+    // Read the reservation before cancellation for the audit payload.
+    let preCancelReservation = null;
+    try {
+      preCancelReservation = await reservationService.getReservationById(reservationId);
+    } catch (_) {
+      // Ignore — service call below will surface the 404.
+    }
+
+    await reservationService.cancelReservation(reservationId, adminId, reason || null);
+
+    // Phase 21d (21.8): admin-initiated parking cancel.
+    await audit.emit(req, {
+      actionType: 'PARKING_RESERVATION_CANCELLED_BY_ADMIN',
+      targetType: 'parking_reservation',
+      targetId: reservationId,
+      summary: preCancelReservation
+        ? `Admin cancelled parking reservation #${reservationId} (space ${preCancelReservation.parkingSpaceId})`
+        : `Admin cancelled parking reservation #${reservationId}`,
+      payload: {
+        reservation_user_id: preCancelReservation ? preCancelReservation.userId : null,
+        parking_space_id: preCancelReservation ? preCancelReservation.parkingSpaceId : null,
+        reason: reason || null,
+      },
+    });
+
     res.status(204).send();
   } catch (error) {
     if (error.message === 'Reservation not found') {
@@ -181,6 +265,24 @@ router.post('/desks/bulk', authenticate, requireCompleteProfile, authorize(['adm
     }
 
     const desks = await adminService.createDesksBulk(parseInt(count), numberingMode, parseInt(startNumber));
+
+    // Phase 21d (21.9): bulk desk creation — emit one aggregate event
+    // rather than a row per desk, matching the approach used for bulk
+    // count changes.
+    await audit.emit(req, {
+      actionType: 'ADMIN_CONFIG_UPDATED',
+      targetType: 'admin_config',
+      summary: `Admin bulk-created ${desks.length} desk(s)`,
+      payload: {
+        changed_keys: ['desks'],
+        change: 'created',
+        numbering_mode: numberingMode,
+        start_number: parseInt(startNumber),
+        created_count: desks.length,
+        created_desk_numbers: desks.map(d => d.deskNumber),
+      },
+    });
+
     res.status(201).json(desks.map(d => d.toJSON()));
   } catch (error) {
     if (error.message.includes('already assigned') || error.message.includes('greater than 0')) {
@@ -210,6 +312,22 @@ router.post('/parking-spaces/bulk', authenticate, requireCompleteProfile, author
     }
 
     const spaces = await adminService.createParkingSpacesBulk(parseInt(count), numberingMode, parseInt(startNumber));
+
+    // Phase 21d (21.9): bulk parking-space creation — aggregate event.
+    await audit.emit(req, {
+      actionType: 'ADMIN_CONFIG_UPDATED',
+      targetType: 'admin_config',
+      summary: `Admin bulk-created ${spaces.length} parking space(s)`,
+      payload: {
+        changed_keys: ['parking_spaces'],
+        change: 'created',
+        numbering_mode: numberingMode,
+        start_number: parseInt(startNumber),
+        created_count: spaces.length,
+        created_space_numbers: spaces.map(s => s.spaceNumber),
+      },
+    });
+
     res.status(201).json(spaces.map(s => s.toJSON()));
   } catch (error) {
     if (error.message.includes('already assigned') || error.message.includes('greater than 0')) {
@@ -238,7 +356,35 @@ router.put('/desks/:id/number', authenticate, requireCompleteProfile, authorize(
       });
     }
 
-    const desk = await adminService.assignDeskNumber(parseInt(req.params.id), deskNumber);
+    const deskId = parseInt(req.params.id);
+
+    // Capture the previous desk number for the audit payload. If the lookup
+    // fails we still emit (with previous_desk_number=null); the service
+    // call below will surface the proper 404 if the id is invalid.
+    let previousDeskNumber = null;
+    try {
+      const existing = await adminService.deskRepository.findById(deskId);
+      previousDeskNumber = existing ? existing.deskNumber : null;
+    } catch (_) {
+      // Non-fatal; audit tolerates null.
+    }
+
+    const desk = await adminService.assignDeskNumber(deskId, deskNumber);
+
+    // Phase 21d (21.9): per-desk rename. Unlike bulk count changes, renames
+    // are individual admin edits and rare enough to warrant one row each.
+    await audit.emit(req, {
+      actionType: 'DESK_CONFIG_UPDATED',
+      targetType: 'desk',
+      targetId: deskId,
+      summary: `Admin renamed desk #${deskId} → ${desk.deskNumber}`,
+      payload: {
+        change: 'renamed',
+        desk_number: desk.deskNumber,
+        previous_desk_number: previousDeskNumber,
+      },
+    });
+
     res.json(desk.toJSON());
   } catch (error) {
     if (error.message === 'Desk not found') {
@@ -275,7 +421,31 @@ router.put('/parking-spaces/:id/number', authenticate, requireCompleteProfile, a
       });
     }
 
-    const space = await adminService.assignParkingSpaceNumber(parseInt(req.params.id), spaceNumber);
+    const spaceId = parseInt(req.params.id);
+
+    let previousSpaceNumber = null;
+    try {
+      const existing = await adminService.parkingSpaceRepository.findById(spaceId);
+      previousSpaceNumber = existing ? existing.spaceNumber : null;
+    } catch (_) {
+      // Non-fatal; audit tolerates null.
+    }
+
+    const space = await adminService.assignParkingSpaceNumber(spaceId, spaceNumber);
+
+    // Phase 21d (21.9): per-space rename.
+    await audit.emit(req, {
+      actionType: 'PARKING_CONFIG_UPDATED',
+      targetType: 'parking_space',
+      targetId: spaceId,
+      summary: `Admin renamed parking space #${spaceId} → ${space.spaceNumber}`,
+      payload: {
+        change: 'renamed',
+        space_number: space.spaceNumber,
+        previous_space_number: previousSpaceNumber,
+      },
+    });
+
     res.json(space.toJSON());
   } catch (error) {
     if (error.message === 'Parking space not found') {

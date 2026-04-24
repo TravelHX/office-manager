@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const BookingService = require('../services/BookingService');
 const { authenticate, optionalAuthenticate, requireCompleteProfile, optionalRequireCompleteProfile } = require('../middleware/auth');
+const audit = require('../utils/audit-helper');
 
 const bookingService = new BookingService();
 
@@ -110,7 +111,22 @@ router.post('/', authenticate, async (req, res, next) => {
       startDate,
       endDate
     );
-    
+
+    // Phase 21d (21.7): record the new booking. Payload carries the resource
+    // ids and dates so admins can reconstruct what was booked without
+    // joining against `bookings` (which may itself be mutated later).
+    await audit.emit(req, {
+      actionType: 'DESK_BOOKING_CREATED',
+      targetType: 'booking',
+      targetId: booking.id,
+      summary: `Booked desk ${booking.deskId} for ${startDate} to ${endDate}`,
+      payload: {
+        desk_id: booking.deskId,
+        start_date: startDate,
+        end_date: endDate,
+      },
+    });
+
     res.status(201).json(booking.toJSON());
   } catch (error) {
     // Log the error for debugging
@@ -172,13 +188,31 @@ router.post('/bulk', authenticate, requireCompleteProfile, async (req, res, next
       });
     }
 
+    const normalisedDeskIds = deskIds.map(id => parseInt(id));
     const results = await bookingService.createBulkBookings(
       userId,
-      deskIds.map(id => parseInt(id)),
+      normalisedDeskIds,
       startDate,
       endDate
     );
-    
+
+    // Phase 21d (21.11): one aggregate audit row per bulk call (not per
+    // individual desk) to keep the audit stream readable. The counts and
+    // the requested desk list are captured so an admin can correlate.
+    const successfulCount = Array.isArray(results.successful) ? results.successful.length : 0;
+    const failedCount = Array.isArray(results.failed) ? results.failed.length : 0;
+    await audit.emit(req, {
+      actionType: 'DESK_BOOKING_BULK_CREATED',
+      summary: `Bulk desk booking: ${successfulCount} succeeded, ${failedCount} failed`,
+      payload: {
+        desk_ids: normalisedDeskIds,
+        start_date: startDate,
+        end_date: endDate,
+        successful_count: successfulCount,
+        failed_count: failedCount,
+      },
+    });
+
     // Return 201 if all succeeded, 207 (Multi-Status) if partial success
     const statusCode = results.failed.length === 0 ? 201 : 207;
     res.status(statusCode).json(results);
@@ -216,7 +250,35 @@ router.post('/bulk', authenticate, requireCompleteProfile, async (req, res, next
 router.delete('/:id', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const userId = req.user.id;
-    await bookingService.cancelUserBooking(parseInt(req.params.id), userId);
+    const bookingId = parseInt(req.params.id);
+
+    // Read booking BEFORE cancellation so we can record desk_id / dates
+    // in the audit payload (cancelUserBooking returns the cancel result,
+    // not the pre-cancel row, and cancellation may null out fields).
+    let preCancelBooking = null;
+    try {
+      preCancelBooking = await bookingService.getBookingById(bookingId);
+    } catch (_) {
+      // Ignore — the service call below will surface a proper 404.
+    }
+
+    await bookingService.cancelUserBooking(bookingId, userId);
+
+    // Phase 21d (21.7): user-driven cancel. Actor is the booking owner.
+    await audit.emit(req, {
+      actionType: 'DESK_BOOKING_CANCELLED_BY_USER',
+      targetType: 'booking',
+      targetId: bookingId,
+      summary: preCancelBooking
+        ? `Cancelled own booking for desk ${preCancelBooking.deskId}`
+        : `Cancelled own booking #${bookingId}`,
+      payload: preCancelBooking ? {
+        desk_id: preCancelBooking.deskId,
+        start_date: preCancelBooking.startDate,
+        end_date: preCancelBooking.endDate,
+      } : { booking_id: bookingId },
+    });
+
     res.status(204).send();
   } catch (error) {
     if (error.message === 'Booking not found') {

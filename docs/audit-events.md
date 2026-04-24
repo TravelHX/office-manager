@@ -2,13 +2,15 @@
 
 ## Document purpose
 
-This file lists every audit event the application will eventually emit. It is the
+This file lists every audit event the application emits. It is the
 contract between the **audit event store** (Phase 21a: schema + model + repository +
-service) and the **emission wiring** (Phase 21d: hook each HTTP route / service
-method into `AuditService.logEvent`).
+service) and the **emission wiring** (Phase 21d: each HTTP route calls
+`AuditService.logEvent` via `src/backend/utils/audit-helper.js`).
 
-21a does **not** add any emission code. Nothing in the application calls
-`AuditService.logEvent` yet. The catalogue below is descriptive, not executable.
+Emission wiring was delivered in Phase 21d (tasks 21.6-21.11). Every row in
+the **Event type table** below now maps to a live emission site. Proof lives
+in `tests/integration/audit-emissions.test.js`, which hits each route end
+to end and asserts the resulting audit row.
 
 ## Relationship to spec
 
