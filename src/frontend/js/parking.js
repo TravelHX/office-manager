@@ -321,3 +321,16 @@ function showSuccess(message) {
     messageDiv.innerHTML = `<div class="success">${message}</div>`;
 }
 
+// Expose multi-select surface on window for testability (parity with desk-booking.js).
+// No user-visible behaviour change; functions continue to be attached as event
+// handlers during displayParkingSpaces as before.
+if (typeof window !== 'undefined') {
+    window.checkAvailability = checkAvailability;
+    window.reserveParkingSpace = reserveParkingSpace;
+    window.displayParkingSpaces = displayParkingSpaces;
+    window.reserveSelectedParkingSpaces = reserveSelectedParkingSpaces;
+    window.toggleParkingSpaceSelection = toggleParkingSpaceSelection;
+    window.clearParkingSelection = clearParkingSelection;
+    window.selectedParkingSpaceIds = selectedParkingSpaceIds;
+}
+

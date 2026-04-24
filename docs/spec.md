@@ -304,6 +304,8 @@ This feature will improve user experience by providing immediate visibility into
 
 ### 8. Multi-Select Desk and Parking Booking
 
+**Status:** Implemented (Phase 15). The desk and parking pages expose per-card **Select** and **Book**/**Reserve** buttons with a **Book Selected** / **Reserve Selected** action and a **Clear Selection** control; bulk booking is served by `POST /api/bookings/bulk` and `POST /api/parking-reservations/bulk`. Jest coverage is in `src/frontend/tests/desk-booking.test.js` and `src/frontend/tests/parking-multiselect.test.js`; API coverage is in `tests/integration/desk-booking.test.js` and `tests/integration/parking-tracking.test.js`. Remaining optional items: Playwright end-to-end coverage (deferred where Playwright is not in CI). **Alignment with section 19** (hide per-item Book/Reserve when selected, uniform button sizing) is scheduled under Phase 23.12.
+
 Enhanced booking interface allowing users to select and book multiple desks or parking spaces at once:
 
 - **Multi-Select Functionality**: Users can select multiple desks or parking spaces before booking
@@ -378,6 +380,8 @@ Comprehensive test coverage requirements to ensure quality and reliability:
 This feature will ensure the application maintains high quality standards and reliability through comprehensive test coverage.
 
 ### 12. Version Tracking and Management
+
+**Status:** Implemented (Phase 18). End-to-end validation coverage lives in `tests/integration/version-phase18.test.js` (backend deployment flow, startup sync, increments, error paths, semantic-version enforcement) and `src/frontend/tests/version.test.js` (client footer, localStorage config, error display). Remaining optional items: Playwright end-to-end for the footer release-history link is tracked under Phase 22.9.
 
 Automatic version tracking aligned with deployment configuration and history:
 

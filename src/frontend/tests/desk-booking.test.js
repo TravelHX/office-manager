@@ -126,5 +126,41 @@ describe('Desk Booking', () => {
         },
       });
     });
+
+    test('selection persists across a scroll event on the desks container (15.40)', () => {
+      // Render two desks via the module's own display function so the real
+      // event listeners and DOM structure are in place.
+      const container = document.getElementById('desks-container');
+      const desks = [
+        { id: 1, deskNumber: 'D001', location: 'Floor 1' },
+        { id: 2, deskNumber: 'D002', location: 'Floor 1' },
+      ];
+      window.displayDesks(desks, '2025-12-15', '2025-12-16');
+
+      // Pre-condition: nothing selected.
+      window.selectedDeskIds.clear();
+      expect(window.selectedDeskIds.size).toBe(0);
+
+      // User clicks Select on both desks.
+      container.querySelectorAll('.select-desk-btn').forEach((btn) => btn.click());
+      expect(window.selectedDeskIds.size).toBe(2);
+      expect(window.selectedDeskIds.has('1')).toBe(true);
+      expect(window.selectedDeskIds.has('2')).toBe(true);
+
+      // Simulate the user scrolling the desks list. The implementation relies
+      // on an in-memory Set rather than re-rendering on scroll, so the
+      // selection must be unaffected by any scroll event.
+      container.dispatchEvent(new Event('scroll', { bubbles: true }));
+      window.dispatchEvent(new Event('scroll'));
+
+      // Set state is preserved and each card still shows the selected class
+      // and the selection indicator (the on-card visual cue).
+      expect(window.selectedDeskIds.size).toBe(2);
+      const cards = container.querySelectorAll('.desk-card');
+      cards.forEach((card) => {
+        expect(card.classList.contains('selected')).toBe(true);
+        expect(card.querySelector('.selection-indicator')).not.toBeNull();
+      });
+    });
   });
 });

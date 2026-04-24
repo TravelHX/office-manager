@@ -329,3 +329,31 @@ Primary navigation is a **collapsible left sidebar** on standard pages. **Admin*
 6. Log in as the admin and use User Management to provision a second user (Use Case 8) to demonstrate the supported path after first-user registration
 
 ---
+
+## Use Case 10: Book Multiple Desks or Parking Spaces at Once
+
+**Description:** A logged-in user with a completed profile wants to book more than one desk (or parking space) for the same date range without repeating the booking flow for each resource. They pick dates, select several resources, and submit a single booking request. The single-resource **Book** / **Reserve** action on each row remains available for users who only need one resource.
+
+**Steps (desks):**
+1. User signs in and opens **Desk Booking**
+2. User chooses start and end dates and runs **Check Availability**; the page shows available desks with a **Select** and a **Book** button on each card
+3. User clicks **Select** on each desk they want; the card shows a **Selected** indicator and the **Book Selected** control appears with a running count (e.g. "3 desks selected")
+4. User scrolls the list to continue selecting; previously selected cards stay marked
+5. User clicks **Book Selected**; the application issues one `POST /api/bookings/bulk` request for all selected desks and the chosen date range
+6. On success the user is redirected to **My Bookings** with a success toast; the selection is cleared
+7. If only a single desk is required, the user instead clicks the per-card **Book** button, which posts to `POST /api/bookings` without touching the multi-select selection
+
+**Steps (parking):** Identical, using **Parking**, **Select** / **Reserve Selected**, and `POST /api/parking-reservations/bulk`. A per-card **Reserve** button continues to post to `POST /api/parking-reservations` when the user wants only one space.
+
+**Expected Result:** All selected desks (or spaces) are booked for the chosen date range in one operation; partial failures are reported per resource; per-card single-booking continues to work unchanged. Selection state is held in memory and is not lost when the list is scrolled.
+
+**Manual Testing Path:**
+1. Configure at least three desks and at least three parking spaces as an admin
+2. As a regular user, open **Desk Booking**, pick a date range, and run **Check Availability**
+3. Click **Select** on three desks in succession; confirm the **Book Selected** control shows "3 desks selected" and each card shows a **Selected** indicator
+4. Scroll the desks list; confirm the selected state on each card is unchanged
+5. Click **Book Selected**; confirm a single call to `POST /api/bookings/bulk` is made and you are redirected to **My Bookings** with three new bookings
+6. Return to **Desk Booking**, run availability again, and click a per-card **Book** button on one desk; confirm a single call to `POST /api/bookings` is made and the multi-select selection controls remain hidden
+7. Repeat steps 2-6 on the **Parking** page using **Reserve Selected** and `POST /api/parking-reservations/bulk` / `POST /api/parking-reservations`
+
+---
