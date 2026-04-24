@@ -148,6 +148,8 @@ $testFiles = $testFilesOutput | Where-Object {
 $ErrorActionPreference = "Stop"
 
 # Expected test files
+# Note: `tests/overtime.test.js` was dropped in Phase 23a (overtime removal);
+# do not re-add it.
 $expectedTests = @(
     'tests/admin.test.js',
     'tests/auth-state.test.js',
@@ -157,7 +159,6 @@ $expectedTests = @(
     'tests/login.test.js',
     'tests/main.test.js',
     'tests/matrix.test.js',
-    'tests/overtime.test.js',
     'tests/parking.test.js',
     'tests/reset-password.test.js',
     'tests/user-creation-form.test.js'
