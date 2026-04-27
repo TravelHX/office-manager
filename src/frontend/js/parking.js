@@ -10,13 +10,33 @@ const apiRequest = (endpoint, options) => {
 
 let selectedParkingSpaceIds = new Set(); // Track selected parking space IDs for multi-select
 
-document.addEventListener('DOMContentLoaded', () => {
+// Phase 23e: cached map config and last availability snapshot.
+let parkingMapConfig = null;
+let lastAvailableSpaces = [];
+let lastParkingContext = { date: null, period: null };
+
+document.addEventListener('DOMContentLoaded', async () => {
     const reservationDateInput = document.getElementById('reservationDate');
     const timePeriodSelect = document.getElementById('timePeriod');
     const checkAvailabilityBtn = document.getElementById('checkAvailabilityBtn');
-    
+
     const today = new Date().toISOString().split('T')[0];
     reservationDateInput.setAttribute('min', today);
+
+    // Phase 23e: load the parking map once and wire click-from-map -> list.
+    const mapContainer = document.getElementById('parking-map-container');
+    if (mapContainer && globalThis.MapRenderer) {
+        try {
+            parkingMapConfig = await globalThis.MapRenderer.load('parking');
+            renderParkingMap();
+            mapContainer.addEventListener('map:resource-click', (event) => {
+                const id = event.detail && event.detail.resourceId;
+                onMapParkingClick(id);
+            });
+        } catch (_err) {
+            // Renderer.load() swallows errors itself.
+        }
+    }
     
     checkAvailabilityBtn.addEventListener('click', checkAvailability);
     
@@ -82,7 +102,13 @@ async function checkAvailability() {
 
 function displayParkingSpaces(spaces, reservationDate, timePeriod) {
     const container = document.getElementById('parking-spaces-container');
-    
+
+    // Phase 23e: keep the most recent availability so the map can re-render
+    // whenever selection changes.
+    lastAvailableSpaces = spaces;
+    lastParkingContext = { date: reservationDate, period: timePeriod };
+    renderParkingMap();
+
     if (spaces.length === 0) {
         container.innerHTML = '<p>No parking spaces available.</p>';
         updateParkingSelectionUI();
@@ -341,4 +367,48 @@ if (typeof window !== 'undefined') {
     window.clearParkingSelection = clearParkingSelection;
     window.selectedParkingSpaceIds = selectedParkingSpaceIds;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 23e: floor plan map integration on the parking page.
+// ---------------------------------------------------------------------------
+
+function renderParkingMap() {
+    const container = document.getElementById('parking-map-container');
+    if (!container || !globalThis.MapRenderer) return;
+
+    const placedById = new Map();
+    if (parkingMapConfig && Array.isArray(parkingMapConfig.resources)) {
+        parkingMapConfig.resources.forEach((c) => placedById.set(String(c.resourceId), c));
+    }
+    const resources = lastAvailableSpaces.map((space) => {
+        const placement = placedById.get(String(space.id));
+        if (!placement) return null;
+        return {
+            id: space.id,
+            number: space.spaceNumber,
+            x: placement.x,
+            y: placement.y,
+        };
+    }).filter(Boolean);
+
+    globalThis.MapRenderer.render(container, parkingMapConfig, {
+        resources,
+        selectedIds: selectedParkingSpaceIds,
+        resourceLabelPrefix: 'Space',
+    });
+}
+
+function onMapParkingClick(spaceId) {
+    if (spaceId === undefined || spaceId === null) return;
+    const id = String(spaceId);
+    const stillAvailable = lastAvailableSpaces.find((s) => String(s.id) === id);
+    if (!stillAvailable) return;
+    if (!lastParkingContext.date || !lastParkingContext.period) return;
+
+    if (typeof toggleParkingSpaceSelection === 'function') {
+        toggleParkingSpaceSelection(id, lastParkingContext.date, lastParkingContext.period);
+        renderParkingMap();
+    }
+}
+
 

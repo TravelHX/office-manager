@@ -47,7 +47,17 @@
             </div>
 
             <div id="availability-message" class="mt-2"></div>
-            
+
+            <!-- Phase 23e: square map panel. Renders only when an admin has
+                 uploaded a floor plan; otherwise the renderer shows a hint
+                 to use the list below as a fallback. -->
+            <section id="map-panel" class="map-panel mt-2" aria-label="Floor plan map">
+                <h3>Floor plan</h3>
+                <div id="desk-map-container">
+                    <div class="map-empty"><p>Loading map…</p></div>
+                </div>
+            </section>
+
             <div id="desks-container" class="mt-2">
                 <p>Select dates and click "Check Availability" to see available desks.</p>
             </div>
@@ -63,6 +73,7 @@
 
     <script src="/js/main.js"></script>
     <script src="/js/notifications.js"></script>
+    <script src="/js/map-renderer.js"></script>
     <script src="/js/desk-booking.js"></script>
 </body>
 </html>

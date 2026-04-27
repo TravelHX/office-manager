@@ -26,6 +26,7 @@
                     <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="matrix">Booking Matrix</button></li>
                     <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="users" id="users-tab-btn" style="display: none;">User Management</button></li>
                     <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="audit" id="audit-tab-btn" style="display: none;">Audit</button></li>
+                    <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="maps" id="maps-tab-btn" style="display: none;">Maps</button></li>
                     <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="password">Change Password</button></li>
                 </ul>
             </nav>
@@ -184,6 +185,39 @@
                     </div>
                 </div>
 
+                <div id="maps-tab" class="tab-content">
+                    <h3>Floor Plan Maps (Admin Only)</h3>
+                    <div class="card map-editor">
+                        <p class="help-text" style="color: #555; margin-bottom: 0.75rem;">
+                            Upload a square floor plan for desks or parking. Then place landmarks
+                            (orientation only — they do not block clicks on resources) and put each
+                            desk / parking space on the map. Coordinates are normalised to the image,
+                            so the markers stay aligned at any size.
+                        </p>
+                        <form id="map-upload-form" class="form-row" style="margin-bottom: 0.75rem;">
+                            <input type="file" id="map-upload-file" accept="image/png,image/jpeg" required>
+                            <button type="submit" class="btn-primary">Upload floor plan</button>
+                            <button type="button" id="map-delete-floor-plan" class="btn-secondary">Delete current</button>
+                        </form>
+                        <div class="map-editor-toolbar">
+                            <label for="map-context">Map:</label>
+                            <select id="map-context"></select>
+                            <label for="map-mode">Click action:</label>
+                            <select id="map-mode">
+                                <option value="landmark">Place landmark</option>
+                                <option value="resource">Place resource</option>
+                            </select>
+                            <label for="map-landmark-type">Landmark type:</label>
+                            <select id="map-landmark-type"></select>
+                            <label for="map-landmark-label">Label (optional):</label>
+                            <input type="text" id="map-landmark-label" maxlength="120" placeholder="e.g. Front lift">
+                        </div>
+                        <div id="map-editor-canvas"></div>
+                        <div id="map-editor-resource-list" class="map-editor-resource-list"></div>
+                        <div id="map-editor-status" class="map-editor-status"></div>
+                    </div>
+                </div>
+
                 <div id="password-tab" class="tab-content">
                     <h3>Change Password</h3>
                     <div class="card">
@@ -216,7 +250,9 @@
 
     <script src="/js/main.js"></script>
     <script src="/js/notifications.js"></script>
+    <script src="/js/map-renderer.js"></script>
     <script src="/js/admin-audit.js"></script>
+    <script src="/js/admin-maps.js"></script>
     <script src="/js/admin.js"></script>
 </body>
 </html>

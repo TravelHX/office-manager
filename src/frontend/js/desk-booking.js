@@ -10,14 +10,41 @@ const apiRequest = (endpoint, options) => {
 
 let selectedDeskIds = new Set(); // Track selected desk IDs for multi-select
 
-document.addEventListener('DOMContentLoaded', () => {
+// Phase 23e: cached map configuration so we don't re-fetch on every
+// availability check. Refreshed on page load.
+let deskMapConfig = null;
+// Last-known available desks list, indexed by desk id, used when (re-)rendering
+// the map after an availability check.
+let lastAvailableDesks = [];
+let lastDateRange = { start: null, end: null };
+
+document.addEventListener('DOMContentLoaded', async () => {
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
     const checkAvailabilityBtn = document.getElementById('checkAvailabilityBtn');
-    
+
     const today = new Date().toISOString().split('T')[0];
     startDateInput.setAttribute('min', today);
     endDateInput.setAttribute('min', today);
+
+    // Phase 23e: pull the desk map config once. The renderer is loaded
+    // via <script src="/js/map-renderer.js"> on this page.
+    const mapContainer = document.getElementById('desk-map-container');
+    if (mapContainer && globalThis.MapRenderer) {
+        try {
+            deskMapConfig = await globalThis.MapRenderer.load('desk');
+            renderDeskMap();
+            // Wire map -> list. A click on a desk marker scrolls to the
+            // matching desk card and toggles its Select state. Clicks on
+            // landmarks are blocked by CSS pointer-events.
+            mapContainer.addEventListener('map:resource-click', (event) => {
+                const id = event.detail && event.detail.resourceId;
+                onMapDeskClick(id);
+            });
+        } catch (_err) {
+            // Renderer's load() already swallows errors; nothing to do.
+        }
+    }
     
     startDateInput.addEventListener('change', () => {
         endDateInput.setAttribute('min', startDateInput.value);
@@ -92,7 +119,13 @@ async function checkAvailability() {
 
 function displayDesks(desks, startDate, endDate) {
     const container = document.getElementById('desks-container');
-    
+
+    // Phase 23e: keep the most recent availability + dates so the map can
+    // re-render whenever selection changes.
+    lastAvailableDesks = desks;
+    lastDateRange = { start: startDate, end: endDate };
+    renderDeskMap();
+
     if (desks.length === 0) {
         container.innerHTML = '<p>No desks available.</p>';
         updateSelectionUI();
@@ -343,5 +376,65 @@ function showError(message) {
 function showSuccess(message) {
     const messageDiv = document.getElementById('availability-message');
     messageDiv.innerHTML = `<div class="success">${message}</div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 23e: floor plan map integration on the desk booking page.
+// ---------------------------------------------------------------------------
+
+/**
+ * Re-render the map using the current map config + the most recent
+ * availability / selection state. Markers correspond to desks the
+ * server returned as available; the placement coords come from the map
+ * config; selection visually mirrors the list's selection state.
+ */
+function renderDeskMap() {
+    const container = document.getElementById('desk-map-container');
+    if (!container || !globalThis.MapRenderer) return;
+
+    // Build the resource list the renderer wants. Each entry is the desk
+    // joined with its placement coordinates (from the map config). Desks
+    // without coordinates are skipped — there's nothing for the renderer
+    // to draw at "no position".
+    const placedById = new Map();
+    if (deskMapConfig && Array.isArray(deskMapConfig.resources)) {
+        deskMapConfig.resources.forEach((c) => placedById.set(String(c.resourceId), c));
+    }
+    const resources = lastAvailableDesks.map((desk) => {
+        const placement = placedById.get(String(desk.id));
+        if (!placement) return null;
+        return {
+            id: desk.id,
+            number: desk.deskNumber,
+            x: placement.x,
+            y: placement.y,
+        };
+    }).filter(Boolean);
+
+    globalThis.MapRenderer.render(container, deskMapConfig, {
+        resources,
+        selectedIds: selectedDeskIds,
+        resourceLabelPrefix: 'Desk',
+    });
+}
+
+/**
+ * Handle a click on a desk marker on the map. We mirror the list's
+ * Select / Deselect behavior: clicking toggles the multi-select state for
+ * that desk, identical to clicking its Select button. Items that aren't
+ * in the currently-loaded availability are ignored (e.g. desks placed on
+ * the map that aren't available for the chosen dates).
+ */
+function onMapDeskClick(deskId) {
+    if (deskId === undefined || deskId === null) return;
+    const id = String(deskId);
+    const stillAvailable = lastAvailableDesks.find((d) => String(d.id) === id);
+    if (!stillAvailable) return;
+    if (!lastDateRange.start || !lastDateRange.end) return;
+
+    if (typeof toggleDeskSelection === 'function') {
+        toggleDeskSelection(id, lastDateRange.start, lastDateRange.end);
+        renderDeskMap();
+    }
 }
 

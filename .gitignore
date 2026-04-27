@@ -14,5 +14,10 @@ test-results/
 playwright-report/
 .playwright/
 
+# Phase 23d/e: admin-uploaded floor plan images live under data/maps/ at
+# runtime. The schema row in floor_plans references the file by path; the
+# images themselves are runtime state and are not tracked in source.
+data/maps/
+
 # Local configuration files (not tracked in Git)
 agents.md

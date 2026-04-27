@@ -1005,3 +1005,204 @@ tr:hover {
     color: #333;
 }
 
+/* ------------------------------------------------------------------ */
+/* Phase 23e: Floor plan map renderer                                  */
+/* ------------------------------------------------------------------ */
+
+.map-panel {
+    margin: 1rem 0 1.25rem;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.map-panel h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+    color: var(--color-primary);
+}
+
+.map-empty {
+    background: #f6f8fa;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    padding: 1rem;
+    text-align: center;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.map-viewport {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 720px;
+    margin: 0 auto;
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    user-select: none;
+}
+
+.map-floor-plan {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.map-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+}
+
+/* Landmarks: orientation only, MUST NOT block clicks on resource markers. */
+.map-landmark {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #555;
+    font-size: 0.7rem;
+    line-height: 1;
+}
+
+.map-landmark-icon {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid #aaa;
+    border-radius: 50%;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: #444;
+}
+
+.map-landmark-label {
+    margin-top: 0.15rem;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 0 0.25rem;
+    border-radius: 2px;
+    white-space: nowrap;
+}
+
+/* Resource markers (desks / parking spaces): clickable, dispatch a
+ * CustomEvent that page scripts subscribe to. Higher z-index than
+ * landmarks so they sit on top in case of overlap. */
+.map-resource-marker {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 4;
+    background: var(--color-primary);
+    color: #fff;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    padding: 0;
+}
+
+.map-resource-marker:hover,
+.map-resource-marker:focus {
+    background: var(--color-primary-hover);
+    outline: none;
+}
+
+.map-resource-marker--selected {
+    background: #2e7d32;
+}
+
+.map-resource-marker-label {
+    pointer-events: none;
+}
+
+/* Admin map editor */
+.map-editor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 0.5rem 0 0.75rem;
+    padding: 0.5rem;
+    background: #f6f8fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.map-editor-toolbar label {
+    font-weight: 500;
+    margin-right: 0.25rem;
+}
+
+.map-editor-toolbar select,
+.map-editor-toolbar input[type="text"] {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 0.9rem;
+}
+
+.map-editor-status {
+    margin-top: 0.5rem;
+    color: #555;
+    font-size: 0.85rem;
+}
+
+.map-editor .map-viewport {
+    cursor: crosshair;
+}
+
+.map-editor .map-resource-marker--editor {
+    background: #1565c0;
+}
+
+.map-editor .map-resource-marker--unplaced {
+    background: #999;
+}
+
+.map-editor-resource-list {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+}
+
+.map-editor-resource-list button {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #ccc;
+    background: #fff;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.map-editor-resource-list button.is-active {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}
+
+.map-editor-resource-list button.is-placed {
+    background: #e8f5e9;
+    border-color: #66bb6a;
+    color: #1b5e20;
+}
+
+

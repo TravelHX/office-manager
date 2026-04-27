@@ -52,7 +52,16 @@
             </div>
 
             <div id="availability-message" class="mt-2"></div>
-            
+
+            <!-- Phase 23e: square map panel for the carpark, mirroring the
+                 desk booking page. -->
+            <section id="map-panel" class="map-panel mt-2" aria-label="Carpark map">
+                <h3>Carpark map</h3>
+                <div id="parking-map-container">
+                    <div class="map-empty"><p>Loading map…</p></div>
+                </div>
+            </section>
+
             <div id="parking-spaces-container" class="mt-2">
                 <p>Select date and time period, then click "Check Availability" to see available parking spaces.</p>
             </div>
@@ -68,6 +77,7 @@
 
     <script src="/js/main.js"></script>
     <script src="/js/notifications.js"></script>
+    <script src="/js/map-renderer.js"></script>
     <script src="/js/parking.js"></script>
 </body>
 </html>

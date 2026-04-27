@@ -48,6 +48,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof globalThis.initAuditTabControls === 'function') {
             globalThis.initAuditTabControls();
         }
+        // Phase 23e: Maps tab — same admin gate. We reveal the button here
+        // but defer initialisation until the tab is opened to avoid an
+        // /api/admin/maps and /api/admin/desks request on every admin page
+        // load.
+        const mapsTabBtn = document.getElementById('maps-tab-btn');
+        if (mapsTabBtn) {
+            mapsTabBtn.style.display = 'block';
+        }
     }
     
     document.getElementById('saveConfigurationBtn').addEventListener('click', saveConfiguration);
@@ -88,6 +96,10 @@ function setupTabs() {
             // Load audit events when audit tab is opened (admin-only).
             if (targetTab === 'audit' && userManagementEnabled && typeof globalThis.loadAuditEvents === 'function') {
                 globalThis.loadAuditEvents(0, '');
+            }
+            // Phase 23e: lazy-init the Maps editor on first open.
+            if (targetTab === 'maps' && userManagementEnabled && typeof globalThis.initMapsTabControls === 'function') {
+                globalThis.initMapsTabControls();
             }
         });
     });

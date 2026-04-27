@@ -65,6 +65,14 @@ Office Manager is a web application designed to manage office operations and res
 - Booking validation: one parking space per person per period, one space per person per day/time
 - Clear error messages for reservation conflicts
 
+### Floor Plan Maps
+
+- Square map panel above the desk and parking lists, rendered when an admin has uploaded a floor plan for that area.
+- Admin Maps tab: upload PNG/JPEG floor plans (≤2 MB), click on the map to place landmarks (lift, stairs, exit, kitchen, reception, meeting room, first aid, custom) and resource markers, switch contexts between desk and parking.
+- Landmarks are orientation-only and do not block clicks on resource markers.
+- Desk / parking-space markers are clickable and toggle the same Select state used by the existing list, so booking flows stay consistent whether the user clicks the list or the map.
+- Coordinates are stored as fractions of the floor plan image so markers stay aligned at any viewport size.
+
 ### Multi-Select Desk and Parking Booking
 
 - Select multiple desks or parking spaces before booking
@@ -376,3 +384,4 @@ All features listed in "Currently Implemented Features" above are fully function
 - **Phase 23a:** Overtime feature removed end-to-end (APIs, UI, table, tests, docs)
 - **Phase 23b:** Uniform Select/Book/Reserve/Book-selected button sizing; per-item Book/Reserve hidden when the resource is in the multi-select selection
 - **Phase 23c:** Undo desk booking cancellation — toast with Undo button, 30-second server-enforced window, re-availability check, `POST /api/bookings/:id/undo-cancel`, `DESK_BOOKING_RESTORED` audit event
+- **Phase 23d/e:** Floor plan maps — admin uploads a square PNG/JPEG floor plan per context (desk / parking), places landmarks (lift, stairs, exit, …) and resource markers; desk booking and parking pages render a square map panel above the list with clickable resource markers synced to the existing Select / Book state. Backend in 23d (`/api/maps/:context`, `/api/admin/maps/...`); frontend editor + per-page panels in 23e

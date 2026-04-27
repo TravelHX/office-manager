@@ -375,3 +375,32 @@ The previous Use Case 7 covered combined desk, parking, and overtime actions. Ov
 **Automated coverage:** `tests/services/BookingService.test.js` (service rules — window, ownership, admin-cancel exclusion, re-availability); `tests/integration/undo-cancel.test.js` (full HTTP happy path + expired + taken + 403/404/400 edges + `X-Undo-Window-Ms` header); `src/frontend/tests/undo-cancel.test.js` (toast render, auto-dismiss, replace-on-second-cancel, Undo click success + failure, mid-flight disable); `tests/e2e/undo-cancel.spec.js` (Playwright — user cancels a seeded booking and successfully undoes via the toast).
 
 ---
+
+## Use Case 13: Admin Configures the Floor Plan Map
+
+**Description:** An administrator uploads a floor plan image for the desk or parking context, places landmarks for orientation (lift, exit, kitchen, …), and pins each desk or parking space onto the map at the correct position. Coordinates are stored as fractions of the image so markers stay aligned at any size; landmarks are display-only and do not block clicks on resource markers.
+
+**Steps:**
+1. Admin signs in and opens the **Admin** page
+2. Admin clicks the **Maps** sidebar item (visible to admins only)
+3. Admin chooses the context (**Desk map** or **Parking map**) from the toolbar
+4. Admin selects a PNG or JPEG file (≤2 MB) and clicks **Upload floor plan**. The server validates the MIME, size, and file magic bytes and rejects spoofed `Content-Type` headers (`400 INVALID_IMAGE`). On success the floor plan appears in the editor.
+5. Admin sets **Click action** to **Place landmark**, picks a landmark **type** (and optional label), and clicks on the map to drop landmarks. Each click POSTs to `/api/admin/maps/:context/landmarks` and emits `MAP_LANDMARK_CREATED`.
+6. Admin switches **Click action** to **Place resource**. The list of active desks or parking spaces appears below the map; the first unplaced one is auto-selected.
+7. Admin clicks on the map at the desk's intended location. The client PUTs to `/api/admin/maps/:context/resources/:id/coordinates`, the marker appears, and the editor auto-advances to the next unplaced resource. Each placement emits `MAP_RESOURCE_COORDINATES_SET`.
+8. Admin can switch context to refine the parking map without leaving the page. Replacing the floor plan bumps `image_version` (cache-busted via the URL `?v=N` query parameter).
+
+**Expected Result:** When the admin opens **Desk Booking** or **Parking** as a regular user, the map panel above the list shows the uploaded floor plan with the landmarks and resource markers in their saved positions. Selecting a desk on the map toggles its Select state in the list.
+
+**Manual Testing Path:**
+1. Sign in as an admin and open **Admin → Maps**
+2. Upload a small PNG to the desk map; confirm a 1:1 viewport renders the image with `object-fit: contain`
+3. Place two landmarks (e.g. *Lift*, *Exit*) and confirm they render with icons and labels but do not respond to clicks (CSS `pointer-events: none`)
+4. Switch to **Place resource** mode and click on the map for each desk in the active list; confirm the editor auto-advances and that placed desks show as ✓ in the resource list
+5. Reload `/pages/admin.html` and confirm everything persisted (the editor reloads from `/api/admin/maps/desk`)
+6. Sign in as a regular user, open **Desk Booking**, choose a future date range, and click **Check Availability**; confirm the same map is rendered above the desks list, with markers only for desks that are available for the selected dates
+7. Click a desk marker on the map; confirm the matching desk card in the list flips to **Selected**
+
+**Automated coverage:** `tests/services/MapService.test.js` (validation rules — context, mime, size, magic bytes, normalised coords, resource existence); `tests/integration/maps.test.js` (HTTP shape, auth, audit emission); `src/frontend/tests/map-renderer.test.js` (renderer DOM, escaping, marker click event, fallback when no floor plan); `tests/e2e/maps.spec.js` (Playwright — user sees floor plan + markers + landmark; admin opens the Maps tab and switches contexts).
+
+---

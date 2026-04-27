@@ -465,7 +465,7 @@ The overtime capability was **removed end-to-end from the product** in Phase 23a
 
 ### 17. Floor Plan Map for Desk and Parking Selection
 
-**Status (Phase 23d, backend):** Implemented. Schema, repositories, service, and admin/public APIs are live: `GET /api/maps/:context`, `GET /api/maps/:context/floor-plan/image?v=N`, `POST /api/admin/maps/:context/floor-plan` (raw PNG/JPEG body, ≤2 MB, magic-byte sniff), `DELETE /api/admin/maps/:context/floor-plan`, `POST/PUT/DELETE /api/admin/maps/:context/landmarks[/:id]`, `PUT/DELETE /api/admin/maps/:context/resources/:resourceId/coordinates`. Audit events `MAP_FLOOR_PLAN_UPLOADED`, `MAP_FLOOR_PLAN_DELETED`, `MAP_LANDMARK_CREATED`, `MAP_LANDMARK_UPDATED`, `MAP_LANDMARK_DELETED`, `MAP_RESOURCE_COORDINATES_SET`, `MAP_RESOURCE_COORDINATES_CLEARED` emit on every mutation. The UI (admin map editor + per-page square map panels) is **Phase 23e** and remains pending; the descriptive bullets below state the intended product behaviour.
+**Status:** Implemented (Phase 23d backend + Phase 23e UI). The admin editor lives in the **Maps** tab on the admin page; the desk booking and parking pages each render a square map panel above their lists, synced with the existing availability + selection state. See root `README.md` for the user / admin guide and `docs/audit-events.md` for the `MAP_*` event catalogue.
 
 Visual **map** (floor plan) support for choosing desks and parking spaces:
 
