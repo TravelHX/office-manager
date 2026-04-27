@@ -98,14 +98,34 @@ class BookingRepository extends BaseRepository {
 
   async cancel(id, cancelledBy, reason = null) {
     const query = `
-      UPDATE bookings 
-      SET status = 'cancelled', 
-          cancelled_at = NOW(), 
+      UPDATE bookings
+      SET status = 'cancelled',
+          cancelled_at = NOW(),
           cancelled_by = ?,
           cancellation_reason = ?
       WHERE id = ?
     `;
     await this.executeRawQuery(query, [cancelledBy, reason, id]);
+    return this.findById(id);
+  }
+
+  /**
+   * Restore a previously-cancelled booking: flip status back to `active` and
+   * clear the cancellation metadata. Phase 23c (Undo Desk Booking Cancel).
+   * The caller (service layer) is responsible for enforcing the time window
+   * and re-checking desk availability; this method is the unconditional
+   * write.
+   */
+  async restore(id) {
+    const query = `
+      UPDATE bookings
+      SET status = 'active',
+          cancelled_at = NULL,
+          cancelled_by = NULL,
+          cancellation_reason = NULL
+      WHERE id = ?
+    `;
+    await this.executeRawQuery(query, [id]);
     return this.findById(id);
   }
 

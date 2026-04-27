@@ -191,20 +191,104 @@ function displayBookings(bookings, reservations) {
     });
 }
 
+// Phase 23c: Undo window for self-cancelled bookings. Mirrors
+// BookingService.UNDO_CANCEL_WINDOW_MS on the server; the server also
+// returns this in the `X-Undo-Window-Ms` response header so we stay in sync
+// if the value is ever changed server-side.
+const UNDO_CANCEL_WINDOW_MS_DEFAULT = 30_000;
+
 async function cancelBooking(bookingId) {
     if (!confirm('Are you sure you want to cancel this booking?')) {
         return;
     }
-    
+
+    // We need the DELETE response headers to read X-Undo-Window-Ms, so go
+    // directly via fetch() for this call rather than apiRequest() (which
+    // drops headers and only returns the parsed body).
+    const token = (typeof globalThis.getAuthToken === 'function')
+        ? globalThis.getAuthToken()
+        : null;
     try {
-        await apiRequest(`/api/bookings/${bookingId}`, {
+        const response = await fetch(`/api/bookings/${bookingId}`, {
             method: 'DELETE',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         });
-        
-        showSuccess('Booking cancelled successfully!');
-        loadBookings();
+        if (!response.ok) {
+            let message = 'Failed to cancel booking';
+            try {
+                const body = await response.json();
+                if (body && body.error && body.error.message) message = body.error.message;
+            } catch (_) { /* empty body */ }
+            throw new Error(message);
+        }
+
+        const headerMs = Number.parseInt(response.headers.get('X-Undo-Window-Ms'), 10);
+        const windowMs = Number.isFinite(headerMs) && headerMs > 0
+            ? headerMs
+            : UNDO_CANCEL_WINDOW_MS_DEFAULT;
+
+        // Await the list re-render FIRST; loadBookings rewrites the container's
+        // innerHTML, which would otherwise wipe a toast we inserted beforehand.
+        await loadBookings();
+        showUndoCancelToast(bookingId, windowMs);
     } catch (error) {
         showError('Failed to cancel booking: ' + error.message);
+    }
+}
+
+/**
+ * Phase 23c: Render a dismissible toast with an Undo button that auto-hides
+ * when the server-side undo window expires. Clicking Undo POSTs to
+ * /api/bookings/:id/undo-cancel and refreshes the bookings list on success.
+ */
+function showUndoCancelToast(bookingId, windowMs) {
+    const container = document.getElementById('bookings-container');
+    if (!container) {
+        // Defensive: if the container isn't mounted for some reason, fall
+        // back to the notification helper so the user still gets feedback.
+        showSuccess('Booking cancelled.');
+        return;
+    }
+
+    // Replace any existing toast for a previous cancel so only the most
+    // recent one is actionable.
+    const existing = document.getElementById('undo-cancel-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'undo-cancel-toast';
+    toast.className = 'success undo-cancel-toast';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.innerHTML = `
+        <span class="undo-cancel-toast-message">Booking cancelled.</span>
+        <button type="button" class="btn-link undo-cancel-toast-btn" id="undo-cancel-btn" data-booking-id="${bookingId}">Undo</button>
+    `;
+    container.insertBefore(toast, container.firstChild);
+
+    const dismiss = () => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+    };
+    const timer = setTimeout(dismiss, windowMs);
+
+    const btn = toast.querySelector('#undo-cancel-btn');
+    if (btn) {
+        btn.addEventListener('click', async () => {
+            clearTimeout(timer);
+            btn.disabled = true;
+            btn.textContent = 'Undoing…';
+            try {
+                await apiRequest(`/api/bookings/${bookingId}/undo-cancel`, {
+                    method: 'POST',
+                });
+                dismiss();
+                showSuccess('Booking restored.');
+                loadBookings();
+            } catch (error) {
+                dismiss();
+                showError('Could not undo cancellation: ' + error.message);
+            }
+        });
     }
 }
 

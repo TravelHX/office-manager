@@ -4,6 +4,12 @@ const DeskService = require('./DeskService');
 const Booking = require('../models/Booking');
 const { dateRangesOverlap } = require('../utils/dateUtils');
 
+// Phase 23c: window within which a user can Undo their own desk cancel.
+// Spec section 18 allows 15-30 s; 30 s gives users time to notice and click
+// the Undo toast without being so long that a conflicting booking is likely.
+// Exposed as a constant so tests can import it and the value appears once.
+const UNDO_CANCEL_WINDOW_MS = 30_000;
+
 class BookingService {
   constructor() {
     this.bookingRepository = new BookingRepository();
@@ -123,6 +129,76 @@ class BookingService {
     return await this.cancelBooking(bookingId, userId);
   }
 
+  /**
+   * Phase 23c: Undo a user's own desk cancel, provided:
+   *   (a) the booking was cancelled by *this* user (not an admin);
+   *   (b) the cancel happened within UNDO_CANCEL_WINDOW_MS;
+   *   (c) the desk is still available for the original date range
+   *       (no conflicting booking has been created in the meantime).
+   *
+   * On success the cancellation metadata is cleared and the booking is
+   * marked `active` again. Errors are distinct so the route can translate
+   * each to the correct HTTP status / code:
+   *   - `Booking not found`                      -> 404
+   *   - `You can only undo your own cancellation`-> 403
+   *   - `Only self-cancellations can be undone`  -> 403
+   *   - `Booking is not cancelled`               -> 400
+   *   - `Undo window has expired`                -> 400
+   *   - `Desk is no longer available`            -> 409
+   *
+   * @param {number} bookingId
+   * @param {number} userId   ID of the currently-authenticated user.
+   * @param {Date}   [now=new Date()]  Override for deterministic tests.
+   * @returns {Promise<Booking>}
+   */
+  async restoreCancelledBooking(bookingId, userId, now = new Date()) {
+    const booking = await this.bookingRepository.findById(bookingId);
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+
+    if (booking.userId !== userId) {
+      throw new Error('You can only undo your own cancellation');
+    }
+
+    if (booking.status !== 'cancelled') {
+      throw new Error('Booking is not cancelled');
+    }
+
+    // Admin-initiated cancels are out of scope for undo (spec section 18:
+    // "initial scope: user self-cancel only"). `cancelledBy` is the user id
+    // that triggered the cancel — if it's not this user, refuse.
+    if (booking.cancelledBy !== userId) {
+      throw new Error('Only self-cancellations can be undone');
+    }
+
+    const cancelledAt = booking.cancelledAt ? new Date(booking.cancelledAt) : null;
+    if (!cancelledAt || isNaN(cancelledAt.getTime())) {
+      // Shouldn't happen for a cancelled row but guard against a partial
+      // write or a manual SQL poke that cleared the timestamp.
+      throw new Error('Undo window has expired');
+    }
+    const elapsedMs = now.getTime() - cancelledAt.getTime();
+    if (elapsedMs > UNDO_CANCEL_WINDOW_MS) {
+      throw new Error('Undo window has expired');
+    }
+
+    // Re-check desk availability excluding THIS booking: while we were
+    // cancelled, someone else (or the same user on another desk) could
+    // have claimed the desk for overlapping dates. If so, undo is refused.
+    const availability = await this.deskService.checkDeskAvailability(
+      booking.deskId,
+      booking.startDate,
+      booking.endDate,
+      booking.id
+    );
+    if (!availability.available) {
+      throw new Error('Desk is no longer available for the original dates');
+    }
+
+    return await this.bookingRepository.restore(booking.id);
+  }
+
   async checkAvailability(deskId, startDate, endDate) {
     return await this.deskService.checkDeskAvailability(deskId, startDate, endDate);
   }
@@ -240,4 +316,5 @@ class BookingService {
 }
 
 module.exports = BookingService;
+module.exports.UNDO_CANCEL_WINDOW_MS = UNDO_CANCEL_WINDOW_MS;
 

@@ -65,6 +65,9 @@ describe('BookingService', () => {
     test('should throw error when desk not available', async () => {
       const mockDesk = new Desk({ id: 1, desk_number: 'D001', is_active: 1 });
       mockDeskRepository.findById = jest.fn().mockResolvedValue(mockDesk);
+      // createBooking now checks user-overlap first; mock returns no overlap
+      // so we reach the desk-availability branch this test is asserting.
+      mockBookingRepository.findOverlappingUserBookings = jest.fn().mockResolvedValue([]);
       mockDeskService.checkDeskAvailability = jest.fn().mockResolvedValue({ available: false });
 
       await expect(
@@ -185,6 +188,118 @@ describe('BookingService', () => {
       await expect(
         bookingService.cancelUserBooking(1, 2)
       ).rejects.toThrow('only cancel your own');
+    });
+  });
+
+  describe('restoreCancelledBooking (Phase 23c undo)', () => {
+    // Capture the canonical window so tests stay in sync with the source.
+    const UNDO_WINDOW_MS = BookingService.UNDO_CANCEL_WINDOW_MS;
+    const USER_ID = 7;
+    const DESK_ID = 42;
+    const BOOKING_ID = 100;
+
+    function cancelledBookingFixture(overrides = {}) {
+      const base = {
+        id: BOOKING_ID,
+        user_id: USER_ID,
+        desk_id: DESK_ID,
+        start_date: '2099-01-01',
+        end_date: '2099-01-01',
+        status: 'cancelled',
+        cancelled_by: USER_ID,
+        cancelled_at: new Date('2026-06-01T12:00:00Z'),
+      };
+      return new Booking({ ...base, ...overrides });
+    }
+
+    test('restores booking inside window when desk is still available', async () => {
+      const cancelled = cancelledBookingFixture();
+      mockBookingRepository.findById = jest.fn().mockResolvedValue(cancelled);
+      mockDeskService.checkDeskAvailability = jest.fn().mockResolvedValue({ available: true, conflicts: [] });
+      const restored = new Booking({ ...cancelled.toJSON(), status: 'active', cancelled_at: null, cancelled_by: null });
+      // toJSON uses camelCase keys; the Booking constructor expects snake_case.
+      // Re-seed the restored row from a snake_case shape.
+      mockBookingRepository.restore = jest.fn().mockResolvedValue(new Booking({
+        id: BOOKING_ID,
+        user_id: USER_ID,
+        desk_id: DESK_ID,
+        start_date: '2099-01-01',
+        end_date: '2099-01-01',
+        status: 'active',
+      }));
+
+      // `now` is one millisecond before the window closes so we're still allowed.
+      const nowJustInside = new Date(cancelled.cancelledAt.getTime() + UNDO_WINDOW_MS - 1);
+      const result = await bookingService.restoreCancelledBooking(BOOKING_ID, USER_ID, nowJustInside);
+
+      expect(result.status).toBe('active');
+      expect(mockDeskService.checkDeskAvailability).toHaveBeenCalledWith(
+        DESK_ID,
+        '2099-01-01',
+        '2099-01-01',
+        BOOKING_ID,
+      );
+      expect(mockBookingRepository.restore).toHaveBeenCalledWith(BOOKING_ID);
+    });
+
+    test('rejects when booking is not found', async () => {
+      mockBookingRepository.findById = jest.fn().mockResolvedValue(null);
+      await expect(
+        bookingService.restoreCancelledBooking(BOOKING_ID, USER_ID)
+      ).rejects.toThrow('Booking not found');
+    });
+
+    test('rejects when another user attempts to undo', async () => {
+      mockBookingRepository.findById = jest.fn().mockResolvedValue(cancelledBookingFixture());
+      await expect(
+        bookingService.restoreCancelledBooking(BOOKING_ID, USER_ID + 1)
+      ).rejects.toThrow('only undo your own');
+    });
+
+    test('rejects when booking is still active (nothing to undo)', async () => {
+      const active = cancelledBookingFixture({ status: 'active', cancelled_by: null, cancelled_at: null });
+      mockBookingRepository.findById = jest.fn().mockResolvedValue(active);
+      await expect(
+        bookingService.restoreCancelledBooking(BOOKING_ID, USER_ID)
+      ).rejects.toThrow('Booking is not cancelled');
+    });
+
+    test('rejects admin-cancelled booking (self-cancel only)', async () => {
+      const adminCancelled = cancelledBookingFixture({ cancelled_by: 999 });
+      mockBookingRepository.findById = jest.fn().mockResolvedValue(adminCancelled);
+      await expect(
+        bookingService.restoreCancelledBooking(BOOKING_ID, USER_ID)
+      ).rejects.toThrow('Only self-cancellations can be undone');
+    });
+
+    test('rejects when undo window has expired', async () => {
+      const cancelled = cancelledBookingFixture();
+      mockBookingRepository.findById = jest.fn().mockResolvedValue(cancelled);
+      const nowTooLate = new Date(cancelled.cancelledAt.getTime() + UNDO_WINDOW_MS + 1);
+      await expect(
+        bookingService.restoreCancelledBooking(BOOKING_ID, USER_ID, nowTooLate)
+      ).rejects.toThrow('Undo window has expired');
+    });
+
+    test('rejects when desk is no longer available', async () => {
+      const cancelled = cancelledBookingFixture();
+      mockBookingRepository.findById = jest.fn().mockResolvedValue(cancelled);
+      mockDeskService.checkDeskAvailability = jest.fn().mockResolvedValue({
+        available: false,
+        conflicts: [{ id: 200 }],
+      });
+      const nowInside = new Date(cancelled.cancelledAt.getTime() + 1000);
+      await expect(
+        bookingService.restoreCancelledBooking(BOOKING_ID, USER_ID, nowInside)
+      ).rejects.toThrow('no longer available');
+    });
+
+    test('treats missing cancelled_at as an expired window (defensive)', async () => {
+      const weird = cancelledBookingFixture({ cancelled_at: null });
+      mockBookingRepository.findById = jest.fn().mockResolvedValue(weird);
+      await expect(
+        bookingService.restoreCancelledBooking(BOOKING_ID, USER_ID)
+      ).rejects.toThrow('Undo window has expired');
     });
   });
 

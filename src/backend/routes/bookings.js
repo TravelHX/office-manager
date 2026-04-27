@@ -279,6 +279,10 @@ router.delete('/:id', authenticate, requireCompleteProfile, async (req, res, nex
       } : { booking_id: bookingId },
     });
 
+    // Phase 23c: tell the client how long it has to undo the cancellation.
+    // The client uses this to gate the Undo toast timer so backend and UI
+    // stay in sync if the window changes.
+    res.setHeader('X-Undo-Window-Ms', String(BookingService.UNDO_CANCEL_WINDOW_MS));
     res.status(204).send();
   } catch (error) {
     if (error.message === 'Booking not found') {
@@ -303,6 +307,76 @@ router.delete('/:id', authenticate, requireCompleteProfile, async (req, res, nex
           message: error.message,
           code: 'ALREADY_CANCELLED',
         },
+      });
+    }
+    next(error);
+  }
+});
+
+// Phase 23c: Undo a user's own recent self-cancel. Owner-only, time-boxed,
+// and gated on current desk availability — see BookingService.restoreCancelledBooking
+// for the full rule set.
+router.post('/:id/undo-cancel', authenticate, requireCompleteProfile, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const bookingId = parseInt(req.params.id);
+
+    if (!Number.isFinite(bookingId) || bookingId <= 0) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid booking id',
+          code: 'INVALID_BOOKING_ID',
+        },
+      });
+    }
+
+    const restored = await bookingService.restoreCancelledBooking(bookingId, userId);
+
+    // Phase 21d / 23c: emit DESK_BOOKING_RESTORED. Actor is the booking
+    // owner (undo is self-only). Payload mirrors the create/cancel payloads
+    // so an admin can reconstruct the resource + date range from a single
+    // event and can see which undo window was in force at the time.
+    await audit.emit(req, {
+      actionType: 'DESK_BOOKING_RESTORED',
+      targetType: 'booking',
+      targetId: bookingId,
+      summary: `Undid cancellation of booking #${bookingId} (desk ${restored.deskId})`,
+      payload: {
+        desk_id: restored.deskId,
+        start_date: restored.startDate,
+        end_date: restored.endDate,
+        undo_within_ms: BookingService.UNDO_CANCEL_WINDOW_MS,
+      },
+    });
+
+    res.status(200).json(restored.toJSON());
+  } catch (error) {
+    if (error.message === 'Booking not found') {
+      return res.status(404).json({
+        error: { message: error.message, code: 'BOOKING_NOT_FOUND' },
+      });
+    }
+    if (
+      error.message.includes('only undo your own')
+      || error.message.includes('Only self-cancellations')
+    ) {
+      return res.status(403).json({
+        error: { message: error.message, code: 'FORBIDDEN' },
+      });
+    }
+    if (error.message === 'Booking is not cancelled') {
+      return res.status(400).json({
+        error: { message: error.message, code: 'NOT_CANCELLED' },
+      });
+    }
+    if (error.message === 'Undo window has expired') {
+      return res.status(400).json({
+        error: { message: error.message, code: 'UNDO_EXPIRED' },
+      });
+    }
+    if (error.message.includes('no longer available')) {
+      return res.status(409).json({
+        error: { message: error.message, code: 'DESK_UNAVAILABLE' },
       });
     }
     next(error);

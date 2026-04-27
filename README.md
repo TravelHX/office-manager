@@ -47,7 +47,8 @@ Office Manager is a web application designed to manage office operations and res
 - Book desks for single or multiple days
 - View and manage personal desk bookings
 - Cancel own bookings
-- Admin can view all bookings and cancel any booking
+- **Undo a self-cancelled desk booking within 30 seconds** — a toast with an Undo button appears on My Bookings immediately after cancelling. Undo restores the booking only if the window has not expired and the desk has not been taken by another booking in the meantime.
+- Admin can view all bookings and cancel any booking (admin-initiated cancels are not eligible for user Undo)
 - Remaining desk count displayed for selected dates (availability enhancement)
 - Booking proceeds directly without confirmation modal (streamlined flow)
 - Booking validation: one desk per person per period, one person per desk per day
@@ -169,6 +170,14 @@ Welcome to Office Manager. The sections below describe how to use desk bookings 
 4. Confirm the cancellation
 
 **Note:** Once cancelled, the desk is immediately available for other users.
+
+#### Undoing a cancellation
+
+Immediately after you cancel one of your own desk bookings, an **Undo** toast appears at the top of **My Bookings**. Clicking **Undo** restores the booking.
+
+- The Undo window is **30 seconds**. After that the toast disappears and the cancellation is final.
+- Undo only works for cancellations **you** made. If an administrator cancelled the booking, you cannot undo it — contact the administrator instead.
+- Undo may also fail if, during the 30 seconds, another user has booked the desk for the same dates. In that case you'll see a message that the desk is no longer available; the booking stays cancelled.
 
 ### Parking Reservations
 
@@ -364,3 +373,6 @@ All features listed in "Currently Implemented Features" above are fully function
 - **Phase 19:** Minimal admin provisioning (email + name only), profile completion on first login
 - **Phase 20:** Global application shell with collapsible navigation and blue theme
 - **Phase 21:** Administrative audit trail — append-only `audit_events` table, admin-only `GET /api/admin/audit-events` list/search API, admin UI tab, and emission from every mutating flow (authentication, bookings, parking, admin config, user management, bulk create)
+- **Phase 23a:** Overtime feature removed end-to-end (APIs, UI, table, tests, docs)
+- **Phase 23b:** Uniform Select/Book/Reserve/Book-selected button sizing; per-item Book/Reserve hidden when the resource is in the multi-select selection
+- **Phase 23c:** Undo desk booking cancellation — toast with Undo button, 30-second server-enforced window, re-availability check, `POST /api/bookings/:id/undo-cancel`, `DESK_BOOKING_RESTORED` audit event

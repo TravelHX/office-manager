@@ -346,3 +346,32 @@ The previous Use Case 7 covered combined desk, parking, and overtime actions. Ov
 **Automated coverage:** `tests/integration/audit.test.js` (GET API: authorisation, listing, search, pagination); `tests/integration/audit-emissions.test.js` (every catalogue action type lands in the table); `src/frontend/tests/admin-audit.test.js` (UI rendering, XSS escaping, pagination bounds, search wiring); `tests/e2e/audit.spec.js` (Playwright — admin opens Audit, searches, sees seeded event).
 
 ---
+
+## Use Case 12: User Undoes a Recent Desk Booking Cancellation
+
+**Description:** A signed-in user cancels their own desk booking from **My Bookings** and immediately realises they need it after all. They use the **Undo** toast to restore the booking, provided the short undo window has not elapsed and no other user has claimed the desk in the meantime.
+
+**Steps:**
+1. User signs in and opens **My Bookings**
+2. User clicks **Cancel** on an active desk booking and accepts the confirmation dialog
+3. The row changes to **Cancelled** and an **Undo** toast appears at the top of the bookings container with the message *"Booking cancelled."* and an **Undo** button
+4. The client also notes the `X-Undo-Window-Ms` header from the cancel response and sets a local timer for that many milliseconds. The default window is **30 seconds** (see `BookingService.UNDO_CANCEL_WINDOW_MS`).
+5. If user clicks **Undo** within the window, the client POSTs to `/api/bookings/:id/undo-cancel`. The server re-checks ownership, the window, and desk availability, then sets status back to `active` and clears cancellation metadata. The bookings list refreshes with the restored row, and a `DESK_BOOKING_RESTORED` audit event is written.
+6. If the window expires first, the toast disappears and the cancellation is final.
+7. If the user clicks **Undo** but another user has booked the desk for the same date range in the meantime, the server responds `409 DESK_UNAVAILABLE`, the toast dismisses, and the user sees an error message explaining the desk is no longer available. The original booking stays cancelled.
+8. Attempting to undo an **admin-cancelled** booking (rare edge: user triggers undo from another path) returns `403 FORBIDDEN` with message referencing self-cancellations only.
+
+**Expected Result:** Within a 30-second window a user can reverse their own desk cancel with a single click, subject to the desk still being available. The audit trail always records both the cancel and the restore.
+
+**Manual Testing Path:**
+1. Sign in as a user with at least one active desk booking
+2. Open **My Bookings**, click **Cancel** on the booking, and accept the confirm
+3. Confirm the **Undo** toast appears and the booking row shows **Cancelled**
+4. Click **Undo** within 30 seconds; confirm the toast disappears and the booking row returns to **Active** with a Cancel button
+5. Repeat the cancel, then wait 31+ seconds; confirm the toast auto-dismisses and the booking stays cancelled
+6. Repeat the cancel with a second browser/user having a window open on the same desk for the same dates; have the second user book the desk during the first user's 30 seconds; the first user's Undo click should show *"Could not undo cancellation: Desk is no longer available…"*
+7. As an admin, cancel another user's desk booking (via the All Bookings tab). As that user, open the DB / audit log and confirm no Undo affordance was available for the admin-initiated cancel — the client only shows Undo after a self-cancel.
+
+**Automated coverage:** `tests/services/BookingService.test.js` (service rules — window, ownership, admin-cancel exclusion, re-availability); `tests/integration/undo-cancel.test.js` (full HTTP happy path + expired + taken + 403/404/400 edges + `X-Undo-Window-Ms` header); `src/frontend/tests/undo-cancel.test.js` (toast render, auto-dismiss, replace-on-second-cancel, Undo click success + failure, mid-flight disable); `tests/e2e/undo-cancel.spec.js` (Playwright — user cancels a seeded booking and successfully undoes via the toast).
+
+---
