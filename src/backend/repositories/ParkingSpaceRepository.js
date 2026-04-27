@@ -1,5 +1,6 @@
 const BaseRepository = require('../data-access/base-repository');
 const ParkingSpace = require('../models/ParkingSpace');
+const naturalSort = require('../utils/natural-sort');
 
 class ParkingSpaceRepository extends BaseRepository {
   constructor() {
@@ -7,9 +8,11 @@ class ParkingSpaceRepository extends BaseRepository {
   }
 
   async findAllActive() {
-    const query = 'SELECT * FROM parking_spaces WHERE is_active = 1 ORDER BY space_number';
+    // Phase 24: in-JS natural sort matches the desk repository pattern.
+    const query = 'SELECT * FROM parking_spaces WHERE is_active = 1';
     const results = await this.executeRawQuery(query);
-    return results.map(row => new ParkingSpace(row));
+    const spaces = results.map(row => new ParkingSpace(row));
+    return naturalSort.sortByProperty(spaces, 'spaceNumber');
   }
 
   async findById(id) {
@@ -37,7 +40,10 @@ class ParkingSpaceRepository extends BaseRepository {
 
   async findAll() {
     const results = await super.findAll();
-    return results.map(row => new ParkingSpace(row));
+    return naturalSort.sortByProperty(
+      results.map(row => new ParkingSpace(row)),
+      'spaceNumber'
+    );
   }
 }
 

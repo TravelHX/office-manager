@@ -1,5 +1,6 @@
 const BaseRepository = require('../data-access/base-repository');
 const Desk = require('../models/Desk');
+const naturalSort = require('../utils/natural-sort');
 
 class DeskRepository extends BaseRepository {
   constructor() {
@@ -7,9 +8,13 @@ class DeskRepository extends BaseRepository {
   }
 
   async findAllActive() {
-    const query = 'SELECT * FROM desks WHERE is_active = 1 ORDER BY desk_number';
+    // Phase 24: SQL ORDER BY desk_number sorts strings ("10" before "2"),
+    // so we sort in JS using the natural comparator. The list is small
+    // (<= a few hundred) and only fetched on admin / availability paths.
+    const query = 'SELECT * FROM desks WHERE is_active = 1';
     const results = await this.executeRawQuery(query);
-    return results.map(row => new Desk(row));
+    const desks = results.map(row => new Desk(row));
+    return naturalSort.sortByProperty(desks, 'deskNumber');
   }
 
   async findById(id) {
@@ -37,7 +42,10 @@ class DeskRepository extends BaseRepository {
 
   async findAll() {
     const results = await super.findAll();
-    return results.map(row => new Desk(row));
+    return naturalSort.sortByProperty(
+      results.map(row => new Desk(row)),
+      'deskNumber'
+    );
   }
 }
 

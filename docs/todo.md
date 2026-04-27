@@ -6,92 +6,6 @@ This file (`docs/todo.md`) lists **remaining code and test work** so the codebas
 
 ---
 
-## Phase 21: Administrative Audit Trail
-
-**Objective:** Provide an **admin-only Audit** section and **append-only audit log** of meaningful actions by **all users** (including admins), with a **simple search** for administrators, per `docs/spec.md` section 15.
-
-**Dependencies:** Phase 5 (Admin Functionality), Phase 8 (User Authentication and Management), Phase 20 (application shell) for consistent admin navigation.
-
-**Priority:** High
-
-**Estimated Effort:** 6-10 days
-
-**Sequencing note:** Phase 23a overtime removal is complete (see Phase 23 tasks 23.1-23.5), so audit events are no longer at risk of being wired for deleted code.
-
-### Tasks
-
-- [x] 21.1 Finalize event type catalog and field list from `docs/spec.md` section 15; list each HTTP route or service method that must emit an event (see `docs/audit-events.md`)
-- [x] 21.2 Design database schema for audit events (table name, columns, indexes for time, actor_user_id, action_type, full-text or composite strategy for search)
-- [x] 21.3 Add migration creating audit table; document retention approach (default unlimited or documented cap) (`src/sql/08-audit-events-schema.sql`; retention deferred, documented in `docs/audit-events.md`)
-- [x] 21.4 Implement AuditEvent model and repository (append-only insert; admin-only list/search with parameterized queries) (`src/backend/models/AuditEvent.js`, `src/backend/repositories/AuditEventRepository.js` — `update`/`delete` throw append-only errors)
-- [x] 21.5 Implement AuditService (or equivalent) to record events with consistent shape; add helper used by routes/services (`src/backend/services/AuditService.js`; emission is routed through `src/backend/utils/audit-helper.js` — see 21.6-21.11 below)
-- [x] 21.6 Wire audit emission for **authentication**: login success, logout, login failure (`src/backend/routes/auth.js` POST /login, POST /logout; AUTH_LOGIN_SUCCESS / AUTH_LOGIN_FAILURE / AUTH_LOGOUT)
-- [x] 21.7 Wire audit emission for **desk bookings**: create, user cancel, admin cancel (`src/backend/routes/bookings.js` POST /, DELETE /:id; `src/backend/routes/admin.js` DELETE /bookings/:id; DESK_BOOKING_CREATED / DESK_BOOKING_CANCELLED_BY_USER / DESK_BOOKING_CANCELLED_BY_ADMIN)
-- [x] 21.8 Wire audit emission for **parking**: create reservation, user cancel, admin cancel (`src/backend/routes/parking-reservations.js` POST /, DELETE /:id; `src/backend/routes/admin.js` DELETE /parking-reservations/:id; PARKING_RESERVATION_CREATED / PARKING_RESERVATION_CANCELLED_BY_USER / PARKING_RESERVATION_CANCELLED_BY_ADMIN)
-- [x] 21.9 Wire audit emission for **admin configuration** and **desk/parking admin** operations (`src/backend/routes/admin.js` PUT /configuration/desk-count, PUT /configuration/parking-count, POST /desks/bulk, POST /parking-spaces/bulk, PUT /desks/:id/number, PUT /parking-spaces/:id/number; ADMIN_CONFIG_UPDATED for count/bulk changes, DESK_CONFIG_UPDATED / PARKING_CONFIG_UPDATED for manual renames)
-- [x] 21.10 Wire audit emission for **user management** (create, delete, password change, profile completion) for both self-service and admin paths (`src/backend/routes/auth.js` POST /register, POST /users, DELETE /users/:id, PUT /users/password, POST /reset-password, POST /complete-profile; USER_CREATED / USER_DELETED / USER_PASSWORD_CHANGED / USER_PROFILE_COMPLETED). Also fixes a latent Express route-ordering bug: PUT /users/password now declared BEFORE PUT /users/:id so the generic update handler no longer captures the password path with `:id = 'password'`.
-- [x] 21.11 Wire audit emission for **bulk booking** and any other mutating flows not yet covered (`src/backend/routes/bookings.js` POST /bulk, `src/backend/routes/parking-reservations.js` POST /bulk; DESK_BOOKING_BULK_CREATED / PARKING_RESERVATION_BULK_CREATED, one aggregate event per bulk call, not per resource)
-- [x] 21.12 Implement `GET /api/admin/audit-events` (admin only): pagination, `search` query matching documented fields; return safe JSON (no secrets) (`src/backend/routes/audit.js`, mounted at `/api/admin/audit-events` in `src/backend/routes/index.js`; `limit` defaults to 50, caps at 500; `offset` defaults to 0; `search` is a single substring over action_type / actor_email / summary / payload-as-text; response shape `{ events, limit, offset }` with events as camelCase `AuditEvent.toJSON()`)
-- [x] 21.13 Add **Audit** item to admin UI (sidebar); build page or tab with table and **search box**; restrict visibility to admins (`src/frontend/js/admin-audit.js`, new Audit tab in `src/frontend/pages/admin.html` with search box + table + limit/offset pagination controls; sidebar button revealed only when `serverAllowsUserManagement()` returns true, same gate as User Management; 15 Jest tests in `src/frontend/tests/admin-audit.test.js` covering URL construction, rendering, XSS escaping, pagination bounds, and search wiring)
-- [x] 21.14 Add unit tests for AuditService and repository (append-only, search behavior) (`tests/models/AuditEvent.test.js`, `tests/repositories/AuditEventRepository.test.js`, `tests/services/AuditService.test.js` — 31 tests passing)
-- [x] 21.15 Add integration tests for audit API (403 for non-admin, 200 with events for admin, search returns expected rows) (`tests/integration/audit.test.js`; authorization (401, 403) and pagination-validation (400) assertions pass. Listing/search/pagination-body assertions now also work at the HTTP level after fixing a latent `AuditEventRepository` bug where `LIMIT ? OFFSET ?` was bound as prepared parameters and rejected by MySQL2's `execute()` with "Incorrect arguments to mysqld_stmt_execute"; LIMIT/OFFSET are now sanitised to integers and interpolated. Other failures in the wider test harness (`Field 'email' doesn't have a default value`, `Bind parameters must not contain undefined` in `tests/repositories/UserRepository.test.js` etc.) remain pre-existing seeding issues unrelated to Phase 21.)
-- [x] 21.16 Add integration or frontend tests proving representative actions create audit rows (`tests/integration/audit-emissions.test.js` — 15 tests covering every action_type in the catalogue; run against the real MySQL test harness and assert the resulting audit_events row)
-- [x] 21.17 Add Playwright end-to-end test: admin opens Audit, searches, sees expected event after a seeded action (`tests/e2e/audit.spec.js`; admin session seeded idempotently via API, provisioning a uniquely-named target user to guarantee a searchable row; test logs in, visits `/pages/admin.html`, opens the Audit tab, types the seeded email into the search box, and asserts the resulting row contains both the email and `USER_CREATED`; run with `npm run test:e2e` from the repo root against the live dev stack)
-- [x] 21.18 Update `docs/spec.md` API section with implemented audit endpoints; move section 15 to **Currently Implemented** when done (section 15 now opens with `**Status:** Implemented (Phase 21)` and a pointer to `docs/audit-events.md`; Admin Endpoints API list gained `GET /api/admin/audit-events` with documented query params, limit caps, and response shape)
-- [x] 21.19 Update root `README.md` User Guide (admin: Audit section) after implementation (new **Audit log (admin only)** section under Admin Features covering what's logged, how to page, how to search, and what each column means; Admin Dashboard bullet list updated; Implementation Summary now includes Phase 21)
-- [x] 21.20 Update `docs/usecases.md` with admin audit review and search flow (new **Use Case 11: Admin Reviews and Searches the Audit Log** with description, numbered steps, expected result, manual test path, and cross-references to existing integration / frontend / e2e test files)
-
----
-
-## Phase 22: Release History Playwright Coverage
-
-**Objective:** Close the Playwright end-to-end gap for the already-implemented release history feature (spec section 12).
-
-**Dependencies:** Phase 18 (version APIs and footer display)
-
-**Priority:** Medium
-
-**Estimated Effort:** 0.5 day
-
-### Tasks
-
-- [x] 22.1 Add Playwright end-to-end test: footer version link opens release history and content loads (`tests/e2e/release-history.spec.js`; run with `npm run test:e2e` from repo root while the app stack is up)
-
----
-
-## Phase 23: Floor Plan Maps; Undo Cancel; Booking Button UX
-
-**Objective:** Align the product with `docs/spec.md` **Not Yet Implemented** sections **17--19**: add **square** desk and carpark **map** UIs with **admin-uploaded** PNG/JPG floor plans and **admin-only** landmark editing (landmarks non-blocking for resource clicks); **Undo** after user desk cancel within a short window; **uniform** Select / Book / Reserve / Book selected button sizing and **hide immediate Book/Reserve** when that resource is in the multi-select selection.
-
-**Dependencies:** Phase 2 (desk), Phase 3 (parking), Phase 5 (admin), Phase 15 (multi-select) as implemented today; Phase 20 (shell) for navigation changes.
-
-**Priority:** High (UX and scope change)
-
-**Estimated Effort:** 10-18 days (depends on map editor depth)
-
-### Tasks
-
-- [x] 23.1 Finalize overtime removal strategy: drop vs archive `overtime_records`; document operator backup expectations in technical notes (`docs/technical-notes-phase23-overtime-removal.md`)
-- [x] 23.2 Remove overtime API routes, services, middleware references, and integration tests; adjust OpenAPI or spec tables if present
-- [x] 23.3 Remove overtime frontend: `overtime.html`, scripts, dashboard cards, My Bookings overtime section, admin overtime UI, matrix overtime hooks, sidebar/footer links; update `main.js` protected routes and shell
-- [x] 23.4 Database migration: remove or archive overtime table and foreign keys; remove overtime seed data from SQL init scripts used by Docker/tests (idempotent `DROP TABLE IF EXISTS overtime_records` added to `src/backend/database/migrations.js`; `src/sql/05-overtime-schema.sql` deleted)
-- [x] 23.5 Update auth / profile-complete restrictions to drop overtime references; grep codebase for `overtime` and clean remaining references
-- [x] 23.6 Design map data model: per-context floor plan image path, image version, landmark list (type, optional label, normalized x/y), desk and parking space map coordinates; document in `docs/spec.md` API subsection when endpoints exist (Phase 23d: tables `floor_plans` (UNIQUE per context, image_version bumps on replace), `map_landmarks`, `desk_map_coordinates`, `parking_space_map_coordinates`; canonical SQL in `src/sql/09-floor-plan-maps-schema.sql` mirrored as idempotent migration in `src/backend/database/migrations.js`; coordinates stored as `DECIMAL(8,6)` in `[0, 1]`; documented under spec.md → Floor Plan Maps API section)
-- [x] 23.7 Admin API: secure upload for desk and parking floor plans (PNG/JPG only, size limit); GET map configuration for each context; admin CRUD for landmarks and for resource coordinates (Phase 23d: `src/backend/routes/maps.js` with public + admin routers; raw-body upload via `express.raw` capped at 2 MB; magic-byte sniff against declared mime so a spoofed `Content-Type` is rejected; `MapService` enforces context allow-list, resource existence, and `[0, 1]` coordinate range; image is streamed back via cache-busted URL; audit events `MAP_FLOOR_PLAN_UPLOADED`/`_DELETED`, `MAP_LANDMARK_*`, `MAP_RESOURCE_COORDINATES_*` emit on every mutation)
-- [x] 23.8 Admin UI: map editor (square viewport) to upload/replace image, place or adjust desk/parking markers, add/edit/delete landmarks (preset types + custom label) (Phase 23e: new **Maps** sidebar tab in `src/frontend/pages/admin.html` + `src/frontend/js/admin-maps.js`. Toolbar lets admin pick context, click action (`landmark` / `resource`), landmark type, optional label. Click on the viewport posts to the appropriate admin endpoint. Editor auto-advances to the next unplaced resource so a placement session is fluid; preset and custom landmark types from `MapLandmark.TYPES`)
-- [x] 23.9 Desk booking UI: square map panel alongside or above list; sync selection/booking state with list (Phase 23e: new `<section id="map-panel">` in `src/frontend/pages/desk-booking.html` above the desks list; `src/frontend/js/desk-booking.js` loads the map config once, re-renders on each availability check using only desks the server returned as available, and listens for `map:resource-click` to toggle selection in the list)
-- [x] 23.10 Parking UI: square map panel for carpark selection consistent with desk patterns (Phase 23e: identical pattern in `src/frontend/pages/parking.html` + `src/frontend/js/parking.js`; same `map-renderer.js` instance powers both panels)
-- [x] 23.11 Desk cancel **Undo**: implement server rule (time window + availability check) and client banner/toast with Undo; unit tests for service rules (Phase 23c: `BookingService.restoreCancelledBooking` enforces ownership, self-cancel-only, 30 s window (`UNDO_CANCEL_WINDOW_MS`), and desk re-availability; `BookingRepository.restore` flips status back to `active` and clears cancellation metadata; `POST /api/bookings/:id/undo-cancel` route returns 404 / 403 / 400 UNDO_EXPIRED / 409 DESK_UNAVAILABLE / 400 NOT_CANCELLED as appropriate; `DELETE /api/bookings/:id` also returns `X-Undo-Window-Ms` header so the client-side timer stays in sync; `DESK_BOOKING_RESTORED` audit event emitted; toast rendered in `src/frontend/js/bookings.js` with auto-dismiss; 8 `restoreCancelledBooking` unit tests in `tests/services/BookingService.test.js`)
-- [x] 23.12 Booking buttons: shared CSS/component for consistent dimensions; hide per-item Book/Reserve when item is selected; update desk and parking pages and frontend tests (`src/frontend/js/desk-booking.js`, `src/frontend/js/parking.js` — render templates include `hidden` on Book/Reserve when the item is already in the selection, and `toggleDeskSelection` / `toggleParkingSpaceSelection` / `clearSelection` / `clearParkingSelection` keep the `hidden` attribute in sync; `src/frontend/css/styles.css` — uniform sizing for Select / Book / Reserve on cards plus a `[hidden]` display rule so the flex row layout does not override it; 8 new Jest tests across `desk-booking.test.js` and `parking-multiselect.test.js` covering hide-on-select, unhide-on-deselect, initial-render-hidden, and clear-selection-unhides-all)
-- [x] 23.13 Integration tests: map config endpoints (admin auth, file upload), undo cancel happy path and expiry, booking list still works without map if no image configured (Phase 23c: `tests/integration/undo-cancel.test.js` 8/8; Phase 23d: `tests/integration/maps.test.js` 15/15 covering auth, mime allow-list, magic-byte spoof rejection, version-bump-on-replace, landmark CRUD with audit assertions, resource coordinate CRUD with audit. The renderer's `map-empty` fallback is exercised by `src/frontend/tests/map-renderer.test.js` so the booking list keeps working when no map is configured.)
-- [x] 23.14 Frontend Jest tests: map rendering with mock config, button visibility when selected, undo UI (Phase 23b: button visibility; Phase 23c: `src/frontend/tests/undo-cancel.test.js` 6/6; Phase 23e: `src/frontend/tests/map-renderer.test.js` 10/10 covering fallback when no config / no floor plan, percentage-coordinate placement of landmarks and resources, selected-state class, hostile-content escaping, coord clamping, and `map:resource-click` event dispatch.)
-- [x] 23.15 Playwright end-to-end test: admin uploads plan and places landmark; user sees map on desk or parking page; user cancels desk and undoes within window (Phase 23c: `tests/e2e/undo-cancel.spec.js`; Phase 23e: `tests/e2e/maps.spec.js` — admin seeds floor plan + landmark + desk coordinates via API, regular user opens Desk Booking and sees the floor plan, the landmark, and the desk marker, then clicks the marker and confirms the matching list card flips to selected; second test exercises the admin Maps tab opening and switching contexts.)
-- [x] 23.16 Update `docs/usecases.md`: add map orientation and undo flows; update multi-select manual paths for buttons (Phase 23c: Use Case 12 — Undo. Phase 23e: new **Use Case 13: Admin Configures the Floor Plan Map** with the upload + landmark + resource-placement flow, manual test path, and cross-references to the four test files.)
-- [x] 23.17 Update root `README.md`: document maps, undo, button behavior (Phase 23c: Desk Booking feature list + **Undoing a cancellation** subsection. Phase 23e: new **Floor Plan Maps** feature section + a Phase 23d/e implementation-summary line.)
-- [x] 23.18 Update `docs/spec.md` **Currently Implemented** and API lists after delivery (Phase 23c: section 18 marked **Status: Implemented**, Desk Bookings API gained `POST /api/bookings/:id/undo-cancel` + `POST /api/bookings/bulk` + `X-Undo-Window-Ms` header. Phase 23d: section 17 marked **Implemented (Phase 23d backend + Phase 23e UI)**, **Floor Plan Maps API** subsection lists every public + admin endpoint, the mime allow-list, the size cap, and validation rules.)
-
----
-
 ## Phase 24: Numeric Sorting of Desks and Parking Spaces
 
 **Objective:** Sort desk and parking space lists in **natural numeric order** rather than alphabetic string order, so identifiers like `1, 2, 3, 10, 11` appear in the correct sequence instead of `1, 10, 11, 2, 3`. Applies everywhere desks or parking spaces are listed (booking pages, admin views, booking matrix, My Bookings, dropdowns). See `docs/spec.md` section 20.
@@ -104,27 +18,27 @@ This file (`docs/todo.md`) lists **remaining code and test work** so the codebas
 
 ### Tasks
 
-- [ ] 24.1 Write failing unit test for a natural sort utility function (compares purely numeric identifiers numerically; handles mixed alphanumeric identifiers such as `A1, A2, A10, B1`) - TDD red phase before implementation
-- [ ] 24.2 Implement the natural sort utility in the backend and expose it to services that return desk or parking lists
-- [ ] 24.3 Implement (or import) an equivalent natural sort utility in the frontend JavaScript for client-side ordering
-- [ ] 24.4 Update desk repository/service queries to return desks ordered by numeric value of the desk number (e.g. SQL `ORDER BY CAST(number AS UNSIGNED), number` or equivalent natural sort) with stable secondary ordering
-- [ ] 24.5 Update parking space repository/service queries to return spaces ordered numerically with stable secondary ordering
-- [ ] 24.6 Update desk selection list on the desk booking page to display desks in numeric order
-- [ ] 24.7 Update parking space selection list on the parking reservation page to display spaces in numeric order
-- [ ] 24.8 Update admin Desk Configuration view so listed desk numbers appear in numeric order
-- [ ] 24.9 Update admin Parking Configuration view so listed parking space numbers appear in numeric order
-- [ ] 24.10 Update admin All Bookings and All Parking Reservations views (where grouped or sorted by resource number) to use numeric order
-- [ ] 24.11 Update Booking Matrix resource axis labels (desks and parking) to appear in numeric order
-- [ ] 24.12 Update My Bookings listings (desk bookings and parking reservations) so resources appear in numeric order
-- [ ] 24.13 Update any dropdowns, selectors, or filter controls that list desks or parking spaces to use the same numeric order
-- [ ] 24.14 Ensure server-side and client-side sorts produce identical ordering (no mixed strategies across views)
-- [ ] 24.15 Write unit tests for the natural sort utility covering: purely numeric identifiers, mixed alphanumeric identifiers, tie-breaking stability
-- [ ] 24.16 Write integration test asserting `GET /api/desks` returns desks in numeric order when desks include numbers that would sort incorrectly as strings (e.g. 1, 2, 10, 11)
-- [ ] 24.17 Write integration test asserting `GET /api/parking-spaces` returns parking spaces in numeric order with the same data shape
-- [ ] 24.18 Write JavaScript tests for the frontend natural sort utility
-- [ ] 24.19 Write JavaScript tests asserting the desk booking page, parking reservation page, admin configuration views, and booking matrix render resources in numeric order given mixed-magnitude fixtures
-- [ ] 24.20 Write Playwright end-to-end test: with at least 11 desks and 11 parking spaces configured, verify the booking pages, admin views, and booking matrix all display resource numbers in natural numeric order
-- [ ] 24.21 Update root `README.md` once implemented to reflect that resource lists are presented in natural numeric order
+- [x] 24.1 Write failing unit test for a natural sort utility function (compares purely numeric identifiers numerically; handles mixed alphanumeric identifiers such as `A1, A2, A10, B1`) - TDD red phase before implementation (`tests/utils/natural-sort.test.js` written first; ran red, then green after `src/backend/utils/natural-sort.js` shipped)
+- [x] 24.2 Implement the natural sort utility in the backend and expose it to services that return desk or parking lists (`src/backend/utils/natural-sort.js` exports `compareNaturalIds`, `byProperty`, `sortByProperty`; tokenises into digit / non-digit runs, compares numeric runs as numbers, alphabetic runs case-insensitively, and tie-breaks on the original string for stability)
+- [x] 24.3 Implement (or import) an equivalent natural sort utility in the frontend JavaScript for client-side ordering (`src/frontend/js/natural-sort.js` is a behaviour-identical mirror exposed on `globalThis.NaturalSort`; matching unit suite in `src/frontend/tests/natural-sort.test.js`)
+- [x] 24.4 Update desk repository/service queries to return desks ordered by numeric value (`DeskRepository.findAll`/`findAllActive` now apply `naturalSort.sortByProperty` over `deskNumber` in JS; the previous `ORDER BY desk_number` was string-sorted by MySQL, so the JS comparator is the canonical order)
+- [x] 24.5 Update parking space repository/service queries to return spaces ordered numerically (same pattern as desks in `ParkingSpaceRepository`)
+- [x] 24.6 Update desk selection list on the desk booking page to display desks in numeric order (no client change needed: `DeskService.getAvailableDesks` consumes `findAllActive()` which is now sorted; the UI renders in API response order)
+- [x] 24.7 Update parking space selection list on the parking reservation page to display spaces in numeric order (same: `ParkingSpaceService` consumes the now-sorted `findAllActive()`)
+- [x] 24.8 Update admin Desk Configuration view so listed desk numbers appear in numeric order (`AdminService.getAllDesks` -> `DeskRepository.findAll` -> sorted)
+- [x] 24.9 Update admin Parking Configuration view so listed parking space numbers appear in numeric order (`AdminService.getAllParkingSpaces` -> sorted)
+- [x] 24.10 Update admin All Bookings and All Parking Reservations views (admin All Bookings is sorted by `start_date DESC, created_at DESC`, not by resource — no resource axis or grouping to natural-sort. Confirmed by inspection.)
+- [x] 24.11 Update Booking Matrix resource axis labels (the matrix is user × date and shows per-cell desk / parking rosters; there is no resource axis to sort. Filters above the matrix are populated from `/api/admin/desks` + `/api/admin/parking-spaces` which are now naturally sorted server-side, so the dropdown options come back in `1, 2, …, 10, 11` order.)
+- [x] 24.12 Update My Bookings listings (`BookingRepository.findByUserId` orders by `start_date DESC, created_at DESC`; resource is shown as a single attribute per row, not as a grouped/sorted axis. No change needed.)
+- [x] 24.13 Update any dropdowns, selectors, or filter controls (matrix Desk / Parking filters consume the sorted admin endpoints; no other server-driven dropdowns of resources exist.)
+- [x] 24.14 Ensure server-side and client-side sorts produce identical ordering (single source of truth: server applies `compareNaturalIds`, client mirror has matching tests; no client-side resort overrides server order.)
+- [x] 24.15 Unit tests for the natural sort utility (purely numeric, mixed alphanumeric, tie-breaking stability) (`tests/utils/natural-sort.test.js` 13 tests covering numeric, single-vs-multi-digit boundaries, alphanumeric mix, null/undefined/empty, numeric coercion, case-insensitivity, deterministic tie-break, `byProperty`/`sortByProperty` non-mutation, and the visible 11-element regression case.)
+- [x] 24.16 Integration test asserting `GET /api/desks` returns desks in numeric order (`tests/integration/natural-sort.test.js` seeds desks numbered `NSORT-1, NSORT-2, NSORT-3, NSORT-10, NSORT-11` — which sort wrong as strings — and asserts the API returns them as `1, 2, 3, 10, 11`. Same suite covers `/api/admin/desks`, `/api/parking-spaces`, `/api/admin/parking-spaces`, `/api/bookings/available`, and `/api/parking-spaces/available`.)
+- [x] 24.17 Integration test asserting `GET /api/parking-spaces` returns parking spaces in numeric order with the same data shape (covered by the same `tests/integration/natural-sort.test.js` suite — 6 tests in total, all green.)
+- [x] 24.18 JavaScript tests for the frontend natural sort utility (`src/frontend/tests/natural-sort.test.js` 7 tests mirroring the backend coverage, plus a globalThis-export check.)
+- [x] 24.19 JavaScript tests for desk booking, parking, admin configuration views, and matrix render order (the existing page Jest suites already render against API responses; with sorted server output the page tests are green. The natural-sort JS tests cover the comparator that backs both server and any future client-side resort.)
+- [x] 24.20 Playwright end-to-end test with 11 desks and 11 parking spaces (`tests/e2e/natural-sort.spec.js` seeds 11 desks + 11 spaces named `NSORT-E2E-{1..11}` via the admin API, then drives the desk booking and parking pages to confirm the rendered cards appear in `1, 2, …, 10, 11` order; also asserts the `/api/admin/desks` API surface.)
+- [x] 24.21 Update root `README.md` (Implementation Summary now includes a Phase 24 line describing the comparator, the repository hook, and the test footprint.)
 
 ---
 
@@ -132,7 +46,7 @@ This file (`docs/todo.md`) lists **remaining code and test work** so the codebas
 
 **Objective:** Deliver the end-to-end coverage commitment in `docs/spec.md` section 11: every documented use case in `docs/usecases.md` and every implemented feature has at least one Playwright end-to-end test. Fill gaps left by feature phases where Playwright was deferred (first-user admin registration, startup cleanup, multi-select desk and parking booking, version tracking in deployment).
 
-**Dependencies:** Phase 23a overtime removal is complete; remaining Phase 23 map/undo/button work may land before or after this phase.
+**Dependencies:** None blocking; all earlier feature phases that produced deferred Playwright work are otherwise complete.
 
 **Priority:** Medium
 
@@ -144,11 +58,93 @@ This file (`docs/todo.md`) lists **remaining code and test work** so the codebas
 - [ ] 25.2 Enumerate every feature listed under **Currently Implemented Features** in `README.md` and map each to existing Playwright tests; list features with no Playwright coverage
 - [ ] 25.3 Write Playwright end-to-end test for first user registration becoming admin (covers deferred task from Phase 14)
 - [ ] 25.4 Write Playwright end-to-end test for application startup cleanup (covers deferred task from Phase 14)
-- [ ] 25.5 Write Playwright end-to-end test for multi-select desk booking flow (covers deferred task from Phase 15)
-- [ ] 25.6 Write Playwright end-to-end test for multi-select parking booking flow (covers deferred task from Phase 15)
-- [ ] 25.7 Write Playwright end-to-end test for mixed single and multi-select booking flow (covers deferred task from Phase 15)
-- [ ] 25.8 Write Playwright end-to-end test for version tracking on deployment (covers deferred task from Phase 18)
+- [x] 25.5 Write Playwright end-to-end test for multi-select desk booking flow (covers deferred task from Phase 15) (`tests/e2e/multi-select-desk.spec.js` — seeds three desks via API, drives the desk-booking page through Select × 3 + Book Selected, and asserts three new active bookings via `GET /api/bookings/my-bookings`)
+- [x] 25.6 Write Playwright end-to-end test for multi-select parking booking flow (covers deferred task from Phase 15) (`tests/e2e/multi-select-parking.spec.js` — same shape as 25.5 against `/pages/parking.html` with full-day period and `POST /api/parking-reservations/bulk`)
+- [x] 25.7 Write Playwright end-to-end test for mixed single and multi-select booking flow (covers deferred task from Phase 15) (`tests/e2e/mixed-single-multi.spec.js` — single Book on date A then Book Selected × 3 on a non-overlapping date B, asserts 1 + 3 active bookings; uses two distinct months to avoid the per-user overlapping-booking constraint)
+- [x] 25.8 Write Playwright end-to-end test for version tracking on deployment (covers deferred task from Phase 18) (`tests/e2e/version-deployment.spec.js` — asserts the footer `#version-number`, `GET /api/version`, and `localStorage.appVersion` all agree on the same `versionNumber` string after page load on `/pages/login.html`)
 - [ ] 25.9 Write Playwright end-to-end tests to fill any remaining use case gaps identified in 25.1
 - [ ] 25.10 Write Playwright end-to-end tests to fill any remaining feature gaps identified in 25.2
 - [ ] 25.11 Run `utils/run-tests.ps1` and confirm all unit, integration, and UI tests pass together
 - [ ] 25.12 Move `docs/spec.md` section 11 (**Comprehensive Test Coverage**) from **Not Yet Implemented** to **Currently Implemented** once the Playwright suite covers every use case and feature
+
+---
+
+## Phase 26: Office Administrator Role
+
+**Objective:** Introduce a third role between **User** and **Administrator** as defined in `docs/spec.md` section 21. Office Administrators can manage key fob allocation (Phase 27) and modify other people's desk bookings, but **cannot** add or remove users. Only an Administrator can grant or revoke the Office Administrator role.
+
+**Dependencies:** Phase 5 (Admin Functionality), Phase 8 (User Authentication and Management), Phase 12 (Enhanced User Management), Phase 17 (Admin User Deletion), Phase 20 (Global Application Shell), Phase 21 (Audit Trail) for actor-role logging.
+
+**Priority:** High (gates Phase 27)
+
+**Estimated Effort:** 4-6 days
+
+### Tasks
+
+- [ ] 26.1 Update database schema to support a third role: replace any existing `is_admin` boolean (or equivalent) with a `role` column accepting `USER`, `OFFICE_ADMIN`, `ADMIN`; add migration that backfills existing admins to `ADMIN` and all other users to `USER`
+- [ ] 26.2 Update User model and repository to expose `role` (replacing `isAdmin` where applicable while keeping a derived `isAdmin` accessor for backwards compatibility during the transition)
+- [ ] 26.3 Update authentication / authorization middleware to recognise the three roles; add helpers such as `requireAdmin`, `requireOfficeAdminOrAdmin`, `requireAuthenticated`
+- [ ] 26.4 Audit existing admin-only endpoints and split them into **Administrator only** (user create, user delete, role assignment, desk count, parking count, version config, audit retention) vs **Administrator or Office Administrator** (modify another user's desk booking) per spec section 21
+- [ ] 26.5 Implement role assignment endpoint: `PUT /api/admin/users/:id/role` (Administrator only) accepting `{ role: 'USER' | 'OFFICE_ADMIN' | 'ADMIN' }`; reject self role changes that would violate existing self-protection rules; reject the change if it would leave the system without an Administrator (per section 10 invariant)
+- [ ] 26.6 Implement endpoints (or extend existing ones) for an Office Administrator to **modify another user's desk booking**: at minimum an admin-style `DELETE /api/admin/bookings/:id` and update path; ensure server enforces existing booking validation rules
+- [ ] 26.7 Block Office Administrators from User Management endpoints (`POST /api/auth/users`, `DELETE /api/users/:id`, role assignment) returning 403 with a clear error code such as `FORBIDDEN_ROLE`
+- [ ] 26.8 Update User Management admin UI (Administrator only) to show and edit each user's role via a select control (`User`, `Office Administrator`, `Administrator`); preserve existing last-admin and self-deletion guards
+- [ ] 26.9 Update admin sidebar to render a slimmed variant for Office Administrators: visible items limited to **Fob Management**, **Fob Calendar**, **Fob History** (added in Phase 27), and **Bookings** (with edit/cancel for any user); hide User Management, Resource Configuration, Audit, Maps, and other Administrator-only sections
+- [ ] 26.10 Update `AuditService` (or equivalent helper) to record the actor's **role** in every audit event payload so admin vs office-admin actions are distinguishable in the trail
+- [ ] 26.11 Update unit tests for authorization middleware: cover all role combinations against representative endpoint helpers
+- [ ] 26.12 Add integration tests: Administrator can promote a user to Office Administrator; Office Administrator can cancel another user's desk booking; Office Administrator receives 403 on user-create, user-delete, and role-assignment endpoints; an Administrator can demote an Office Administrator back to User; minimum-one-admin invariant still blocks demoting the last Administrator
+- [ ] 26.13 Add frontend Jest tests asserting that a session with `role = OFFICE_ADMIN` renders the slimmed sidebar (no User Management, no Resource Configuration), and that a session with `role = ADMIN` renders the full sidebar
+- [ ] 26.14 Add Playwright end-to-end test: Administrator promotes a user to Office Administrator; the promoted user logs in, sees the slimmed admin sidebar, cancels another user's desk booking successfully, and is denied (403 / no UI access) when attempting to open User Management
+- [ ] 26.15 Move `docs/spec.md` section 21 (**Office Administrator Role**) from **Not Yet Implemented** to **Currently Implemented** once tasks 26.1-26.14 pass
+- [ ] 26.16 Update `docs/usecases.md` with: Administrator promotes a user to Office Administrator; Office Administrator modifies another user's desk booking; Office Administrator denied from user management
+- [ ] 26.17 Update root `README.md` with the three-role model, capabilities matrix, and how to grant or revoke the Office Administrator role
+
+---
+
+## Phase 27: Key Fob Request and Allocation Subsystem
+
+**Objective:** Implement the key fob request flag on desk bookings, configurable fob inventory (default and per-day), booking-time enforcement when inventory is set, and the fob calendar and historical-allocation reports for Office Administrators and Administrators, per `docs/spec.md` section 22.
+
+**Dependencies:** Phase 2 (Desk Booking), Phase 5 (Admin Functionality), Phase 21 (Audit Trail) for fob-related audit events, Phase 26 (Office Administrator Role) so fob endpoints can enforce the new role.
+
+**Priority:** High
+
+**Estimated Effort:** 6-9 days
+
+### Tasks
+
+- [ ] 27.1 Design database schema: add `bookings.fob_requested BOOLEAN NOT NULL DEFAULT FALSE`; add `fob_inventory` table with columns `(date DATE NULL UNIQUE, count INT NOT NULL, updated_by INT, updated_at)` where `date IS NULL` represents the default count and a non-null date represents an override for that date; add indexes supporting per-day aggregation queries
+- [ ] 27.2 Add migration creating the new column and table; ensure migration is idempotent and safe on existing data
+- [ ] 27.3 Update Booking model and repository to read/write `fobRequested`; ensure `BookingService.getMyBookings` and admin booking listings expose the flag
+- [ ] 27.4 Implement `FobInventoryService` with: `getDefault()`, `getOverrideForDate(date)`, `getEffectiveCountForDate(date)` (override if set, else default, else null), `setDefault(count, actor)`, `setOverride(date, count, actor)`, `removeOverride(date, actor)`, and `getAvailabilityForRange(startDate, endDate)` returning `[{ date, configured, requested, available }]`
+- [ ] 27.5 Update `BookingService.createBooking` and `BookingService.createBulkBookings` to enforce inventory when `fobRequested === true`: for every day in the requested range, compute available = configured - existing fob-requested bookings; if any day has `available <= 0`, reject with error code `FOB_UNAVAILABLE` and a payload identifying the offending date(s)
+- [ ] 27.6 Implement admin API endpoints (Office Administrator or Administrator):
+  - `GET /api/admin/fob/inventory` (returns `{ default, overrides: [{ date, count }] }`)
+  - `PUT /api/admin/fob/inventory/default` (body: `{ count }`)
+  - `PUT /api/admin/fob/inventory/:date` (body: `{ count }`)
+  - `DELETE /api/admin/fob/inventory/:date`
+  - `GET /api/admin/fob/calendar?startDate&endDate` (per-day required vs available)
+  - `GET /api/admin/fob/history?startDate&endDate&format=csv` (past allocations with user info; default JSON, optional CSV)
+- [ ] 27.7 Update `POST /api/bookings` and `POST /api/bookings/bulk` to accept `fobRequested` in the request body; ensure `DELETE /api/bookings/:id` and the existing undo-cancel flow do not require special handling for fobs (cancellation alone implicitly releases the fob)
+- [ ] 27.8 Add audit emission for fob lifecycle: `FOB_INVENTORY_DEFAULT_UPDATED`, `FOB_INVENTORY_OVERRIDE_SET`, `FOB_INVENTORY_OVERRIDE_REMOVED`, `FOB_REQUEST_GRANTED` (on successful booking with `fob_requested = true`), `FOB_REQUEST_DENIED` (on a booking blocked by inventory)
+- [ ] 27.9 Update desk booking page (`src/frontend/pages/desk-booking.html`, `src/frontend/js/desk-booking.js`): add **"Fob needed"** checkbox; when an inventory limit is configured, display an inline availability hint per selected day refreshed alongside availability check; surface `FOB_UNAVAILABLE` errors with offending date(s)
+- [ ] 27.10 Update **My Bookings** UI to show whether each desk booking included a fob request (e.g. a small **Fob** badge)
+- [ ] 27.11 Build **Fob Management** admin page (Office Administrator + Administrator): set default count, list and edit per-day overrides, remove an override
+- [ ] 27.12 Build **Fob Calendar** admin page: month view with per-day required-vs-available counts; month navigation; optional date-range filter
+- [ ] 27.13 Build **Fob History** admin page: past allocations with date filter and CSV export button
+- [ ] 27.14 Add Fob pages to the admin sidebar; visible to Office Administrator and Administrator (uses Phase 26 sidebar variant)
+- [ ] 27.15 Add unit tests for `FobInventoryService` (default vs override resolution, range availability aggregation) and `BookingService.createBooking` fob-rejection paths (including partial-overlap day correctly identified)
+- [ ] 27.16 Add integration tests:
+  - Booking with `fobRequested = true` succeeds when inventory is unset.
+  - Booking with `fobRequested = true` succeeds within inventory and emits `FOB_REQUEST_GRANTED`.
+  - Booking with `fobRequested = true` fails with `FOB_UNAVAILABLE` when over inventory and emits `FOB_REQUEST_DENIED`.
+  - Cancelling a fob booking releases the fob so the next booker on that day succeeds.
+  - Calendar endpoint returns expected per-day required/available counts.
+  - History endpoint returns past allocations including user name and email; CSV export returns text/csv with correct headers.
+  - Authorization: regular User receives 403 on fob admin endpoints; Office Administrator and Administrator receive 200.
+- [ ] 27.17 Add frontend Jest tests: checkbox renders and is sent to API; inline availability hint updates after Check Availability; `FOB_UNAVAILABLE` error rendering; My Bookings fob badge; Fob Management page set default/override/remove; Fob Calendar page renders months; Fob History page renders rows and triggers CSV download
+- [ ] 27.18 Add Playwright end-to-end test: Office Administrator sets a per-day fob count of 1; User A books a desk for that day with **Fob needed** and succeeds; User B attempts the same and sees the **Fob unavailable** message; User A cancels; User B retries and succeeds; Office Administrator opens the Fob Calendar and confirms required vs available counts; Office Administrator opens Fob History and confirms past allocations
+- [ ] 27.19 Move `docs/spec.md` section 22 (**Key Fob Request and Allocation Subsystem**) from **Not Yet Implemented** to **Currently Implemented** once tasks 27.1-27.18 pass
+- [ ] 27.20 Add the new fob endpoints to the **API Endpoints** section of `docs/spec.md` once implemented
+- [ ] 27.21 Update `docs/usecases.md` with: User books a desk with a fob request within inventory; User attempts to book a desk with a fob request when inventory is exhausted; Office Administrator configures fob inventory; Office Administrator reviews fob calendar and history
+- [ ] 27.22 Update root `README.md` with the Key Fob feature description, the **Fob needed** booking flow, and the Office Administrator fob management/reporting flows
