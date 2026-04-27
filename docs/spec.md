@@ -465,6 +465,8 @@ The overtime capability was **removed end-to-end from the product** in Phase 23a
 
 ### 17. Floor Plan Map for Desk and Parking Selection
 
+**Status (Phase 23d, backend):** Implemented. Schema, repositories, service, and admin/public APIs are live: `GET /api/maps/:context`, `GET /api/maps/:context/floor-plan/image?v=N`, `POST /api/admin/maps/:context/floor-plan` (raw PNG/JPEG body, ≤2 MB, magic-byte sniff), `DELETE /api/admin/maps/:context/floor-plan`, `POST/PUT/DELETE /api/admin/maps/:context/landmarks[/:id]`, `PUT/DELETE /api/admin/maps/:context/resources/:resourceId/coordinates`. Audit events `MAP_FLOOR_PLAN_UPLOADED`, `MAP_FLOOR_PLAN_DELETED`, `MAP_LANDMARK_CREATED`, `MAP_LANDMARK_UPDATED`, `MAP_LANDMARK_DELETED`, `MAP_RESOURCE_COORDINATES_SET`, `MAP_RESOURCE_COORDINATES_CLEARED` emit on every mutation. The UI (admin map editor + per-page square map panels) is **Phase 23e** and remains pending; the descriptive bullets below state the intended product behaviour.
+
 Visual **map** (floor plan) support for choosing desks and parking spaces:
 
 - **Two contexts**: A **desk** map on the desk booking flow and a **carpark** map on the parking reservation flow. Each context has its own **floor plan image** and map metadata (they may show the same physical image only if the product is configured that way).
@@ -476,12 +478,18 @@ Visual **map** (floor plan) support for choosing desks and parking spaces:
 
 ### 18. Undo Desk Booking Cancellation
 
+**Status:** Implemented (Phase 23c). See root `README.md` (Desk Booking → Undoing a cancellation), `docs/audit-events.md` (`DESK_BOOKING_RESTORED`), and the Admin Endpoints list below for `POST /api/bookings/:id/undo-cancel`.
+
 When a user **cancels** their own desk booking:
 
-- The UI shows an **immediate Undo** affordance (e.g. banner or toast with an **Undo** action).
-- **Undo** restores the booking **only if** still allowed: within a **short time window** (specific duration is an implementation choice, e.g. 15--30 seconds, documented in README) and the desk remains **available** for those dates (no conflicting booking created in the meantime).
-- If Undo expires or is not possible, the user sees a clear message and the booking remains cancelled.
-- Admin cancellation of another user's booking **does not** require this Undo pattern unless product later extends it (initial scope: **user self-cancel** only).
+- The UI shows an **immediate Undo** affordance — a toast with an **Undo** button that appears on the My Bookings page immediately after the cancel succeeds. The toast auto-dismisses when the undo window expires. The `DELETE /api/bookings/:id` response also carries an `X-Undo-Window-Ms` header so the client-side timer stays in sync with the server rule if the duration is tuned.
+- **Undo** restores the booking **only if** still allowed: within a **short time window** (current implementation: **30 seconds** — `BookingService.UNDO_CANCEL_WINDOW_MS`) **and** the desk remains **available** for those dates (no conflicting booking created in the meantime). The client posts `POST /api/bookings/:id/undo-cancel` with a Bearer token; the server re-checks ownership, the window, and desk availability atomically before flipping `status` back to `active` and clearing `cancelled_at` / `cancelled_by` / `cancellation_reason`.
+- If Undo expires or is not possible, the user sees a clear error message and the booking remains cancelled. Specific server responses:
+  - `400 UNDO_EXPIRED` — time window has elapsed
+  - `409 DESK_UNAVAILABLE` — another booking has taken the desk during the window
+  - `403 FORBIDDEN` — caller isn't the booking's owner, or the cancel was admin-initiated
+- Admin cancellation of another user's booking **does not** require this Undo pattern — admin cancels are explicitly excluded from the undo path (initial scope: **user self-cancel** only).
+- The restore action emits a `DESK_BOOKING_RESTORED` audit event, mirroring the `DESK_BOOKING_CREATED` / `DESK_BOOKING_CANCELLED_BY_USER` catalogue entries.
 
 ### 19. Consistent Booking Action Buttons and Selection Mode
 
@@ -538,7 +546,9 @@ Authorization: Bearer admin_1
 - `GET /api/bookings/available` - Get available desks for date range (query params: startDate, endDate)
 - `GET /api/bookings/:id` - Get booking by ID
 - `POST /api/bookings` - Create a new booking (body: deskId, startDate, endDate)
-- `DELETE /api/bookings/:id` - Cancel a booking
+- `POST /api/bookings/bulk` - Create multiple bookings in one call (body: deskIds, startDate, endDate)
+- `DELETE /api/bookings/:id` - Cancel a booking (the response carries an `X-Undo-Window-Ms` header giving the number of milliseconds the user has to undo the cancellation)
+- `POST /api/bookings/:id/undo-cancel` - Phase 23c: restore a self-cancelled booking within the undo window if the desk is still available. Errors: `400 UNDO_EXPIRED`, `409 DESK_UNAVAILABLE`, `403 FORBIDDEN` (not owner or admin-initiated cancel), `400 NOT_CANCELLED`.
 
 ### Parking Spaces
 
@@ -556,6 +566,24 @@ Authorization: Bearer admin_1
 - `GET /api/parking-reservations/:id` - Get reservation by ID
 - `POST /api/parking-reservations` - Create a new reservation (body: parkingSpaceId, reservationDate, timePeriod)
 - `DELETE /api/parking-reservations/:id` - Cancel a reservation
+
+### Floor Plan Maps (Phase 23d)
+
+Public-but-authenticated read endpoints (any signed-in user with a complete profile):
+
+- `GET /api/maps/:context` - Get the map configuration for a context (`desk` or `parking`). Response: `{ context, floorPlan: { url, mime, version, uploadedAt } | null, landmarks: [...], resources: [...] }`.
+- `GET /api/maps/:context/floor-plan/image?v=N` - Stream the floor plan image bytes. The `v` query parameter cache-busts on every replace.
+
+Admin-only mutating endpoints:
+
+- `GET /api/admin/maps/:context` - Same shape as the public GET; for the editor UI.
+- `POST /api/admin/maps/:context/floor-plan` - Replace the floor plan image. Body is the **raw image bytes**; `Content-Type` must be `image/png` or `image/jpeg`. Hard cap **2 MB**. Magic bytes are sniffed against the declared mime so a spoofed `Content-Type` is rejected (`400 INVALID_IMAGE`). Bumps `image_version`.
+- `DELETE /api/admin/maps/:context/floor-plan` - Remove the floor plan and its image file.
+- `POST /api/admin/maps/:context/landmarks` - Body `{ type, label?, x, y }`. Coordinates are in `[0, 1]`. `type` must be one of the catalogue values; `custom` requires a non-empty `label`.
+- `PUT /api/admin/maps/:context/landmarks/:id` - Patch any subset of `{ type, label, x, y }`.
+- `DELETE /api/admin/maps/:context/landmarks/:id`
+- `PUT /api/admin/maps/:context/resources/:resourceId/coordinates` - Body `{ x, y }`. Validates the resource (desk or parking space) exists.
+- `DELETE /api/admin/maps/:context/resources/:resourceId/coordinates`
 
 ### Admin Endpoints
 

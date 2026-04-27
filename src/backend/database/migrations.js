@@ -291,6 +291,80 @@ async function _runMigrationsImpl() {
       logger.info('audit_events table created');
     }
 
+    // Phase 23d: floor plan map tables. See src/sql/09-floor-plan-maps-schema.sql
+    // for the canonical definitions; mirrored here so existing databases (which
+    // skip the docker-entrypoint-initdb step) get the tables on next boot.
+    const mapTableStatements = [
+      {
+        name: 'floor_plans',
+        sql: `
+          CREATE TABLE IF NOT EXISTS floor_plans (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            context VARCHAR(32) NOT NULL UNIQUE,
+            image_path VARCHAR(512) NOT NULL,
+            image_mime VARCHAR(64) NOT NULL,
+            image_version INT NOT NULL DEFAULT 1,
+            uploaded_by INT NULL,
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_floor_plans_context (context)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `,
+      },
+      {
+        name: 'map_landmarks',
+        sql: `
+          CREATE TABLE IF NOT EXISTS map_landmarks (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            context VARCHAR(32) NOT NULL,
+            type VARCHAR(32) NOT NULL,
+            label VARCHAR(128) NULL,
+            x_norm DECIMAL(8,6) NOT NULL,
+            y_norm DECIMAL(8,6) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_landmarks_context (context)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `,
+      },
+      {
+        name: 'desk_map_coordinates',
+        sql: `
+          CREATE TABLE IF NOT EXISTS desk_map_coordinates (
+            desk_id INT PRIMARY KEY,
+            x_norm DECIMAL(8,6) NOT NULL,
+            y_norm DECIMAL(8,6) NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT fk_desk_map_coordinates_desk
+              FOREIGN KEY (desk_id) REFERENCES desks(id) ON DELETE CASCADE
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `,
+      },
+      {
+        name: 'parking_space_map_coordinates',
+        sql: `
+          CREATE TABLE IF NOT EXISTS parking_space_map_coordinates (
+            parking_space_id INT PRIMARY KEY,
+            x_norm DECIMAL(8,6) NOT NULL,
+            y_norm DECIMAL(8,6) NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT fk_parking_space_map_coordinates_space
+              FOREIGN KEY (parking_space_id) REFERENCES parking_spaces(id) ON DELETE CASCADE
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `,
+      },
+    ];
+    for (const stmt of mapTableStatements) {
+      try {
+        await executeQuery(`SELECT 1 FROM ${stmt.name} LIMIT 1`);
+        logger.info(`${stmt.name} table exists`);
+      } catch (_) {
+        logger.info(`Creating ${stmt.name} table...`);
+        await executeQuery(stmt.sql);
+        logger.info(`${stmt.name} table created`);
+      }
+    }
+
   } catch (error) {
     logger.error('========================================');
     logger.error('MIGRATION FAILED');

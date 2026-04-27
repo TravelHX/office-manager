@@ -55,6 +55,7 @@ Legend for **Actor**: *self* = the authenticated user performing their own actio
 | `DESK_BOOKING_BULK_CREATED`               | `POST /api/bookings/bulk` (201/207)                           | self   | (none)                | `desk_ids`, `start_date`, `end_date`, `successful_count`, `failed_count` |
 | `DESK_BOOKING_CANCELLED_BY_USER`          | `DELETE /api/bookings/:id` by the booking's owner             | self   | `booking`             | `desk_id`, `start_date`, `end_date`                      |
 | `DESK_BOOKING_CANCELLED_BY_ADMIN`         | `DELETE /api/admin/bookings/:id`                              | admin  | `booking`             | `booking_user_id`, `desk_id`, `reason`                   |
+| `DESK_BOOKING_RESTORED`                   | `POST /api/bookings/:id/undo-cancel` (self-cancel undo window) | self  | `booking`             | `desk_id`, `start_date`, `end_date`, `undo_within_ms`    |
 | `PARKING_RESERVATION_CREATED`             | `POST /api/parking-reservations` (201)                        | self   | `parking_reservation` | `parking_space_id`, `reservation_date`, `time_period`    |
 | `PARKING_RESERVATION_BULK_CREATED`        | `POST /api/parking-reservations/bulk` (201/207)               | self   | (none)                | `parking_space_ids`, `reservation_date`, `time_period`, `successful_count`, `failed_count` |
 | `PARKING_RESERVATION_CANCELLED_BY_USER`   | `DELETE /api/parking-reservations/:id` by the reservation's owner | self | `parking_reservation` | `parking_space_id`, `reservation_date`, `time_period`   |
@@ -66,6 +67,13 @@ Legend for **Actor**: *self* = the authenticated user performing their own actio
 | `USER_DELETED`                            | `DELETE /api/auth/users/:id` (always admin, never self)       | admin  | `user`                | `deleted_user_id`, `deleted_email`                       |
 | `USER_PASSWORD_CHANGED`                   | Self-service password change or admin-initiated reset         | self/admin | `user`            | `target_user_id`, `initiator` (`self` or `admin`)        |
 | `USER_PROFILE_COMPLETED`                  | Profile completion after admin provisioning (first login)     | self   | `user`                | `office_location`                                        |
+| `MAP_FLOOR_PLAN_UPLOADED`                 | `POST /api/admin/maps/:context/floor-plan`                    | admin  | `floor_plan`          | `context`, `image_mime`, `image_version`, `image_bytes`  |
+| `MAP_FLOOR_PLAN_DELETED`                  | `DELETE /api/admin/maps/:context/floor-plan`                  | admin  | `floor_plan`          | `context`                                                |
+| `MAP_LANDMARK_CREATED`                    | `POST /api/admin/maps/:context/landmarks`                     | admin  | `landmark`            | `context`, `landmark_id`, `type`, `label`                |
+| `MAP_LANDMARK_UPDATED`                    | `PUT /api/admin/maps/:context/landmarks/:id`                  | admin  | `landmark`            | `context`, `landmark_id`                                 |
+| `MAP_LANDMARK_DELETED`                    | `DELETE /api/admin/maps/:context/landmarks/:id`               | admin  | `landmark`            | `context`, `landmark_id`                                 |
+| `MAP_RESOURCE_COORDINATES_SET`            | `PUT /api/admin/maps/:context/resources/:id/coordinates`      | admin  | `desk` / `parking_space` | `context`, `resource_id`, `x`, `y`                    |
+| `MAP_RESOURCE_COORDINATES_CLEARED`        | `DELETE /api/admin/maps/:context/resources/:id/coordinates`   | admin  | `desk` / `parking_space` | `context`, `resource_id`                              |
 
 ### Explicitly out of scope for Phase 21
 
