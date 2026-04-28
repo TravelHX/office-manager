@@ -365,6 +365,33 @@ async function _runMigrationsImpl() {
       }
     }
 
+    // Phase 26: third role 'office_admin'. The users table already has both
+    // `is_admin BOOLEAN` and `role VARCHAR(50)`. Going forward, `role` is the
+    // single source of truth with three valid values: 'user', 'office_admin',
+    // 'admin'. `is_admin` is kept in sync as a derived column for any legacy
+    // SQL or test fixtures that still query it directly. This step backfills
+    // any rows where the two columns disagree:
+    //   - is_admin = 1 but role != 'admin' -> role = 'admin'
+    //   - is_admin = 0 but role = 'admin'  -> is_admin = 1 (the role wins)
+    // The fix-up is idempotent and safe to run on every boot.
+    try {
+      const r1 = await executeQuery(
+        "UPDATE users SET role = 'admin' WHERE is_admin = 1 AND role <> 'admin'"
+      );
+      const r2 = await executeQuery(
+        "UPDATE users SET is_admin = 1 WHERE role = 'admin' AND (is_admin IS NULL OR is_admin = 0)"
+      );
+      const a = (r1 && r1.affectedRows) || 0;
+      const b = (r2 && r2.affectedRows) || 0;
+      if (a > 0 || b > 0) {
+        logger.info(`Phase 26 role backfill: aligned ${a + b} user row(s) between is_admin and role`);
+      } else {
+        logger.info('Phase 26 role backfill: no rows needed alignment');
+      }
+    } catch (error) {
+      logger.warn(`Phase 26 role backfill skipped: ${error.message}`);
+    }
+
   } catch (error) {
     logger.error('========================================');
     logger.error('MIGRATION FAILED');

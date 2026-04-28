@@ -33,7 +33,7 @@ Every row in `audit_events` has these columns (see `src/sql/08-audit-events-sche
 | `target_type` | VARCHAR(64) NULL| e.g. `booking`, `parking_reservation`, `user`, `desk`, `parking_space`, `admin_config`. |
 | `target_id`   | INT NULL        | Primary key of the target row at the time of the action.              |
 | `summary`     | VARCHAR(512) NULL| Short human-readable description, safe to show in admin UI.          |
-| `payload`     | JSON NULL       | Structured context. **Must not** contain secrets (no passwords, no full tokens, no password hashes). |
+| `payload`     | JSON NULL       | Structured context. **Must not** contain secrets (no passwords, no full tokens, no password hashes). Phase 26 onwards every payload also carries an `actor_role` key (`'user' \| 'office_admin' \| 'admin'`) recorded automatically by `src/backend/utils/audit-helper.js`, so admin vs office-admin actions are distinguishable in the trail. |
 | `ip_address`  | VARCHAR(45) NULL| IPv4 or IPv6 (max 45 chars). Captured from request if available.      |
 
 ### Actor rules
@@ -67,6 +67,7 @@ Legend for **Actor**: *self* = the authenticated user performing their own actio
 | `USER_DELETED`                            | `DELETE /api/auth/users/:id` (always admin, never self)       | admin  | `user`                | `deleted_user_id`, `deleted_email`                       |
 | `USER_PASSWORD_CHANGED`                   | Self-service password change or admin-initiated reset         | self/admin | `user`            | `target_user_id`, `initiator` (`self` or `admin`)        |
 | `USER_PROFILE_COMPLETED`                  | Profile completion after admin provisioning (first login)     | self   | `user`                | `office_location`                                        |
+| `USER_ROLE_CHANGED`                       | `PUT /api/auth/users/:id/role` (Administrator only)           | admin  | `user`                | `target_user_id`, `new_role`                             |
 | `MAP_FLOOR_PLAN_UPLOADED`                 | `POST /api/admin/maps/:context/floor-plan`                    | admin  | `floor_plan`          | `context`, `image_mime`, `image_version`, `image_bytes`  |
 | `MAP_FLOOR_PLAN_DELETED`                  | `DELETE /api/admin/maps/:context/floor-plan`                  | admin  | `floor_plan`          | `context`                                                |
 | `MAP_LANDMARK_CREATED`                    | `POST /api/admin/maps/:context/landmarks`                     | admin  | `landmark`            | `context`, `landmark_id`, `type`, `label`                |

@@ -208,7 +208,7 @@ function authorize(roles = []) {
       // Check isAdmin flag first (for admin role)
       const isAdmin = req.user.isAdmin || false;
       const userRole = req.user.role || 'user';
-      
+
       // Admin users have access to all roles
       if (!isAdmin && !roles.includes(userRole)) {
         return res.status(403).json({
@@ -224,10 +224,29 @@ function authorize(roles = []) {
   };
 }
 
+// Phase 26: convenience wrappers around `authorize` that name the policy
+// rather than the role list. Routes are easier to scan when they say
+// `requireOfficeAdminOrAdmin` than when they say `authorize(['admin','office_admin'])`.
+//
+// `requireAdmin`             -> only role === 'admin'
+// `requireOfficeAdminOrAdmin` -> role === 'admin' OR role === 'office_admin'
+//
+// Both keep the existing 401 for unauthenticated and 403 with FORBIDDEN
+// for wrong-role responses, so frontend error handling stays unchanged.
+function requireAdmin(req, res, next) {
+  return authorize(['admin'])(req, res, next);
+}
+
+function requireOfficeAdminOrAdmin(req, res, next) {
+  return authorize(['admin', 'office_admin'])(req, res, next);
+}
+
 module.exports = {
   authenticate,
   optionalAuthenticate,
   authorize,
+  requireAdmin,
+  requireOfficeAdminOrAdmin,
   requireCompleteProfile,
   optionalRequireCompleteProfile,
 };

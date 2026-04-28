@@ -674,6 +674,70 @@ class UserService {
    * @param {number} deletedBy - ID of admin performing the deletion
    * @returns {Promise<void>}
    */
+  /**
+   * Phase 26: change a user's role. Administrator-only operation.
+   *
+   * Enforces:
+   *   - caller exists and has role === 'admin'
+   *   - target user exists
+   *   - new role is one of the canonical values ('user' | 'office_admin' | 'admin')
+   *   - if target is currently 'admin' and the new role isn't, the global
+   *     last-admin invariant from spec section 10 must still hold
+   *     (`getAdminCount() > 1` after the change)
+   *   - admins MAY demote themselves only if at least one other admin
+   *     remains (this matches the existing self-deletion-forbidden rule's
+   *     reasoning: an admin can't strand the system, but moving themselves
+   *     off the admin role is allowed when there's still cover)
+   *
+   * @param {number} userId        the target user
+   * @param {string} newRole       'user' | 'office_admin' | 'admin'
+   * @param {number} changedBy     the acting user's id (must resolve to admin)
+   * @returns {Promise<User>}      the updated user
+   */
+  async changeUserRole(userId, newRole, changedBy) {
+    const User = require('../models/User');
+    const normalised = User.normaliseRole(newRole);
+    if (!normalised) {
+      throw new Error(`Invalid role. Must be one of: ${User.VALID_ROLES.join(', ')}`);
+    }
+
+    const actor = await this.userRepository.findById(changedBy);
+    if (!actor || !actor.isAdmin) {
+      throw new Error('Only admins can change user roles');
+    }
+
+    const target = await this.userRepository.findById(userId);
+    if (!target) {
+      throw new Error('User not found');
+    }
+
+    if (target.role === normalised) {
+      // No-op — return the existing record so callers don't crash on
+      // identity assignments.
+      return target;
+    }
+
+    // Last-admin invariant. Demoting from 'admin' to anything else must
+    // leave at least one admin in the system.
+    if (target.role === 'admin' && normalised !== 'admin') {
+      const adminCount = await this.getAdminCount();
+      if (adminCount <= 1) {
+        throw new Error(
+          'Cannot demote the last admin user. There must always be at least one admin user in the system.'
+        );
+      }
+    }
+
+    // Persist the new role; keep is_admin in sync with the canonical role
+    // so any legacy code reading is_admin still gets a correct answer.
+    await this.userRepository.executeRawQuery(
+      'UPDATE users SET role = ?, is_admin = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [normalised, normalised === 'admin' ? 1 : 0, userId]
+    );
+
+    return await this.userRepository.findById(userId);
+  }
+
   async deleteUser(userId, deletedBy) {
     // Check if deleter is admin
     const deleter = await this.userRepository.findById(deletedBy);

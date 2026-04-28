@@ -428,6 +428,71 @@ router.put('/users/password', authenticate, async (req, res, next) => {
   }
 });
 
+// Phase 26: change a user's role (Administrator only). Declared BEFORE
+// `PUT /users/:id` so the generic update handler doesn't capture this path
+// with `:id = :id` (Express matches in declaration order and the generic
+// handler accepts any value of :id, including the literal id from a /role
+// suffix request — but Express does fall through correctly when the
+// suffix doesn't match, so the only risk would be if someone PUT a body
+// that mentioned `role` to the generic update path. Declaring this route
+// first removes any ambiguity and lets the role-update path run its own
+// validation + audit emission.)
+router.put('/users/:id/role', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    if (!Number.isFinite(userId) || userId <= 0) {
+      return res.status(400).json({
+        error: { message: 'Invalid user id', code: 'INVALID_USER_ID' },
+      });
+    }
+    const { role } = req.body || {};
+    if (!role || typeof role !== 'string') {
+      return res.status(400).json({
+        error: { message: 'role is required (one of: user, office_admin, admin)', code: 'MISSING_ROLE' },
+      });
+    }
+
+    const updated = await userService.changeUserRole(userId, role, req.user.id);
+
+    // Phase 21d / 26.10: emit USER_ROLE_CHANGED. The audit helper already
+    // records actor_role automatically; we add the target's id and new role.
+    await audit.emit(req, {
+      actionType: 'USER_ROLE_CHANGED',
+      targetType: 'user',
+      targetId: userId,
+      summary: `Changed user #${userId} role to ${updated.role}`,
+      payload: {
+        target_user_id: userId,
+        new_role: updated.role,
+      },
+    });
+
+    res.json(updated.toJSON());
+  } catch (error) {
+    if (error.message === 'User not found') {
+      return res.status(404).json({
+        error: { message: error.message, code: 'USER_NOT_FOUND' },
+      });
+    }
+    if (error.message.includes('Invalid role')) {
+      return res.status(400).json({
+        error: { message: error.message, code: 'INVALID_ROLE' },
+      });
+    }
+    if (error.message.includes('Only admins can change user roles')) {
+      return res.status(403).json({
+        error: { message: error.message, code: 'FORBIDDEN' },
+      });
+    }
+    if (error.message.includes('last admin')) {
+      return res.status(400).json({
+        error: { message: error.message, code: 'CANNOT_DEMOTE_LAST_ADMIN' },
+      });
+    }
+    next(error);
+  }
+});
+
 // Update user endpoint (admin can update any user, users can update themselves)
 // NOTE: Must stay below `PUT /users/password` (see comment on that route).
 router.put('/users/:id', authenticate, async (req, res, next) => {

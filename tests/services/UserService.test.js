@@ -945,6 +945,82 @@ describe('UserService', () => {
     });
   });
 
+  describe('changeUserRole (Phase 26)', () => {
+    function buildAdmin(id = 1) {
+      return new User({ id, username: `admin${id}`, email: `admin${id}@example.com`, passwordHash: 'h', isAdmin: true, role: 'admin' });
+    }
+    function buildRegular(id = 2) {
+      return new User({ id, username: `user${id}`, email: `user${id}@example.com`, passwordHash: 'h', isAdmin: false, role: 'user' });
+    }
+
+    test('promotes a user to office_admin when caller is admin', async () => {
+      const admin = buildAdmin(1);
+      const target = buildRegular(2);
+      mockUserRepository.findById = jest.fn()
+        .mockResolvedValueOnce(admin)   // actor lookup
+        .mockResolvedValueOnce(target)  // target lookup
+        .mockResolvedValueOnce(new User({ id: 2, username: 'user2', email: 'u@x', passwordHash: 'h', role: 'office_admin' }));
+      mockUserRepository.executeRawQuery = jest.fn().mockResolvedValue();
+
+      const updated = await userService.changeUserRole(2, 'office_admin', 1);
+
+      expect(updated.role).toBe('office_admin');
+      expect(mockUserRepository.executeRawQuery).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE users SET role = ?'),
+        ['office_admin', 0, 2]
+      );
+    });
+
+    test('rejects unknown role values', async () => {
+      mockUserRepository.findById = jest.fn();
+      await expect(userService.changeUserRole(2, 'super_admin', 1))
+        .rejects.toThrow(/Invalid role/);
+      expect(mockUserRepository.findById).not.toHaveBeenCalled();
+    });
+
+    test('rejects when caller is not admin', async () => {
+      mockUserRepository.findById = jest.fn().mockResolvedValueOnce(buildRegular(99));
+      await expect(userService.changeUserRole(2, 'admin', 99))
+        .rejects.toThrow(/Only admins can change user roles/);
+    });
+
+    test('rejects when target does not exist', async () => {
+      mockUserRepository.findById = jest.fn()
+        .mockResolvedValueOnce(buildAdmin(1))
+        .mockResolvedValueOnce(null);
+      await expect(userService.changeUserRole(999, 'admin', 1))
+        .rejects.toThrow('User not found');
+    });
+
+    test('blocks demoting the last admin', async () => {
+      const admin = buildAdmin(1);
+      mockUserRepository.findById = jest.fn()
+        .mockResolvedValueOnce(admin)
+        .mockResolvedValueOnce(admin); // target is the same admin
+      // getAdminCount delegates to userRepository.countAdmins; mock it to
+      // return 1 so we trip the last-admin guard.
+      mockUserRepository.countAdmins = jest.fn().mockResolvedValue(1);
+      mockUserRepository.executeRawQuery = jest.fn();
+
+      await expect(userService.changeUserRole(1, 'user', 1))
+        .rejects.toThrow(/last admin/);
+      expect(mockUserRepository.executeRawQuery).not.toHaveBeenCalled();
+    });
+
+    test('no-op when target already has the requested role', async () => {
+      const admin = buildAdmin(1);
+      const target = new User({ id: 2, username: 'oa', email: 'oa@x', passwordHash: 'h', role: 'office_admin' });
+      mockUserRepository.findById = jest.fn()
+        .mockResolvedValueOnce(admin)
+        .mockResolvedValueOnce(target);
+      mockUserRepository.executeRawQuery = jest.fn();
+
+      const result = await userService.changeUserRole(2, 'office_admin', 1);
+      expect(result).toBe(target);
+      expect(mockUserRepository.executeRawQuery).not.toHaveBeenCalled();
+    });
+  });
+
   describe('deleteUser', () => {
     it('should delete a regular user successfully', async () => {
       const adminUser = new User({
@@ -1007,7 +1083,20 @@ describe('UserService', () => {
     });
 
     it('should throw error when attempting to delete last admin user', async () => {
-      const adminUser = new User({
+      // Phase 17 added self-deletion prevention which fires BEFORE the
+      // last-admin guard, so this test must use distinct deleter and target
+      // ids to actually exercise the last-admin path. Imagine an admin
+      // (id 100) trying to delete another admin (id 1) who is the only
+      // admin per the mocked count — i.e. the demote-the-last-admin case.
+      const deleter = new User({
+        id: 100,
+        username: 'someotheradmin',
+        email: 'deleter@example.com',
+        passwordHash: 'hash',
+        isAdmin: true,
+        role: 'admin',
+      });
+      const target = new User({
         id: 1,
         username: 'admin',
         email: 'admin@example.com',
@@ -1017,11 +1106,11 @@ describe('UserService', () => {
       });
 
       mockUserRepository.findById
-        .mockResolvedValueOnce(adminUser) // Deleter
-        .mockResolvedValueOnce(adminUser); // User to delete (same user)
+        .mockResolvedValueOnce(deleter) // Deleter
+        .mockResolvedValueOnce(target); // User to delete
       mockUserRepository.countAdmins.mockResolvedValue(1);
 
-      await expect(userService.deleteUser(1, 1)).rejects.toThrow('Cannot delete the last admin user');
+      await expect(userService.deleteUser(1, 100)).rejects.toThrow('Cannot delete the last admin user');
       expect(mockUserRepository.deleteById).not.toHaveBeenCalled();
     });
 

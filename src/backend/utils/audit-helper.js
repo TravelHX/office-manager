@@ -59,7 +59,20 @@ async function emit(req, params = {}) {
       // email; we record it as `actor_email` for audit provenance.
       actorEmail: reqUser ? (reqUser.username || null) : null,
       ipAddress: req && typeof req.ip === 'string' && req.ip ? req.ip : null,
+      // Phase 26: actor role goes into the audit payload so an admin can
+      // distinguish actions taken by a true Administrator vs an Office
+      // Administrator vs a regular User. Falls back to 'user' so the field
+      // is always present.
+      actorRole: reqUser ? (reqUser.role || 'user') : null,
     };
+
+    // Merge actor_role into payload alongside any caller-provided fields.
+    // Caller payloads win on key collision so a deliberate override is
+    // possible if a flow ever needs to record a different role context.
+    const callerPayload = (params.payload && typeof params.payload === 'object') ? params.payload : null;
+    const enrichedPayload = defaults.actorRole !== null
+      ? { actor_role: defaults.actorRole, ...(callerPayload || {}) }
+      : (callerPayload || params.payload || null);
 
     const merged = {
       actionType: params.actionType,
@@ -68,7 +81,7 @@ async function emit(req, params = {}) {
       targetType: params.targetType !== undefined ? params.targetType : null,
       targetId: params.targetId !== undefined ? params.targetId : null,
       summary: params.summary !== undefined ? params.summary : null,
-      payload: params.payload !== undefined ? params.payload : null,
+      payload: params.payload === null ? null : enrichedPayload,
       ipAddress: params.ipAddress !== undefined ? params.ipAddress : defaults.ipAddress,
     };
 

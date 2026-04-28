@@ -33,6 +33,16 @@ function parseIsAdmin(value) {
   return Boolean(value);
 }
 
+// Phase 26: canonical role tokens. `role` is the single source of truth;
+// `isAdmin` is a derived convenience flag computed from `role === 'admin'`.
+const VALID_ROLES = Object.freeze(['user', 'office_admin', 'admin']);
+
+function normaliseRole(value) {
+  if (typeof value !== 'string') return null;
+  const t = value.trim().toLowerCase();
+  return VALID_ROLES.includes(t) ? t : null;
+}
+
 class User {
   constructor(data) {
     this.id = data.id;
@@ -42,10 +52,22 @@ class User {
     this.email = data.email;
     this.officeLocation = data.office_location || data.officeLocation || null;
     this.passwordHash = data.password_hash || data.passwordHash;
-    this.isAdmin = data.is_admin !== undefined && data.is_admin !== null
+    // Phase 26: derive `role` then compute `isAdmin` from it. If the source
+    // row has only `is_admin = 1` and no role (or an unknown role), promote
+    // to 'admin' so the model is internally consistent. The migration in
+    // src/backend/database/migrations.js performs the same alignment in DB.
+    const explicitRole = normaliseRole(data.role);
+    const legacyIsAdmin = data.is_admin !== undefined && data.is_admin !== null
       ? parseIsAdmin(data.is_admin)
       : (data.isAdmin !== undefined && data.isAdmin !== null ? parseIsAdmin(data.isAdmin) : false);
-    this.role = data.role || 'user';
+    if (explicitRole) {
+      this.role = explicitRole;
+    } else if (legacyIsAdmin) {
+      this.role = 'admin';
+    } else {
+      this.role = 'user';
+    }
+    this.isAdmin = this.role === 'admin';
     this.resetToken = data.reset_token || data.resetToken || null;
     this.resetTokenExpiry = data.reset_token_expiry || data.resetTokenExpiry || null;
     this.invitationToken = data.invitation_token || data.invitationToken || null;
@@ -54,6 +76,11 @@ class User {
     this.createdAt = data.created_at || data.createdAt;
     this.updatedAt = data.updated_at || data.updatedAt;
   }
+
+  /** Phase 26: convenience checks reused by services and routes. */
+  isOfficeAdmin() { return this.role === 'office_admin'; }
+  hasAdminPrivileges() { return this.role === 'admin'; }
+  hasOfficeAdminPrivileges() { return this.role === 'office_admin' || this.role === 'admin'; }
 
   toJSON() {
     return {
@@ -149,4 +176,6 @@ class User {
 }
 
 module.exports = User;
+module.exports.VALID_ROLES = VALID_ROLES;
+module.exports.normaliseRole = normaliseRole;
 

@@ -143,7 +143,11 @@ router.get('/parking-spaces', authenticate, requireCompleteProfile, authorize(['
   }
 });
 
-router.delete('/bookings/:id', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
+// Phase 26: Office Administrators can also cancel another user's desk
+// booking. The previous `authorize(['admin'])` is widened to include
+// 'office_admin'; the audit event records the actor's role so admin vs
+// office-admin actions are distinguishable in the trail.
+router.delete('/bookings/:id', authenticate, requireCompleteProfile, authorize(['admin', 'office_admin']), async (req, res, next) => {
   try {
     const adminId = req.user.id;
     const { reason } = req.body;
@@ -197,7 +201,9 @@ router.delete('/bookings/:id', authenticate, requireCompleteProfile, authorize([
   }
 });
 
-router.delete('/parking-reservations/:id', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
+// Phase 26: Office Administrators can also cancel another user's parking
+// reservation, parallel to the desk-booking cancel above.
+router.delete('/parking-reservations/:id', authenticate, requireCompleteProfile, authorize(['admin', 'office_admin']), async (req, res, next) => {
   try {
     const adminId = req.user.id;
     const { reason } = req.body;

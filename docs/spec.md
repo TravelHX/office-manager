@@ -518,6 +518,54 @@ Desk and parking space lists must be sorted in **natural numeric order**, not al
 
 This feature ensures resource lists are presented in an intuitive, human-friendly order across the entire application.
 
+### 21. Office Administrator Role
+
+**Status (Phase 26a, backend):** Implemented. The three-role model is enforced server-side: schema, model, middleware, role-assignment endpoint, and audit. The **Phase 26b** UI (admin sidebar variant + User Management role selector + Playwright e2e + final docs) is pending.
+
+Introduce a new role distinct from User and Administrator, expanding the role model to **three** roles in total:
+
+- **Three roles:** **User** (default), **Office Administrator** (new), **Administrator** (existing top-level admin).
+- **Office Administrator capabilities:**
+  - Manage **key fob allocation** (see section 22): set fob counts (overall default and per-day overrides), view fob requirement reports, view past fob allocation reports.
+  - **Modify other people's desk bookings**: create, cancel, or change a desk booking on behalf of another user, subject to the same business rules that already apply to admin desk operations (no double-booking, valid date ranges, etc.).
+- **Office Administrator restrictions:**
+  - **Cannot add or remove users.** User provisioning and deletion remain exclusive to the **Administrator** role.
+  - **Cannot edit other configuration** outside of fob settings (desk count, parking count, version configuration, audit retention, role assignment, etc. remain Administrator-only).
+- **Role assignment and removal:**
+  - **Only an Administrator** may grant or revoke the Office Administrator role on another user. Office Administrators cannot promote or demote anyone.
+  - An **Office Administrator may be removed** (deleted) by an **Administrator**, subject to existing user-deletion rules in section 10.
+- **Self-protection rules:**
+  - The minimum-one-admin invariant from section 10 applies to **Administrators only**; Office Administrators do **not** count toward the minimum admin requirement and are **not** subject to a minimum count of their own.
+  - Existing self-deletion forbidden rules from section 10 apply to Administrators; Office Administrators may also not delete their own account (since deletion is Administrator-only, an Office Administrator could not delete anyone in any case).
+- **UI / navigation:** Office Administrators see a slimmed admin sidebar containing only fob management, fob reports, and other-user desk booking management. They do **not** see User Management, Resource Configuration (desk/parking counts), Audit (admin-only), or any other Administrator-only sections.
+- **API authorization:** The new role is enforced server-side on every endpoint. Endpoints that previously required `admin` are reviewed and split into "Administrator only" vs "Administrator or Office Administrator" as defined by the capabilities above. Audit events (per section 15) capture the **actor role** for any action so that office-admin actions are distinguishable from administrator actions in the trail.
+- **Backwards compatibility:** Existing users default to **User**. Existing Administrators are unchanged. No automatic promotion to Office Administrator occurs on migration.
+
+This feature lets a delegated person manage day-to-day fob logistics and other-user desk changes without granting full administrator access.
+
+### 22. Key Fob Request and Allocation Subsystem
+
+Allow a desk booking to optionally request a building **key fob**, and let Office Administrators (and Administrators) manage fob inventory and reporting.
+
+- **Per-booking fob request flag (22.1):** When a user creates a desk booking, the booking form includes a **"Fob needed"** checkbox. The flag is stored against the booking and applies to **every day** of a multi-day booking. The flag is also exposed in **My Bookings** so the user can see which of their bookings included a fob request.
+- **Per-day fob requirement report (22.2):** Office Administrators (and Administrators) can view a **calendar** report. Each calendar day shows the **count of fobs required** for that day, computed from active desk bookings flagged "fob needed" that overlap that day. The calendar supports month navigation and an optional date-range filter.
+- **Configurable fob inventory (22.3):**
+  - Office Administrators may specify a **default total number of fobs** available, applied to every day unless overridden.
+  - Office Administrators may also specify a **per-day fob count** for specific dates that overrides the default for that date only.
+  - Both settings are **optional**. If no inventory is configured, fob requests are **tracked** (flag stored on the booking) but **never** block booking.
+- **Booking enforcement when inventory is set (22.3):**
+  - When an inventory limit exists and the user ticks **"Fob needed"**, the booking is **blocked** if granting the fob would exceed the available inventory on **any** day in the requested range.
+  - Available on a given day = `inventory_for_day - (count of active bookings with fob_requested = true overlapping that day)`.
+  - The user sees a clear error message identifying the offending date(s), e.g. **"Fob unavailable: only N fob(s) remaining on YYYY-MM-DD"**.
+  - The user may either uncheck "Fob needed" and proceed (booking succeeds without a fob), or pick different dates.
+- **Past allocation report (22.4):** Office Administrators can view a **historical allocation report** that lists, for each past day, every booking that was granted a fob, including the **person** who took the fob (name and email), the **date(s)**, and the **booking id**. The report supports a date-range filter and is **exportable to CSV** consistent with existing admin reports.
+- **Visibility:**
+  - End users see the **Fob needed** checkbox on the desk booking form. When inventory is configured, an inline hint shows remaining fob availability for the selected date(s).
+  - The fob calendar and history reports are visible only to **Office Administrators** and **Administrators**.
+- **Audit (per section 15):** Fob inventory changes and fob-request outcomes emit audit events such as `FOB_INVENTORY_DEFAULT_UPDATED`, `FOB_INVENTORY_OVERRIDE_SET`, `FOB_INVENTORY_OVERRIDE_REMOVED`, `FOB_REQUEST_GRANTED` (on successful booking with `fob_requested = true`), and `FOB_REQUEST_DENIED` (on a booking blocked by inventory).
+- **Cancellation:** Cancelling a desk booking that included a fob releases that fob for the day(s) of the booking; the released capacity is immediately available for the next request.
+- **Cascade:** Deleting a user removes their bookings (per existing rules) which also releases any fobs associated with those bookings.
+
 ## API Endpoints
 
 ### Authentication
@@ -595,6 +643,7 @@ Admin-only mutating endpoints:
 - `DELETE /api/admin/bookings/:id` - Cancel any booking (admin only, body: reason)
 - `DELETE /api/admin/parking-reservations/:id` - Cancel any reservation (admin only, body: reason)
 - `GET /api/admin/audit-events` - List and search the audit trail (admin only, query: `limit` default 50 / max 500, `offset` default 0, `search` substring match over action_type / actor_email / summary / payload). Response shape: `{ events: [...], limit, offset }` with events in newest-first order.
+- `PUT /api/auth/users/:id/role` - Phase 26: change a user's role (Administrator only). Body `{ role: 'user' | 'office_admin' | 'admin' }`. Errors: `400 INVALID_ROLE`, `400 CANNOT_DEMOTE_LAST_ADMIN`, `403 FORBIDDEN`, `404 USER_NOT_FOUND`. Emits `USER_ROLE_CHANGED` audit event.
 
 ### Error Responses
 
