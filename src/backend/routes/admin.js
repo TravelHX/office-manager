@@ -107,7 +107,10 @@ router.put('/configuration/parking-count', authenticate, requireCompleteProfile,
   }
 });
 
-router.get('/bookings', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
+// Phase 26: Office Administrators need to LIST all bookings before they can
+// cancel any of them, so the GET endpoints are widened to include
+// 'office_admin'. Read-only listing — no audit emission required here.
+router.get('/bookings', authenticate, requireCompleteProfile, authorize(['admin', 'office_admin']), async (req, res, next) => {
   try {
     const bookings = await adminService.getAllBookings();
     res.json(bookings);
@@ -116,7 +119,7 @@ router.get('/bookings', authenticate, requireCompleteProfile, authorize(['admin'
   }
 });
 
-router.get('/parking-reservations', authenticate, requireCompleteProfile, authorize(['admin']), async (req, res, next) => {
+router.get('/parking-reservations', authenticate, requireCompleteProfile, authorize(['admin', 'office_admin']), async (req, res, next) => {
   try {
     const reservations = await adminService.getAllParkingReservations();
     res.json(reservations);

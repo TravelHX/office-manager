@@ -21,6 +21,12 @@ RUN if [ "$NODE_ENV" = "test" ]; then npm install; else npm install --omit=dev; 
 # Copy application code
 COPY . .
 
+# Restore the application package.json after `COPY . .` overwrote it.
+# The repo root now holds a separate Playwright-only package.json
+# (name "office-manager-e2e") which would mask the application package
+# (with the test script and runtime deps) without this re-copy.
+COPY src/frontend/package.json ./package.json
+
 # Second copy duplicates src/frontend/package.json; Jest haste map requires unique "name"
 RUN node -e "const fs=require('fs');const p='src/frontend/package.json';if(fs.existsSync(p)){const j=JSON.parse(fs.readFileSync(p,'utf8'));if(j.name==='office-manager'){j.name='office-manager-frontend-embed';fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');}}"
 

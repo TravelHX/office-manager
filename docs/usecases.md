@@ -404,3 +404,76 @@ The previous Use Case 7 covered combined desk, parking, and overtime actions. Ov
 **Automated coverage:** `tests/services/MapService.test.js` (validation rules — context, mime, size, magic bytes, normalised coords, resource existence); `tests/integration/maps.test.js` (HTTP shape, auth, audit emission); `src/frontend/tests/map-renderer.test.js` (renderer DOM, escaping, marker click event, fallback when no floor plan); `tests/e2e/maps.spec.js` (Playwright — user sees floor plan + markers + landmark; admin opens the Maps tab and switches contexts).
 
 ---
+
+## Use Case 14: Administrator Promotes a User to Office Administrator
+
+**Description:** An Administrator grants a regular User the Office Administrator role so they can help cancel other users' bookings without giving them full Administrator access. The change is enforced server-side and recorded in the audit log.
+
+**Steps:**
+1. Administrator signs in and opens the **Admin** page
+2. Administrator clicks the **User Management** sidebar item (visible only to Administrators)
+3. The user table shows a **Role** column with a per-row `<select>` containing `User`, `Office Administrator`, and `Administrator`. Each row has a **Save** button next to the select.
+4. Administrator changes the target user's role from `User` to `Office Administrator`. The Save button enables when the value differs from the original.
+5. Administrator clicks **Save**. The browser PUTs `/api/auth/users/:id/role` with `{ role: "office_admin" }`.
+6. The server enforces the **last-admin invariant** (you cannot demote the only remaining Administrator) and records `USER_ROLE_CHANGED` with `actor_role: 'admin'` and the new role in the payload.
+7. Administrator's own row shows the role as a static badge (no select); the page never lets an Administrator demote themselves from this control. The server-side last-admin check is the authoritative guard.
+
+**Expected Result:** The target user's `role` becomes `office_admin`. Their next login carries that role in the JWT, and the slimmed admin sidebar variant applies on `/pages/admin.html`. The audit trail shows who changed whose role and when.
+
+**Manual Testing Path:**
+1. Sign in as an Administrator and open **Admin → User Management**
+2. Pick a regular user, choose **Office Administrator** in their Role select, click **Save**
+3. Confirm the success message ("Role updated to office_admin.")
+4. Open **Admin → Audit** and search for `USER_ROLE_CHANGED`; confirm the row has the actor's email and the target user's id
+5. Sign out, sign in as the promoted user, and open `/pages/admin.html`; confirm the slimmed sidebar (no Resource Configuration, no User Management, no Audit, no Maps)
+
+**Automated coverage:** `tests/integration/office-admin-role.test.js` (PUT role assignment HTTP shape, audit `actor_role`, last-admin invariant); `src/frontend/tests/admin-role-ui.test.js` (`renderRoleCell`, `saveUserRole`, sidebar variant); `tests/e2e/office-admin-role.spec.js` (Playwright — full Administrator → OA promotion → OA login flow).
+
+---
+
+## Use Case 15: Office Administrator Cancels Another User's Desk Booking
+
+**Description:** An Office Administrator helps an absent or unresponsive colleague by cancelling that user's desk booking. The OA does this from the same All Bookings table that Administrators use; the server recognises both `admin` and `office_admin` and records the actor's role on the audit row.
+
+**Steps:**
+1. Office Administrator signs in and opens `/pages/admin.html`
+2. The slimmed sidebar opens with **All Bookings** as the active tab. The OA cannot see Resource Configuration, User Management, Audit, or Maps.
+3. The All Bookings table lists every booking (the GET endpoint is widened to accept `office_admin` for read access).
+4. OA finds the target booking row, clicks the **Cancel** button, accepts the optional reason prompt.
+5. The browser DELETEs `/api/admin/bookings/:id`. The server cancels the booking and emits `DESK_BOOKING_CANCELLED_BY_ADMIN` with `actor_role: 'office_admin'`.
+6. The cancellation success toast appears. The booking row re-renders as cancelled.
+
+**Expected Result:** The booking moves from `active` to `cancelled`. The owning user sees it cancelled in **My Bookings**. The audit log row distinguishes the OA from a full Administrator via the `actor_role` field.
+
+**Manual Testing Path:**
+1. Sign in as an Office Administrator (promoted in Use Case 14)
+2. Open **Admin → All Bookings**; the tab is the default for OAs
+3. Find any other user's active booking and click **Cancel**, accept the prompt
+4. Confirm the success toast and that the row no longer shows a Cancel button
+5. Sign in as an Administrator, open **Admin → Audit**, search for `DESK_BOOKING_CANCELLED_BY_ADMIN`; confirm the payload contains `actor_role: 'office_admin'`
+
+**Automated coverage:** `tests/integration/office-admin-role.test.js` (OA cancels a desk booking and a parking reservation; audit `actor_role`); `tests/e2e/office-admin-role.spec.js` (full OA-cancels-booking flow through the UI).
+
+---
+
+## Use Case 16: Office Administrator Denied from User Management
+
+**Description:** An Office Administrator should not be able to provision users, delete users, or assign roles. The protection is enforced both in the UI (the sidebar item is hidden) and at the API (every User Management endpoint returns `403 FORBIDDEN`).
+
+**Steps:**
+1. Office Administrator signs in and opens `/pages/admin.html`
+2. The sidebar does **not** include **User Management**, **Audit**, or **Maps**. The Resource Configuration tab is also hidden because it is part of the Administrator-only configuration surface.
+3. If the OA crafts a direct request to `POST /api/auth/users`, `DELETE /api/auth/users/:id`, or `PUT /api/auth/users/:id/role`, the server rejects with `403 FORBIDDEN`.
+4. The server records nothing in the audit log for the rejected request — `403`s short-circuit before the audit emit point.
+
+**Expected Result:** The Office Administrator cannot create, delete, or re-role any user, in either the UI or the API.
+
+**Manual Testing Path:**
+1. Sign in as an Office Administrator
+2. Open `/pages/admin.html`; confirm the sidebar contains All Bookings, All Parking Reservations, and Change Password — but not User Management, Audit, Maps, or Resource Configuration
+3. Use a tool like `curl` (or the browser devtools console) to call `GET /api/auth/users` with the OA's JWT; confirm `403 FORBIDDEN`
+4. Same for `POST /api/auth/users` and `PUT /api/auth/users/:id/role` — both must return `403`
+
+**Automated coverage:** `tests/integration/office-admin-role.test.js` (OA receives 403 on POST/DELETE/PUT user-management endpoints); `src/frontend/tests/admin-role-ui.test.js` (`applyRoleSidebarVariant` keeps User Management / Audit / Maps hidden for `office_admin`); `tests/e2e/office-admin-role.spec.js` (sidebar visibility + API 403 probe).
+
+---

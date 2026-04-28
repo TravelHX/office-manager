@@ -88,16 +88,16 @@ This file (`docs/todo.md`) lists **remaining code and test work** so the codebas
 - [x] 26.5 Implement role assignment endpoint (Phase 26a: `PUT /api/auth/users/:id/role` admin-only, body `{ role }`. `UserService.changeUserRole` validates the role token, refuses if caller isn't admin, refuses if target doesn't exist, and enforces the last-admin invariant from spec section 10 — demotion fails with `400 CANNOT_DEMOTE_LAST_ADMIN` if it would leave zero admins. No-op when target already has the requested role. Emits `USER_ROLE_CHANGED` audit event.)
 - [x] 26.6 Implement endpoints for Office Administrator to modify another user's desk booking (Phase 26a: `DELETE /api/admin/bookings/:id` and `DELETE /api/admin/parking-reservations/:id` now accept `office_admin OR admin`. Existing booking validation (already-cancelled checks, etc.) is unchanged. The audit row records `actor_role`.)
 - [x] 26.7 Block Office Administrators from User Management endpoints (Phase 26a: `POST /api/auth/users`, `DELETE /api/auth/users/:id`, and `PUT /api/auth/users/:id/role` retain `authorize(['admin'])` so an OA caller hits `403 FORBIDDEN`. Integration tests assert this for every endpoint.)
-- [ ] 26.8 Update User Management admin UI (Administrator only) to show and edit each user's role via a select control (`User`, `Office Administrator`, `Administrator`); preserve existing last-admin and self-deletion guards
-- [ ] 26.9 Update admin sidebar to render a slimmed variant for Office Administrators: visible items limited to **Fob Management**, **Fob Calendar**, **Fob History** (added in Phase 27), and **Bookings** (with edit/cancel for any user); hide User Management, Resource Configuration, Audit, Maps, and other Administrator-only sections
-- [ ] 26.10 Update `AuditService` (or equivalent helper) to record the actor's **role** in every audit event payload so admin vs office-admin actions are distinguishable in the trail
-- [ ] 26.11 Update unit tests for authorization middleware: cover all role combinations against representative endpoint helpers
-- [ ] 26.12 Add integration tests: Administrator can promote a user to Office Administrator; Office Administrator can cancel another user's desk booking; Office Administrator receives 403 on user-create, user-delete, and role-assignment endpoints; an Administrator can demote an Office Administrator back to User; minimum-one-admin invariant still blocks demoting the last Administrator
-- [ ] 26.13 Add frontend Jest tests asserting that a session with `role = OFFICE_ADMIN` renders the slimmed sidebar (no User Management, no Resource Configuration), and that a session with `role = ADMIN` renders the full sidebar
-- [ ] 26.14 Add Playwright end-to-end test: Administrator promotes a user to Office Administrator; the promoted user logs in, sees the slimmed admin sidebar, cancels another user's desk booking successfully, and is denied (403 / no UI access) when attempting to open User Management
-- [ ] 26.15 Move `docs/spec.md` section 21 (**Office Administrator Role**) from **Not Yet Implemented** to **Currently Implemented** once tasks 26.1-26.14 pass
-- [ ] 26.16 Update `docs/usecases.md` with: Administrator promotes a user to Office Administrator; Office Administrator modifies another user's desk booking; Office Administrator denied from user management
-- [ ] 26.17 Update root `README.md` with the three-role model, capabilities matrix, and how to grant or revoke the Office Administrator role
+- [x] 26.8 Update User Management admin UI (Administrator only) to show and edit each user's role via a select control (`User`, `Office Administrator`, `Administrator`); preserve existing last-admin and self-deletion guards (Phase 26b: `displayAllUsers` in `src/frontend/js/admin.js` now calls `renderRoleCell(user, isSelf)` for the Role column. The cell renders a `<select>` with the three canonical role tokens plus a `Save` button which is disabled until the value differs from the original. The current admin's own row stays as a static badge so the UI never asks an admin to demote themselves out of the page. Save calls `PUT /api/auth/users/:id/role`; the server-side last-admin and self-deletion invariants still apply.)
+- [x] 26.9 Update admin sidebar to render a slimmed variant for Office Administrators (Phase 26b: `applyRoleSidebarVariant` in `src/frontend/js/admin.js` reads the canonical role after `/me` sync. For `office_admin` it hides the Resource Configuration, Desks, Parking Spaces, and Booking Matrix tab buttons, switches the active tab to All Bookings, and skips the admin-only background loads (`loadConfiguration`, `loadAllDesks`, `loadAllParkingSpaces`). User Management, Audit, and Maps remain hidden because `serverAllowsUserManagement()` returns false for OAs. Fob Management / Fob Calendar / Fob History items will be added by Phase 27.)
+- [x] 26.10 Update `AuditService` (or equivalent helper) to record the actor's **role** in every audit event payload (Phase 26a: `src/backend/utils/audit-helper.js` auto-injects `actor_role` from `req.user.role` into every emitted event payload; admin vs office-admin actions are distinguishable in the trail.)
+- [x] 26.11 Update unit tests for authorization middleware: cover all role combinations (Phase 26a: `tests/middleware/auth.test.js` covers `requireAdmin`, `requireOfficeAdminOrAdmin`, and the underlying `authorize([...])` for every role combination.)
+- [x] 26.12 Add integration tests: promote / OA cancels / OA receives 403 / demote back / last-admin invariant (Phase 26a: `tests/integration/office-admin-role.test.js` covers all five flows end-to-end against the real test database.)
+- [x] 26.13 Add frontend Jest tests for sidebar role variants and the role-selector flow (Phase 26b: `src/frontend/tests/admin-role-ui.test.js` drives the real `applyRoleSidebarVariant`, `renderRoleCell`, and `saveUserRole` helpers exported from `admin.js`; 11 tests cover OA sidebar gating, full-admin no-op, role-cell select markup, Save-button data attrs, and the `Cannot demote` error message.)
+- [x] 26.14 Add Playwright end-to-end test (Phase 26b: `tests/e2e/office-admin-role.spec.js` provisions an OA target, promotes them via the role endpoint, re-logs in to pick up the new JWT, asserts the slimmed sidebar on `/pages/admin.html`, cancels another user's desk booking from the All Bookings tab, and probes the API directly to confirm the OA receives `403` on `GET /api/auth/users` and `PUT /api/auth/users/:id/role`.)
+- [x] 26.15 Move `docs/spec.md` section 21 to fully Implemented (Phase 26b: status line updated to "Implemented (Phase 26)" with the full backend + frontend summary; the section retains its number 21 and remains in the spec where the rest of the feature catalogue lives.)
+- [x] 26.16 Update `docs/usecases.md` (Phase 26b: appended Use Case 14 — Administrator promotes a user to Office Administrator; Use Case 15 — Office Administrator cancels another user's desk booking; Use Case 16 — Office Administrator denied from User Management.)
+- [x] 26.17 Update root `README.md` with the three-role model, capabilities matrix, and how to grant or revoke the Office Administrator role (Phase 26b: User Authentication section now lists the three roles and includes a capabilities matrix; a new sub-section walks an Administrator through granting/revoking the OA role; the Implementation Summary has a Phase 26 entry.)
 
 ---
 
@@ -148,3 +148,56 @@ This file (`docs/todo.md`) lists **remaining code and test work** so the codebas
 - [ ] 27.20 Add the new fob endpoints to the **API Endpoints** section of `docs/spec.md` once implemented
 - [ ] 27.21 Update `docs/usecases.md` with: User books a desk with a fob request within inventory; User attempts to book a desk with a fob request when inventory is exhausted; Office Administrator configures fob inventory; Office Administrator reviews fob calendar and history
 - [ ] 27.22 Update root `README.md` with the Key Fob feature description, the **Fob needed** booking flow, and the Office Administrator fob management/reporting flows
+
+---
+
+## Phase 28: Select-as-Toggle and Uniform Booking Card Button Sizing
+
+**Objective:** Make the per-card **Select** button on the desk booking and parking reservation pages a true toggle (click to select, click again to deselect) and render it at the **same dimensions** as the per-card **Book** / **Reserve** buttons via a shared CSS class. Per `docs/spec.md` section 23, refining section 19. This corrects a current regression where Select is noticeably larger than Book on the desk booking page.
+
+**Dependencies:** Phase 2 (Desk Booking), Phase 3 (Parking Tracking), Phase 15 (Multi-Select). The hide-on-select rule from earlier work continues to apply.
+
+**Priority:** Medium
+
+**Estimated Effort:** 0.5-1 day
+
+### Tasks
+
+- [ ] 28.1 Audit current CSS in `src/frontend/css/styles.css` for `.btn-primary`, `.btn-secondary`, `.select-desk-btn`, `.select-parking-btn`, `.book-desk-btn`, `.reserve-parking-btn` (or equivalents) and identify why Select renders larger than Book on desk cards
+- [ ] 28.2 Define a single shared CSS class (e.g. `.btn-card-action`) with a fixed `min-width`, `min-height`, padding, and font-size; apply this class to the Select, Book, and Reserve buttons on both desk and parking cards
+- [ ] 28.3 Update `src/frontend/js/desk-booking.js` to render the Select button with the shared class and an `aria-pressed` attribute reflecting the current selection state for that desk
+- [ ] 28.4 Update `src/frontend/js/parking.js` to render the Select button with the shared class and an `aria-pressed` attribute reflecting the current selection state for that parking space
+- [ ] 28.5 Update Select click handlers in `src/frontend/js/desk-booking.js` and `src/frontend/js/parking.js` to **toggle**: if the resource is already in the selection, remove it; otherwise add it. The existing **Clear Selection** behaviour for "deselect all" remains unchanged
+- [ ] 28.6 Update the Select button's visible label and styling on toggle: when selected, show **Selected** (or equivalent affordance such as a checkmark) and apply a distinct active style; when deselected, return to the default **Select** label and style. Re-render does not flicker (use a class flip rather than rebuilding the element where reasonable)
+- [ ] 28.7 Confirm hide-on-select still applies: when a card is in the selected state, the immediate **Book** / **Reserve** control on that same card stays hidden; toggling Select off must restore that control
+- [ ] 28.8 Add frontend Jest tests in `src/frontend/tests/desk-booking.test.js` covering: equal computed width and height of Select / Book on a rendered card; Select click toggles selection on then off; `aria-pressed` flips between `true` and `false`; Book button hidden when Selected, restored when toggled off
+- [ ] 28.9 Add frontend Jest tests in `src/frontend/tests/parking-multiselect.test.js` covering the same behaviour for parking cards (Select toggle, sizing, Reserve hide-on-select)
+- [ ] 28.10 Add Playwright end-to-end test (`tests/e2e/select-toggle.spec.js`): on the desk booking page, render at least 3 desks; assert the Select and Book buttons report the same bounding-box size; click Select on one desk and assert it shows Selected and the Book button on that card is hidden; click Select again and assert the desk is no longer in the selection and Book is restored; repeat the same flow on the parking reservation page
+- [ ] 28.11 Move `docs/spec.md` section 23 (**Select-as-Toggle and Uniform Booking Card Button Sizing**) from **Not Yet Implemented** to **Currently Implemented** once tasks 28.1-28.10 pass
+- [ ] 28.12 Update root `README.md` to describe the Select toggle behaviour and uniform button sizing on desk and parking cards
+- [ ] 28.13 Update `docs/usecases.md` if any documented manual path describes the previous Select / Clear Selection flow so it reflects the new toggle behaviour
+
+---
+
+## Phase 29: Loading Animation on Admin Save Configuration
+
+**Objective:** Add an inline loading animation to the admin **Resource Configuration** view's **Save Configuration** action for desks (and, symmetrically, parking spaces) so the admin gets immediate visual feedback during the in-flight request and cannot accidentally double-submit. Per `docs/spec.md` section 24.
+
+**Dependencies:** Phase 5 (Admin Functionality), Phase 7 (Enhanced Admin Resource Configuration), Phase 20 (Global Application Shell and Blue Theme) for the consistent colour palette.
+
+**Priority:** Low
+
+**Estimated Effort:** 0.5 day
+
+### Tasks
+
+- [ ] 29.1 Add a CSS-only spinner (or short progress bar) class in `src/frontend/css/styles.css` that uses the existing blue primary palette and respects `prefers-reduced-motion: reduce` (animation removed or static when the user prefers reduced motion)
+- [ ] 29.2 Update `src/frontend/js/admin.js` Save Configuration handler for **desks** so that when the request fires it: disables the button, sets `aria-busy="true"`, renders the spinner inside or beside the button, and prevents further clicks until the response settles
+- [ ] 29.3 Apply the same change to the Save Configuration handler for **parking spaces** so both flows share behaviour
+- [ ] 29.4 On success, transition to a brief success state (e.g. checkmark for a short interval) before returning to idle; the existing success notification surface continues to display the textual confirmation
+- [ ] 29.5 On error, stop the animation, return the button to idle state, clear `aria-busy`, and rely on the existing error notification surface for the failure message
+- [ ] 29.6 Confirm no new audit events are needed (the existing `ADMIN_CONFIG_UPDATED` events from Phase 21 continue to record the underlying mutation)
+- [ ] 29.7 Add frontend Jest tests in `src/frontend/tests/admin.test.js`: clicking Save Configuration disables the button and sets `aria-busy="true"`; on a mocked successful response, the button re-enables and `aria-busy` returns to `false`; on a mocked error response, the button re-enables, `aria-busy` returns to `false`, and the error notification is shown; double-clicking the button while in flight does not produce a second network request
+- [ ] 29.8 Add Playwright end-to-end test (`tests/e2e/admin-save-config.spec.js`): admin opens **Resource Configuration**, changes the desk count, clicks **Save Configuration**, and observes the spinner appear and the button become disabled for the duration of the request, then return to idle on success; repeat for parking count
+- [ ] 29.9 Move `docs/spec.md` section 24 (**Loading Animation on Admin Save Configuration**) from **Not Yet Implemented** to **Currently Implemented** once tasks 29.1-29.8 pass
+- [ ] 29.10 Update root `README.md` Admin Features section to mention that Save Configuration shows a loading indicator while saving

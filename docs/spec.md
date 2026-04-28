@@ -520,7 +520,7 @@ This feature ensures resource lists are presented in an intuitive, human-friendl
 
 ### 21. Office Administrator Role
 
-**Status (Phase 26a, backend):** Implemented. The three-role model is enforced server-side: schema, model, middleware, role-assignment endpoint, and audit. The **Phase 26b** UI (admin sidebar variant + User Management role selector + Playwright e2e + final docs) is pending.
+**Status:** Implemented (Phase 26). The three-role model is enforced end-to-end. Backend (Phase 26a): idempotent migration aligning `users.role` and `users.is_admin`; `User` model derives `isAdmin` from `role === 'admin'`; `requireAdmin` and `requireOfficeAdminOrAdmin` middleware wrappers; `UserService.changeUserRole` enforces the last-admin invariant; `PUT /api/auth/users/:id/role` (admin-only) for role assignment; `DELETE /api/admin/bookings/:id` and `DELETE /api/admin/parking-reservations/:id` widened to `office_admin OR admin`; `audit-helper` auto-injects `actor_role` from `req.user.role`. Frontend (Phase 26b): per-row role `<select>` + Save button in **Admin → User Management** (admin-only); `applyRoleSidebarVariant` renders a slimmed admin sidebar for Office Administrators (Bookings + Parking Reservations + Change Password — no Resource Configuration / User Management / Audit / Maps / Booking Matrix). Note that section 22 ("Key Fob Request and Allocation Subsystem") is still pending — when it lands, the OA sidebar gains the Fob Management / Fob Calendar / Fob History items described there.
 
 Introduce a new role distinct from User and Administrator, expanding the role model to **three** roles in total:
 
@@ -565,6 +565,32 @@ Allow a desk booking to optionally request a building **key fob**, and let Offic
 - **Audit (per section 15):** Fob inventory changes and fob-request outcomes emit audit events such as `FOB_INVENTORY_DEFAULT_UPDATED`, `FOB_INVENTORY_OVERRIDE_SET`, `FOB_INVENTORY_OVERRIDE_REMOVED`, `FOB_REQUEST_GRANTED` (on successful booking with `fob_requested = true`), and `FOB_REQUEST_DENIED` (on a booking blocked by inventory).
 - **Cancellation:** Cancelling a desk booking that included a fob releases that fob for the day(s) of the booking; the released capacity is immediately available for the next request.
 - **Cascade:** Deleting a user removes their bookings (per existing rules) which also releases any fobs associated with those bookings.
+
+### 23. Select-as-Toggle and Uniform Booking Card Button Sizing
+
+Refines section 19 with two specific corrections that are visible on the desk booking and parking reservation pages today.
+
+- **Select is a toggle:** The per-card **Select** button is a true toggle. The first click adds the desk or parking space to the multi-select list and the button changes to a clearly "selected" state (for example, an active visual style and a label such as **Selected** or a checkmark indicator). A second click on the same control removes that item from the multi-select list. This replaces patterns where a user can only undo a single-item selection by using **Clear Selection** (which still exists for "deselect all").
+- **Same dimensions as Book and Reserve:** The Select toggle uses the **same width and height** as the **Book** (desk) and **Reserve** (parking) action buttons on the same card. They share a single CSS button class so future style changes apply uniformly to all three. This corrects the current regression where **Select** renders noticeably larger than **Book** on the desk booking page (and the symmetric case on the parking page if present).
+- **Symmetric coverage:** The change applies identically to the parking reservation page (Select / Reserve toggle plus uniform sizing).
+- **Hide-on-select still applies (per section 19):** When a card is in the selected state, the immediate **Book** or **Reserve** control on that same card remains hidden; only the Select toggle is visible. Toggling Select off restores the **Book** / **Reserve** control.
+- **Accessibility:** The Select toggle exposes its state via `aria-pressed` (`true` when selected, `false` otherwise) so assistive tech can announce the toggle state.
+
+This feature ensures the booking pages have a consistent, predictable button layout and a single clear way to add or remove a single resource from the multi-select list.
+
+### 24. Loading Animation on Admin Save Configuration
+
+When an administrator clicks **Save Configuration** to create or update desks (and, by symmetry, parking spaces) in the admin **Resource Configuration** view, the UI provides immediate, animated feedback that the request is being processed.
+
+- **Inline progress indicator:** A small animation appears on or immediately next to the **Save Configuration** button while the request is in flight. The button is disabled during this period to prevent duplicate submissions.
+- **Animation style:** A spinner (or short progress bar) consistent with the existing **blue** primary theme (section 14). Implemented in CSS only; no external graphic libraries.
+- **Symmetric coverage:** Applies to both **Desk** and **Parking** save flows in the admin Resource Configuration view; both buttons use the same animated control.
+- **Completion feedback:** On success, the animation transitions briefly to a success state (e.g. a checkmark or short fade) and the existing success notification surface is used for the textual confirmation; the button then returns to the idle state.
+- **Failure feedback:** On error, the animation stops and the button returns to the idle state; the existing error notification surface is used for the failure message.
+- **Accessibility:** The button sets `aria-busy="true"` during the in-flight state so assistive tech announces the loading indication; `aria-busy` returns to `false` on success or failure.
+- **Audit (per section 15):** No new audit events are introduced — the existing `ADMIN_CONFIG_UPDATED` (and related) events continue to capture the underlying mutation.
+
+This feature makes admin configuration changes feel responsive and prevents accidental double submissions during the brief server round-trip.
 
 ## API Endpoints
 

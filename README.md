@@ -17,13 +17,36 @@ Office Manager is a web application designed to manage office operations and res
 ### User Authentication and Management
 
 - Email-based login (email address is the username/login identifier)
-- Role-based access control: admin users and regular users
+- **Role-based access control with three roles**: `user`, `office_admin` (Office Administrator), and `admin` (Administrator). The role is the canonical source of truth; the legacy `isAdmin` flag is derived from `role === 'admin'`.
 - Session/token management for logged-in users
 - User indicator in top-left showing logged-in user information
 - Access control: logged-in users can access all features; non-logged-in users can only view available desks/spaces
 - Login redirect when unauthenticated users attempt to book
 - Password change functionality
 - Password reset with time-limited tokens (no outbound email; admin shares reset links)
+
+#### Three-role model and capabilities matrix
+
+| Capability                                              | User | Office Administrator | Administrator |
+|---------------------------------------------------------|:----:|:--------------------:|:-------------:|
+| Book a desk / reserve a parking space                   |  Y   |          Y           |       Y       |
+| Cancel **own** booking / reservation (and undo)         |  Y   |          Y           |       Y       |
+| View **all** bookings and parking reservations          |      |          Y           |       Y       |
+| Cancel **another user's** booking / reservation         |      |          Y           |       Y       |
+| Resource Configuration (desk / parking counts, renames) |      |                      |       Y       |
+| User Management (provision, delete, change role)        |      |                      |       Y       |
+| Maps (upload floor plans, place markers)                |      |                      |       Y       |
+| Audit log                                               |      |                      |       Y       |
+
+Audit rows record the actor's role in the payload (`actor_role`) so administrative actions taken by an Office Administrator are distinguishable from those taken by an Administrator.
+
+#### Granting or revoking the Office Administrator role
+
+1. Sign in as an Administrator and open **Admin → User Management**
+2. Find the target user's row. The **Role** column contains a `<select>` with **User**, **Office Administrator**, **Administrator** plus a **Save** button
+3. Choose the new role and click **Save**. The browser PUTs `/api/auth/users/:id/role`. The server validates the role token, enforces the **last-admin invariant** (you cannot demote the only remaining Administrator — the request is rejected with `400 CANNOT_DEMOTE_LAST_ADMIN`), and emits a `USER_ROLE_CHANGED` audit event
+4. The change takes effect on the user's **next login** (the JWT is re-issued with the new role)
+5. To revoke the Office Administrator role, repeat with `User` (or `Administrator`) selected
 
 ### First User Admin Registration
 
@@ -386,3 +409,4 @@ All features listed in "Currently Implemented Features" above are fully function
 - **Phase 23c:** Undo desk booking cancellation — toast with Undo button, 30-second server-enforced window, re-availability check, `POST /api/bookings/:id/undo-cancel`, `DESK_BOOKING_RESTORED` audit event
 - **Phase 23d/e:** Floor plan maps — admin uploads a square PNG/JPEG floor plan per context (desk / parking), places landmarks (lift, stairs, exit, …) and resource markers; desk booking and parking pages render a square map panel above the list with clickable resource markers synced to the existing Select / Book state. Backend in 23d (`/api/maps/:context`, `/api/admin/maps/...`); frontend editor + per-page panels in 23e
 - **Phase 24:** Natural numeric ordering — desk and parking space numbers now appear in human order (`1, 2, 3, …, 10, 11`) instead of alphabetic order (`1, 10, 11, 2, …, 9`). Implementation lives in `src/backend/utils/natural-sort.js` (and a matching frontend mirror in `src/frontend/js/natural-sort.js`); applied at the `DeskRepository.findAll{,Active}` and `ParkingSpaceRepository.findAll{,Active}` boundary so every API response is sorted, with corresponding integration / unit / Playwright coverage
+- **Phase 26:** Office Administrator role — new third role between regular User and Administrator. OAs can cancel **any** user's desk booking or parking reservation but cannot create / delete users, change roles, edit resource configuration, view the audit log, or upload floor plans. Backend: idempotent migration aligning `users.role` and `users.is_admin`; `User` model derives `isAdmin` from `role === 'admin'`; `requireAdmin` and `requireOfficeAdminOrAdmin` middleware wrappers; `UserService.changeUserRole` enforces the last-admin invariant; `PUT /api/auth/users/:id/role` (admin-only) for role assignment; `DELETE /api/admin/bookings/:id` and `DELETE /api/admin/parking-reservations/:id` widened to `office_admin OR admin`; audit emission auto-injects `actor_role` from `req.user.role`. Frontend: per-row role `<select>` + Save button in **Admin → User Management** (admin-only); slimmed admin sidebar variant for Office Administrators (Bookings + Parking Reservations + Change Password only — no Resource Configuration / User Management / Audit / Maps).

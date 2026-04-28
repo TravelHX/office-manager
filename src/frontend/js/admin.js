@@ -3,6 +3,13 @@
 /** Set after /me sync + serverAllowsUserManagement probe (authoritative for User Management UI). */
 let userManagementEnabled = false;
 
+/**
+ * Phase 26b: canonical role for the signed-in user, lower-cased.
+ * One of 'user', 'office_admin', 'admin'. Drives the admin-page sidebar
+ * variant and which background data loads run on page open.
+ */
+let currentUserRole = 'user';
+
 const apiRequest = (endpoint, options) => {
     const impl = globalThis.apiRequest;
     if (typeof impl !== 'function') {
@@ -16,6 +23,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         await globalThis.syncCurrentUserFromServer();
     }
 
+    // Phase 26b: read the canonical role AFTER /me sync so we don't act on
+    // a stale localStorage copy that's missing role.
+    const sessionUser = (typeof globalThis.getCurrentUser === 'function')
+        ? globalThis.getCurrentUser()
+        : null;
+    currentUserRole = (sessionUser && typeof sessionUser.role === 'string')
+        ? sessionUser.role.trim().toLowerCase()
+        : 'user';
+    const isFullAdmin = currentUserRole === 'admin';
+    const isOfficeAdmin = currentUserRole === 'office_admin';
+
     if (typeof globalThis.serverAllowsUserManagement === 'function') {
         userManagementEnabled = await globalThis.serverAllowsUserManagement();
     }
@@ -23,10 +41,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         userManagementEnabled = globalThis.isAdmin();
     }
 
+    // Phase 26b: gate the sidebar BEFORE setupTabs() so the default "active"
+    // tab can be retargeted for office_admin (whose Configuration tab is
+    // hidden).
+    applyRoleSidebarVariant({ isFullAdmin, isOfficeAdmin });
+
     setupTabs();
-    loadConfiguration();
-    loadAllDesks();
-    loadAllParkingSpaces();
+    // Skip admin-only background loads for office_admin — those endpoints
+    // are still admin-only and would 403.
+    if (isFullAdmin) {
+        loadConfiguration();
+        loadAllDesks();
+        loadAllParkingSpaces();
+    }
     loadAllBookings();
     loadAllParkingReservations();
 
@@ -57,20 +84,64 @@ document.addEventListener('DOMContentLoaded', async () => {
             mapsTabBtn.style.display = 'block';
         }
     }
-    
-    document.getElementById('saveConfigurationBtn').addEventListener('click', saveConfiguration);
-    
+
+    const saveConfigBtn = document.getElementById('saveConfigurationBtn');
+    if (saveConfigBtn) {
+        saveConfigBtn.addEventListener('click', saveConfiguration);
+    }
+
     // User management event listeners
     const createUserBtn = document.getElementById('createUserBtn');
     if (createUserBtn) {
         createUserBtn.addEventListener('click', createUser);
     }
-    
+
     const changePasswordBtn = document.getElementById('changePasswordBtn');
     if (changePasswordBtn) {
         changePasswordBtn.addEventListener('click', changePassword);
     }
 });
+
+/**
+ * Phase 26b: hide admin-only sidebar items for the Office Administrator role
+ * and switch the default active tab to "bookings" since the usual default
+ * (Resource Configuration) is admin-only.
+ *
+ * For full admins we leave the sidebar untouched — User Management / Audit /
+ * Maps still get shown later, gated on `userManagementEnabled`.
+ *
+ * For regular users this never runs (they don't have role === 'office_admin');
+ * the existing behaviour applies.
+ */
+function applyRoleSidebarVariant({ isFullAdmin, isOfficeAdmin }) {
+    if (isFullAdmin || !isOfficeAdmin) {
+        return;
+    }
+
+    // Hide admin-only nav buttons that don't make sense for OA. User
+    // Management / Audit / Maps are already display:none in the HTML and
+    // remain hidden because userManagementEnabled stays false for OA.
+    const oaHiddenTabs = ['configuration', 'desks', 'parking-spaces', 'matrix'];
+    oaHiddenTabs.forEach((tabName) => {
+        const btn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+        if (btn) {
+            btn.style.display = 'none';
+            btn.classList.remove('active');
+        }
+        const content = document.getElementById(`${tabName}-tab`);
+        if (content) {
+            content.classList.remove('active');
+        }
+    });
+
+    // Promote "All Bookings" to the default active tab.
+    document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach((c) => c.classList.remove('active'));
+    const bookingsBtn = document.querySelector('.tab-btn[data-tab="bookings"]');
+    const bookingsContent = document.getElementById('bookings-tab');
+    if (bookingsBtn) bookingsBtn.classList.add('active');
+    if (bookingsContent) bookingsContent.classList.add('active');
+}
 
 function setupTabs() {
     const tabButtons = document.querySelectorAll('.tab-btn');
@@ -690,9 +761,7 @@ async function displayAllUsers(users) {
                                 : '<span class="status-badge status-active">Active</span>'}
                         </td>
                         <td>
-                            <span class="status-badge ${user.role === 'admin' ? 'status-approved' : 'status-active'}">
-                                ${user.role}
-                            </span>
+                            ${renderRoleCell(user, isSelf)}
                         </td>
                         <td>
                             ${user.isAdmin ? '<span class="status-badge status-approved">Yes</span>' : '<span class="status-badge status-pending">No</span>'}
@@ -708,7 +777,7 @@ async function displayAllUsers(users) {
     `;
     
     container.innerHTML = usersHTML;
-    
+
     // Add event listeners for delete buttons
     document.querySelectorAll('.delete-user-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -717,21 +786,98 @@ async function displayAllUsers(users) {
             deleteUser(userId, username);
         });
     });
+
+    // Phase 26b: per-row role Save button calls the new role endpoint.
+    document.querySelectorAll('.save-role-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const userId = btn.getAttribute('data-user-id');
+            const select = document.querySelector(`select.user-role-select[data-user-id="${userId}"]`);
+            if (!select) return;
+            const newRole = select.value;
+            const originalRole = btn.getAttribute('data-original-role');
+            if (newRole === originalRole) return;
+            saveUserRole(userId, newRole);
+        });
+    });
+
+    // Disable the Save button when the select hasn't actually changed.
+    document.querySelectorAll('.user-role-select').forEach(select => {
+        select.addEventListener('change', () => {
+            const userId = select.getAttribute('data-user-id');
+            const btn = document.querySelector(`button.save-role-btn[data-user-id="${userId}"]`);
+            if (!btn) return;
+            const originalRole = btn.getAttribute('data-original-role');
+            btn.disabled = select.value === originalRole;
+        });
+    });
+}
+
+/**
+ * Phase 26b: render the Role table cell.
+ *
+ * For each user row we show a <select> with the three canonical roles plus
+ * a Save button that triggers the role change. The select is disabled
+ * (and rendered as a static badge) for the current admin's own row, so the
+ * UI never asks an admin to demote themselves out of the page. The
+ * server-side last-admin invariant still applies if they ever tried.
+ */
+function renderRoleCell(user, isSelf) {
+    if (isSelf) {
+        return `<span class="status-badge ${user.role === 'admin' ? 'status-approved' : 'status-active'}" title="You cannot change your own role from this page">${user.role}</span>`;
+    }
+    const options = [
+        { value: 'user', label: 'User' },
+        { value: 'office_admin', label: 'Office Administrator' },
+        { value: 'admin', label: 'Administrator' },
+    ];
+    const optionMarkup = options.map((opt) => {
+        const selected = opt.value === user.role ? ' selected' : '';
+        return `<option value="${opt.value}"${selected}>${opt.label}</option>`;
+    }).join('');
+    return `
+        <select class="user-role-select" data-user-id="${user.id}" aria-label="Role for user ${user.username}">
+            ${optionMarkup}
+        </select>
+        <button type="button" class="btn-secondary save-role-btn" data-user-id="${user.id}" data-original-role="${user.role}" disabled>Save</button>
+    `;
+}
+
+async function saveUserRole(userId, newRole) {
+    const messageDiv = document.getElementById('users-message');
+    if (messageDiv) messageDiv.innerHTML = '<p>Updating role...</p>';
+    try {
+        await apiRequest(`/api/auth/users/${userId}/role`, {
+            method: 'PUT',
+            body: { role: newRole },
+        });
+        if (messageDiv) {
+            messageDiv.innerHTML = `<div class="success">Role updated to ${newRole}.</div>`;
+        }
+        loadAllUsers();
+    } catch (error) {
+        if (messageDiv) {
+            if (error.message && error.message.toLowerCase().includes('last admin')) {
+                messageDiv.innerHTML = `<div class="error">Cannot demote: ${error.message}</div>`;
+            } else {
+                messageDiv.innerHTML = `<div class="error">Failed to update role: ${error.message || 'unknown error'}</div>`;
+            }
+        }
+    }
 }
 
 async function deleteUser(userId, username) {
     if (!confirm(`Are you sure you want to delete user "${username}" (ID: ${userId})?\n\nThis will also delete all associated bookings and reservations.`)) {
         return;
     }
-    
+
     const messageDiv = document.getElementById('users-message');
     messageDiv.innerHTML = '<p>Deleting user...</p>';
-    
+
     try {
         await apiRequest(`/api/auth/users/${userId}`, {
             method: 'DELETE',
         });
-        
+
         messageDiv.innerHTML = '<div class="success">User deleted successfully!</div>';
         loadAllUsers();
     } catch (error) {
@@ -746,4 +892,14 @@ async function deleteUser(userId, username) {
             messageDiv.innerHTML = `<div class="error">Failed to delete user: ${error.message}</div>`;
         }
     }
+}
+
+// Phase 26b: expose helpers for Jest tests so they can drive the real
+// admin.js logic instead of mirroring it. Mirrors the pattern in main.js.
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        renderRoleCell,
+        applyRoleSidebarVariant,
+        saveUserRole,
+    };
 }
