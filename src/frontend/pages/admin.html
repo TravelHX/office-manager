@@ -27,6 +27,10 @@
                     <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="users" id="users-tab-btn" style="display: none;">User Management</button></li>
                     <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="audit" id="audit-tab-btn" style="display: none;">Audit</button></li>
                     <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="maps" id="maps-tab-btn" style="display: none;">Maps</button></li>
+                    <!-- Phase 27c: Fob items are visible to Office Administrator AND Administrator. They start hidden and are revealed by admin.js based on role. -->
+                    <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="fob-management" id="fob-management-tab-btn" style="display: none;">Fob Management</button></li>
+                    <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="fob-calendar" id="fob-calendar-tab-btn" style="display: none;">Fob Calendar</button></li>
+                    <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="fob-history" id="fob-history-tab-btn" style="display: none;">Fob History</button></li>
                     <li><button type="button" class="tab-btn sidebar-tab-btn" data-tab="password">Change Password</button></li>
                 </ul>
             </nav>
@@ -168,7 +172,7 @@
                         <p class="help-text" style="color: #555; margin-bottom: 1rem;">
                             Append-only log of meaningful actions taken by all users, including administrators. Search matches action type, actor email, summary, and payload.
                         </p>
-                        <div class="search-filter-group" style="margin-bottom: 1rem;">
+                        <div class="search-filter-group form-row" style="margin-bottom: 1rem;">
                             <input type="text" id="audit-search-input" class="search-input" placeholder="Search action, actor, summary, or payload...">
                             <button id="audit-search-btn" class="btn-primary">Search</button>
                             <button id="audit-clear-search-btn" class="btn-secondary">Clear</button>
@@ -189,13 +193,15 @@
                     <h3>Floor Plan Maps (Admin Only)</h3>
                     <div class="card map-editor">
                         <p class="help-text" style="color: #555; margin-bottom: 0.75rem;">
-                            Upload a square floor plan for desks or parking. Then place landmarks
-                            (orientation only — they do not block clicks on resources) and put each
-                            desk / parking space on the map. Coordinates are normalised to the image,
-                            so the markers stay aligned at any size.
+                            Upload a square floor plan (PNG, JPEG, or SVG) for desks or parking.
+                            SVG uploads are sanitised on the server: scripts, event handlers, and
+                            external entity declarations are removed before the file is stored.
+                            Then place landmarks (orientation only — they do not block clicks on
+                            resources) and put each desk / parking space on the map. Coordinates
+                            are normalised to the image, so the markers stay aligned at any size.
                         </p>
                         <form id="map-upload-form" class="form-row" style="margin-bottom: 0.75rem;">
-                            <input type="file" id="map-upload-file" accept="image/png,image/jpeg" required>
+                            <input type="file" id="map-upload-file" accept="image/png,image/jpeg,image/svg+xml" required>
                             <button type="submit" class="btn-primary">Upload floor plan</button>
                             <button type="button" id="map-delete-floor-plan" class="btn-secondary">Delete current</button>
                         </form>
@@ -215,6 +221,83 @@
                         <div id="map-editor-canvas"></div>
                         <div id="map-editor-resource-list" class="map-editor-resource-list"></div>
                         <div id="map-editor-status" class="map-editor-status"></div>
+                    </div>
+                </div>
+
+                <!-- Phase 27c: Fob Management - set default count + manage per-day overrides. -->
+                <div id="fob-management-tab" class="tab-content">
+                    <h3>Fob Management</h3>
+                    <div class="card">
+                        <h4>Default daily fob count</h4>
+                        <p class="help-text" style="color: #555; margin-bottom: 0.75rem;">
+                            The default applies to every day unless a per-date override is set. Leave blank if you do not want to enforce an inventory limit. When no inventory is configured, fob requests on bookings are tracked but never blocked.
+                        </p>
+                        <div class="form-row">
+                            <label for="fobDefaultCount">Default count:</label>
+                            <input type="number" id="fobDefaultCount" min="0" inputmode="numeric">
+                            <button id="fobDefaultSaveBtn" class="btn-primary" type="button">Save default</button>
+                        </div>
+                        <div id="fob-default-message" class="mt-2"></div>
+                    </div>
+                    <div class="card mt-2">
+                        <h4>Per-date overrides</h4>
+                        <p class="help-text" style="color: #555; margin-bottom: 0.75rem;">
+                            Override the default for a specific date (e.g. when fewer fobs will be available because of a contractor on-site). Setting a date here replaces the default for that date only.
+                        </p>
+                        <div class="form-row">
+                            <label for="fobOverrideDate">Date:</label>
+                            <input type="date" id="fobOverrideDate">
+                            <label for="fobOverrideCount">Count:</label>
+                            <input type="number" id="fobOverrideCount" min="0" inputmode="numeric">
+                            <button id="fobOverrideSaveBtn" class="btn-primary" type="button">Save override</button>
+                        </div>
+                        <div id="fob-overrides-container">
+                            <p>Loading overrides…</p>
+                        </div>
+                        <div id="fob-overrides-message" class="mt-2"></div>
+                    </div>
+                </div>
+
+                <!-- Phase 27c: Fob Calendar - per-day required vs available counts. -->
+                <div id="fob-calendar-tab" class="tab-content">
+                    <h3>Fob Calendar</h3>
+                    <div class="card">
+                        <p class="help-text" style="color: #555; margin-bottom: 0.75rem;">
+                            For each day in the chosen range, this shows the configured fob inventory, the number of bookings that requested a fob, and how many fobs remain available.
+                        </p>
+                        <div class="form-row" style="margin-bottom: 1rem;">
+                            <label for="fobCalendarStart">Start:</label>
+                            <input type="date" id="fobCalendarStart">
+                            <label for="fobCalendarEnd">End:</label>
+                            <input type="date" id="fobCalendarEnd">
+                            <button id="fobCalendarLoadBtn" class="btn-primary" type="button">Load calendar</button>
+                        </div>
+                        <div id="fob-calendar-container">
+                            <p>Pick a date range and click Load calendar.</p>
+                        </div>
+                        <div id="fob-calendar-message" class="mt-2"></div>
+                    </div>
+                </div>
+
+                <!-- Phase 27c: Fob History - past allocations + CSV export. -->
+                <div id="fob-history-tab" class="tab-content">
+                    <h3>Fob History</h3>
+                    <div class="card">
+                        <p class="help-text" style="color: #555; margin-bottom: 0.75rem;">
+                            Every booking with a fob request that overlaps the chosen range. Cancelled rows are included so the report shows the full allocation history. Export to CSV for offline review.
+                        </p>
+                        <div class="form-row" style="margin-bottom: 1rem;">
+                            <label for="fobHistoryStart">Start:</label>
+                            <input type="date" id="fobHistoryStart">
+                            <label for="fobHistoryEnd">End:</label>
+                            <input type="date" id="fobHistoryEnd">
+                            <button id="fobHistoryLoadBtn" class="btn-primary" type="button">Load history</button>
+                            <button id="fobHistoryExportBtn" class="btn-secondary" type="button">Export CSV</button>
+                        </div>
+                        <div id="fob-history-container">
+                            <p>Pick a date range and click Load history.</p>
+                        </div>
+                        <div id="fob-history-message" class="mt-2"></div>
                     </div>
                 </div>
 
@@ -253,6 +336,7 @@
     <script src="/js/map-renderer.js"></script>
     <script src="/js/admin-audit.js"></script>
     <script src="/js/admin-maps.js"></script>
+    <script src="/js/admin-fob.js"></script>
     <script src="/js/admin.js"></script>
 </body>
 </html>

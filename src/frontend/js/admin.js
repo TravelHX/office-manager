@@ -85,6 +85,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Phase 27c: Fob tabs are visible to BOTH Office Administrators AND
+    // Administrators (per spec section 22 — fob configuration is an OA
+    // capability, but Administrators can do everything an OA can do).
+    // Plain users never reach this branch.
+    if (isFullAdmin || isOfficeAdmin) {
+        const fobMgmtBtn = document.getElementById('fob-management-tab-btn');
+        const fobCalBtn = document.getElementById('fob-calendar-tab-btn');
+        const fobHistBtn = document.getElementById('fob-history-tab-btn');
+        if (fobMgmtBtn) fobMgmtBtn.style.display = 'block';
+        if (fobCalBtn) fobCalBtn.style.display = 'block';
+        if (fobHistBtn) fobHistBtn.style.display = 'block';
+        if (typeof globalThis.initFobManagementControls === 'function') {
+            globalThis.initFobManagementControls();
+        }
+        if (typeof globalThis.initFobCalendarControls === 'function') {
+            globalThis.initFobCalendarControls();
+        }
+        if (typeof globalThis.initFobHistoryControls === 'function') {
+            globalThis.initFobHistoryControls();
+        }
+    }
+
     const saveConfigBtn = document.getElementById('saveConfigurationBtn');
     if (saveConfigBtn) {
         saveConfigBtn.addEventListener('click', saveConfiguration);
@@ -172,6 +194,13 @@ function setupTabs() {
             if (targetTab === 'maps' && userManagementEnabled && typeof globalThis.initMapsTabControls === 'function') {
                 globalThis.initMapsTabControls();
             }
+            // Phase 27c: lazy-load Fob Management on first open. Calendar
+            // and History intentionally don't auto-fetch — both have a
+            // potentially expensive query and the admin picks the date
+            // range first via the Load button.
+            if (targetTab === 'fob-management' && typeof globalThis.loadFobManagement === 'function') {
+                globalThis.loadFobManagement();
+            }
         });
     });
 }
@@ -186,30 +215,106 @@ async function loadConfiguration() {
     }
 }
 
+/**
+ * Phase 29: visual feedback for buttons that fire a request.
+ *
+ * Disables the button, sets `aria-busy="true"`, renders a CSS spinner beside
+ * the label, and prevents reentry while the request is in flight. On success
+ * the spinner briefly transitions to a checkmark before the button returns
+ * to idle; on failure the spinner is cleared and `aria-busy` returns to
+ * `false`. The error is rethrown so callers can still surface notifications.
+ *
+ * @param {HTMLButtonElement} button
+ * @param {() => Promise<unknown>} asyncFn
+ * @param {{ successFlashMs?: number }} [opts]
+ */
+async function runWithButtonSpinner(button, asyncFn, opts = {}) {
+    if (!button) {
+        return asyncFn();
+    }
+    if (button.getAttribute('aria-busy') === 'true' || button.disabled) {
+        // Reentrancy guard: ignore a second click while the first is in flight.
+        return undefined;
+    }
+
+    const successFlashMs = typeof opts.successFlashMs === 'number' ? opts.successFlashMs : 700;
+    const originalDisabled = button.disabled;
+
+    const spinner = document.createElement('span');
+    spinner.className = 'btn-spinner';
+    spinner.setAttribute('aria-hidden', 'true');
+    spinner.dataset.role = 'btn-spinner';
+
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.appendChild(spinner);
+
+    function clearSpinner() {
+        const existing = button.querySelector('[data-role="btn-spinner"]');
+        if (existing) existing.remove();
+        const flash = button.querySelector('[data-role="btn-success-flash"]');
+        if (flash) flash.remove();
+    }
+
+    try {
+        const result = await asyncFn();
+
+        // Brief success state: swap the spinner for a checkmark before the
+        // button returns to idle. The textual confirmation is still shown via
+        // the existing notification surface in the caller.
+        clearSpinner();
+        const flash = document.createElement('span');
+        flash.className = 'btn-success-flash';
+        flash.setAttribute('aria-hidden', 'true');
+        flash.dataset.role = 'btn-success-flash';
+        flash.textContent = '✓';
+        button.appendChild(flash);
+
+        if (successFlashMs > 0) {
+            await new Promise((resolve) => setTimeout(resolve, successFlashMs));
+        }
+        clearSpinner();
+        button.disabled = originalDisabled;
+        button.setAttribute('aria-busy', 'false');
+        return result;
+    } catch (error) {
+        clearSpinner();
+        button.disabled = originalDisabled;
+        button.setAttribute('aria-busy', 'false');
+        throw error;
+    }
+}
+
 async function saveConfiguration() {
+    const button = document.getElementById('saveConfigurationBtn');
+    // Reentrancy guard: if the previous click is still in flight, ignore the
+    // second one without firing any further network calls (including the
+    // post-success refresh of the desks / parking-spaces lists).
+    if (button && (button.disabled || button.getAttribute('aria-busy') === 'true')) {
+        return;
+    }
     const deskCount = parseInt(document.getElementById('deskCount').value);
     const parkingCount = parseInt(document.getElementById('parkingCount').value);
     const deskNumberingMode = document.getElementById('deskNumberingMode').value;
     const parkingNumberingMode = document.getElementById('parkingNumberingMode').value;
     const deskStartNumber = parseInt(document.getElementById('deskStartNumber').value) || 1;
     const parkingStartNumber = parseInt(document.getElementById('parkingStartNumber').value) || 1;
-    const messageDiv = document.getElementById('configuration-message');
-    
+
     if (isNaN(deskCount) || isNaN(parkingCount)) {
         showNotification('Please enter valid numbers for desk and parking counts', 'error');
         return;
     }
-    
+
     if (deskCount < 0 || parkingCount < 0) {
         showNotification('Counts cannot be negative', 'error');
         return;
     }
-    
+
     try {
-        await Promise.all([
+        await runWithButtonSpinner(button, () => Promise.all([
             apiRequest('/api/admin/configuration/desk-count', {
                 method: 'PUT',
-                body: { 
+                body: {
                     deskCount,
                     numberingMode: deskNumberingMode,
                     startNumber: deskStartNumber,
@@ -217,14 +322,14 @@ async function saveConfiguration() {
             }),
             apiRequest('/api/admin/configuration/parking-count', {
                 method: 'PUT',
-                body: { 
+                body: {
                     parkingCount,
                     numberingMode: parkingNumberingMode,
                     startNumber: parkingStartNumber,
                 },
             }),
-        ]);
-        
+        ]));
+
         showNotification('Configuration saved successfully!', 'success');
         loadAllDesks();
         loadAllParkingSpaces();
@@ -901,5 +1006,7 @@ if (typeof module !== 'undefined' && module.exports) {
         renderRoleCell,
         applyRoleSidebarVariant,
         saveUserRole,
+        saveConfiguration,
+        runWithButtonSpinner,
     };
 }

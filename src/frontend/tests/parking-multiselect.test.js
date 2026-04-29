@@ -175,6 +175,95 @@ describe('Parking multi-select (Phase 15.38, 15.40)', () => {
     expect(reserveBtn.hasAttribute('hidden')).toBe(true);
   });
 
+  test('Select toggles selection on then off; aria-pressed flips with it (28.5, 28.6)', () => {
+    window.selectedParkingSpaceIds.clear();
+    window.displayParkingSpaces(
+      [{ id: 1, spaceNumber: 'P001', location: 'Lot A' }],
+      '2025-12-15',
+      'morning'
+    );
+
+    const container = document.getElementById('parking-spaces-container');
+    const selectBtn = container.querySelector('.select-space-btn');
+
+    // Initial: not selected, label "Select", aria-pressed="false".
+    expect(window.selectedParkingSpaceIds.size).toBe(0);
+    expect(selectBtn.textContent.trim()).toBe('Select');
+    expect(selectBtn.getAttribute('aria-pressed')).toBe('false');
+    expect(selectBtn.classList.contains('is-selected')).toBe(false);
+
+    // First click: select.
+    selectBtn.click();
+    expect(window.selectedParkingSpaceIds.has('1')).toBe(true);
+    expect(selectBtn.textContent.trim()).toBe('Selected');
+    expect(selectBtn.getAttribute('aria-pressed')).toBe('true');
+    expect(selectBtn.classList.contains('is-selected')).toBe(true);
+
+    // Second click: deselect.
+    selectBtn.click();
+    expect(window.selectedParkingSpaceIds.has('1')).toBe(false);
+    expect(selectBtn.textContent.trim()).toBe('Select');
+    expect(selectBtn.getAttribute('aria-pressed')).toBe('false');
+    expect(selectBtn.classList.contains('is-selected')).toBe(false);
+  });
+
+  test('Select and Reserve share the .btn-card-action sizing class (28.2, 28.9)', () => {
+    window.selectedParkingSpaceIds.clear();
+    window.displayParkingSpaces(
+      [{ id: 1, spaceNumber: 'P001', location: 'Lot A' }],
+      '2025-12-15',
+      'morning'
+    );
+
+    const container = document.getElementById('parking-spaces-container');
+    const selectBtn = container.querySelector('.select-space-btn');
+    const reserveBtn = container.querySelector('.book-space-btn');
+
+    expect(selectBtn.classList.contains('btn-card-action')).toBe(true);
+    expect(reserveBtn.classList.contains('btn-card-action')).toBe(true);
+  });
+
+  test('Select renders pre-pressed when the parking space is in the selection at render time (28.4)', () => {
+    window.selectedParkingSpaceIds.clear();
+    window.selectedParkingSpaceIds.add('3');
+    window.displayParkingSpaces(
+      [{ id: 3, spaceNumber: 'P003', location: 'Lot B' }],
+      '2025-12-15',
+      'afternoon'
+    );
+
+    const selectBtn = document.querySelector('.select-space-btn');
+    expect(selectBtn.getAttribute('aria-pressed')).toBe('true');
+    expect(selectBtn.textContent.trim()).toBe('Selected');
+    expect(selectBtn.classList.contains('is-selected')).toBe(true);
+  });
+
+  test('clearParkingSelection resets every Select toggle to its unpressed state (28.5)', () => {
+    window.selectedParkingSpaceIds.clear();
+    window.displayParkingSpaces(
+      [
+        { id: 1, spaceNumber: 'P001' },
+        { id: 2, spaceNumber: 'P002' },
+      ],
+      '2025-12-15',
+      'full_day'
+    );
+
+    const container = document.getElementById('parking-spaces-container');
+    container.querySelectorAll('.select-space-btn').forEach((btn) => btn.click());
+    container.querySelectorAll('.select-space-btn').forEach((btn) => {
+      expect(btn.getAttribute('aria-pressed')).toBe('true');
+    });
+
+    document.getElementById('clear-parking-selection-btn').click();
+
+    container.querySelectorAll('.select-space-btn').forEach((btn) => {
+      expect(btn.textContent.trim()).toBe('Select');
+      expect(btn.getAttribute('aria-pressed')).toBe('false');
+      expect(btn.classList.contains('is-selected')).toBe(false);
+    });
+  });
+
   test('clearParkingSelection un-hides every per-card Reserve button (23.12)', () => {
     window.selectedParkingSpaceIds.clear();
     window.displayParkingSpaces(

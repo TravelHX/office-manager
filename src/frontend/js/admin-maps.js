@@ -247,11 +247,14 @@
         const fileInput = document.getElementById('map-upload-file');
         const file = fileInput?.files?.[0];
         if (!file) {
-            setStatus('Choose a PNG or JPEG file first.', 'error');
+            setStatus('Choose a PNG, JPEG, or SVG file first.', 'error');
             return;
         }
-        if (!/^image\/(png|jpeg)$/.test(file.type)) {
-            setStatus('Only PNG or JPEG files are allowed.', 'error');
+        // Phase 32: SVG joins PNG/JPEG. Server-side sanitisation strips
+        // active content from SVG before it lands on disk, so callers do
+        // not need to scrub anything client-side beyond the type check.
+        if (!/^image\/(png|jpeg|svg\+xml)$/.test(file.type)) {
+            setStatus('Only PNG, JPEG, or SVG files are allowed.', 'error');
             return;
         }
         try {

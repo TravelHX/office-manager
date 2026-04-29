@@ -75,6 +75,11 @@ Legend for **Actor**: *self* = the authenticated user performing their own actio
 | `MAP_LANDMARK_DELETED`                    | `DELETE /api/admin/maps/:context/landmarks/:id`               | admin  | `landmark`            | `context`, `landmark_id`                                 |
 | `MAP_RESOURCE_COORDINATES_SET`            | `PUT /api/admin/maps/:context/resources/:id/coordinates`      | admin  | `desk` / `parking_space` | `context`, `resource_id`, `x`, `y`                    |
 | `MAP_RESOURCE_COORDINATES_CLEARED`        | `DELETE /api/admin/maps/:context/resources/:id/coordinates`   | admin  | `desk` / `parking_space` | `context`, `resource_id`                              |
+| `FOB_REQUEST_GRANTED`                     | `POST /api/bookings` or `POST /api/bookings/bulk` with `fobRequested=true` (Phase 27a — emitted per granted booking) | self | `booking` | `desk_id`, `start_date`, `end_date`, `fob_requested` |
+| `FOB_REQUEST_DENIED`                      | `POST /api/bookings` or `POST /api/bookings/bulk` rejected by inventory enforcement (Phase 27b) | self | `booking` | `desk_id`, `start_date`, `end_date`, `offending_dates` |
+| `FOB_INVENTORY_DEFAULT_UPDATED`           | `PUT /api/admin/fob/inventory/default` (Phase 27b)                                  | admin  | `fob_inventory` | `previous_count`, `new_count`                  |
+| `FOB_INVENTORY_OVERRIDE_SET`              | `PUT /api/admin/fob/inventory/:date` (Phase 27b)                                    | admin  | `fob_inventory` | `date`, `previous_count`, `new_count`          |
+| `FOB_INVENTORY_OVERRIDE_REMOVED`          | `DELETE /api/admin/fob/inventory/:date` (Phase 27b)                                 | admin  | `fob_inventory` | `date`                                          |
 
 ### Explicitly out of scope for Phase 21
 

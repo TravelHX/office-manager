@@ -522,6 +522,48 @@ tr:hover {
     flex-wrap: wrap;
 }
 
+/*
+ * Phase 30 / spec section 25: shared row layout for an input + adjacent
+ * action button so every form row across the app sits on the same Y axis.
+ *
+ * The drift this fixes: `.form-group` has `margin-bottom: 1.5rem` and a
+ * label that stacks above the input, while a sibling button has no label
+ * above it. With `align-items: flex-end` the form-group's bottom margin
+ * still pushes the input bottom 1.5rem above the button bottom — so the
+ * input and the button are visibly out of alignment even though the
+ * container says they're "end-aligned".
+ *
+ * `.form-row` is additive: existing rows keep their original class
+ * (`.booking-form`, `.search-filter-group`, `.filters-panel`, etc.) so
+ * page-specific styling is preserved, and gain the `.form-row` class to
+ * pin the row layout primitives. The child rule zeros the form-group's
+ * bottom margin inside the row and pins a `min-height` on direct
+ * input / select / button children so the row baseline is stable.
+ */
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+}
+
+.form-row .form-group {
+    margin-bottom: 0;
+}
+
+/*
+ * Buttons and bare inputs / selects that sit directly inside a `.form-row`
+ * (i.e. without their own `.form-group` wrapper, which usually contributes
+ * a label) need an explicit min-height so they line up with the inputs
+ * that DO have a label-stacked-above wrapper.
+ */
+.form-row > button,
+.form-row > input,
+.form-row > select {
+    min-height: 2.75rem;
+    box-sizing: border-box;
+}
+
 .btn-primary {
     background-color: var(--color-primary);
     color: white;
@@ -585,9 +627,40 @@ tr:hover {
     font-size: 0.9rem;
 }
 
-.desk-card .book-desk-btn {
-    width: 100%;
-    margin-top: 1rem;
+/*
+ * Phase 28: shared per-card action button class for Select / Book on desk
+ * cards and Select / Reserve on parking cards. Pins min-width, min-height,
+ * padding, font, and box-sizing so the four buttons render at identical
+ * dimensions regardless of label length. Replaces an older
+ * `.desk-card .book-desk-btn { width: 100%; margin-top: 1rem; }` rule
+ * that gave Book a top margin Select did not have, leaving Book visibly
+ * shorter than Select inside the flex row.
+ */
+.btn-card-action {
+    flex: 1;
+    min-width: 7rem;
+    min-height: 2.5rem;
+    margin: 0;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    line-height: 1.2;
+    border-radius: 6px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/*
+ * Phase 28: visual style for the Select toggle's active state. Mirrors the
+ * primary action colour so a "Selected" button reads as engaged. The
+ * `aria-pressed="true"` attribute is also exposed for assistive tech.
+ */
+.btn-card-action.is-selected,
+.btn-card-action[aria-pressed="true"] {
+    background-color: var(--color-primary);
+    color: white;
+    border: 1px solid var(--color-primary);
 }
 
 .desk-card.selected {
@@ -1177,6 +1250,177 @@ tr:hover {
     background: #999;
 }
 
+/* Phase 29: inline loading indicator for buttons such as Save Configuration.
+   The spinner sits beside the button label; the success flash briefly
+   replaces it on a successful response before the button returns to idle. */
+.btn-spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-left: 0.5rem;
+    vertical-align: -0.15em;
+    border: 2px solid rgba(255, 255, 255, 0.45);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: btn-spinner-rotate 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+.btn-success-flash {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-left: 0.5rem;
+    vertical-align: -0.15em;
+    color: #ffffff;
+    font-weight: 700;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+@keyframes btn-spinner-rotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+button[aria-busy="true"] {
+    cursor: progress;
+    opacity: 0.85;
+}
+
+button[aria-busy="true"]:disabled,
+button:disabled {
+    cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-spinner {
+        animation: none;
+        border-top-color: rgba(255, 255, 255, 0.45);
+    }
+}
+
+/*
+ * Phase 31 / spec section 26: Booking Matrix initial-state polish.
+ *
+ * Filter card frames the .form-row of date inputs and selects with a
+ * subtle border and the blue accent from section 14 so the toolbar
+ * reads as a deliberate panel rather than a stray row above an empty
+ * region.
+ */
+.matrix-filter-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--color-primary);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--shadow-sm);
+}
+
+/*
+ * #matrix-region hosts one of four mutually exclusive child states:
+ * .matrix-empty-state, .matrix-loading-state, .matrix-error-state, or
+ * the rendered matrix grid (the legacy #matrix-container). matrix.js
+ * sets [data-state="empty|loading|loaded|error"] for testability and
+ * for any future state-specific styling.
+ */
+.matrix-region {
+    min-height: 12rem;
+}
+
+.matrix-empty-state,
+.matrix-loading-state,
+.matrix-error-state {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.matrix-state-icon {
+    color: var(--color-primary);
+    margin-bottom: 0.25rem;
+    line-height: 0;
+}
+
+.matrix-state-title {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.matrix-state-description {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+    max-width: 36rem;
+}
+
+/*
+ * Loading state: a larger spinner than the inline button spinner. It
+ * reuses the existing btn-spinner-rotate keyframe and respects
+ * prefers-reduced-motion via the rule below.
+ */
+.matrix-spinner {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: btn-spinner-rotate 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .matrix-spinner {
+        animation: none;
+        border-top-color: var(--color-border);
+    }
+}
+
+/*
+ * Error state: red accent on the icon to signal failure, recoverable
+ * with the Retry button which re-fires the same Load Matrix request
+ * with the current filters.
+ */
+.matrix-error-state .matrix-state-icon {
+    color: #c0392b;
+}
+
+.matrix-error-message {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 0.95rem;
+    max-width: 40rem;
+}
+
+.matrix-retry-btn {
+    margin-top: 0.5rem;
+}
+
+/*
+ * Narrow viewports: keep the filter card and state placeholders from
+ * causing horizontal scroll. The .form-row already wraps; here we
+ * just trim the card padding so the controls have room to wrap.
+ */
+@media (max-width: 600px) {
+    .matrix-filter-card {
+        padding: 1rem;
+    }
+    .matrix-empty-state,
+    .matrix-loading-state,
+    .matrix-error-state {
+        padding: 1.75rem 1rem;
+    }
+}
+
 .map-editor-resource-list {
     margin-top: 0.75rem;
     display: flex;
@@ -1203,6 +1447,42 @@ tr:hover {
     background: #e8f5e9;
     border-color: #66bb6a;
     color: #1b5e20;
+}
+
+/* Phase 27c: Key Fob subsystem visual elements. */
+
+/* Small "Fob" badge on My Bookings rows that requested a fob. */
+.status-badge.fob-badge {
+    background: #fff3e0;
+    color: #e65100;
+    border: 1px solid #ffb74d;
+    margin-left: 0.4rem;
+}
+
+/* Inline availability hint shown below "Check Availability" on the desk
+   booking page when an inventory limit is configured. */
+.fob-availability-hint {
+    padding: 0.6rem 0.8rem;
+    margin-top: 0.5rem;
+}
+
+.fob-availability-hint ul {
+    list-style: disc inside;
+    margin: 0.3rem 0 0;
+    padding: 0;
+}
+
+.fob-availability-exhausted,
+.fob-day-exhausted {
+    color: #b71c1c;
+    font-weight: 600;
+}
+
+/* Calendar / History tables share a compact look with the rest of the
+   admin tables; the only thing we add is a soft red row tint when the
+   day's available count is zero. */
+.fob-calendar-table .fob-calendar-row.fob-day-exhausted td {
+    background: #fff5f5;
 }
 
 

@@ -29,6 +29,28 @@ const TINY_PNG = Buffer.from(
   'base64'
 );
 const TINY_JPEG = Buffer.from([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10]);
+// Phase 32: assorted SVG payloads exercising the sanitiser. Each one is a
+// complete document so we can post it with Content-Type: image/svg+xml.
+const SAFE_SVG = Buffer.from(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>',
+  'utf8'
+);
+const SVG_WITH_SCRIPT = Buffer.from(
+  '<svg xmlns="http://www.w3.org/2000/svg"><script>window.__pwn = true</script><rect/></svg>',
+  'utf8'
+);
+const SVG_WITH_ONLOAD = Buffer.from(
+  '<svg xmlns="http://www.w3.org/2000/svg" onload="window.__pwn = true"><rect/></svg>',
+  'utf8'
+);
+const SVG_WITH_ENTITY = Buffer.from(
+  `<?xml version="1.0"?>
+<!DOCTYPE svg [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<svg xmlns="http://www.w3.org/2000/svg"><text>&xxe;</text></svg>`,
+  'utf8'
+);
 
 async function getLatestEventByType(actionType) {
   const rows = await executeQuery(
@@ -216,6 +238,118 @@ describe('Floor plan maps API (Phase 23d)', () => {
         .send(TINY_JPEG);
       expect(second.status).toBe(200);
       expect(second.body.imageVersion).toBe(v1 + 1);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // Phase 32: SVG floor plan upload + server-side sanitisation
+  // -------------------------------------------------------------------
+
+  describe('Admin POST /api/admin/maps/:context/floor-plan (SVG, Phase 32)', () => {
+    async function readStoredFloorPlan(context) {
+      const config = await request(app)
+        .get(`/api/admin/maps/${context}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(config.status).toBe(200);
+      const meta = config.body.floorPlan;
+      if (!meta) return null;
+      const file = await request(app)
+        .get(meta.url)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(file.status).toBe(200);
+      return { meta, body: file.text || file.body.toString('utf8') };
+    }
+
+    test('accepts a safe SVG, returns 200, bumps image_version, and emits MAP_FLOOR_PLAN_UPLOADED with image_mime=image/svg+xml', async () => {
+      const res = await request(app)
+        .post('/api/admin/maps/desk/floor-plan')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Content-Type', 'image/svg+xml')
+        .send(SAFE_SVG);
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        context: 'desk',
+        imageMime: 'image/svg+xml',
+        imageVersion: expect.any(Number),
+      });
+
+      const event = await getLatestEventByType('MAP_FLOOR_PLAN_UPLOADED');
+      expect(event).not.toBeNull();
+      expect(event.payload.context).toBe('desk');
+      expect(event.payload.image_mime).toBe('image/svg+xml');
+      expect(event.payload.image_bytes).toBe(SAFE_SVG.length);
+    });
+
+    test('SVG with <script> uploads but stored bytes contain no script', async () => {
+      const res = await request(app)
+        .post('/api/admin/maps/desk/floor-plan')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Content-Type', 'image/svg+xml')
+        .send(SVG_WITH_SCRIPT);
+      expect(res.status).toBe(200);
+
+      const stored = await readStoredFloorPlan('desk');
+      expect(stored).not.toBeNull();
+      expect(stored.body).not.toMatch(/<script/i);
+      expect(stored.body).not.toMatch(/window\.__pwn/);
+      expect(stored.body).toContain('<rect/>');
+    });
+
+    test('SVG with onload="..." uploads but stored bytes contain no onload attribute', async () => {
+      const res = await request(app)
+        .post('/api/admin/maps/parking/floor-plan')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Content-Type', 'image/svg+xml')
+        .send(SVG_WITH_ONLOAD);
+      expect(res.status).toBe(200);
+
+      const stored = await readStoredFloorPlan('parking');
+      expect(stored).not.toBeNull();
+      expect(stored.body).not.toMatch(/onload/i);
+      expect(stored.body).not.toMatch(/window\.__pwn/);
+    });
+
+    test('SVG with <!ENTITY> in DOCTYPE is rejected with 400 INVALID_IMAGE', async () => {
+      const res = await request(app)
+        .post('/api/admin/maps/desk/floor-plan')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Content-Type', 'image/svg+xml')
+        .send(SVG_WITH_ENTITY);
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('INVALID_IMAGE');
+    });
+
+    test('Content-Type image/svg+xml with PNG bytes is rejected (magic-byte sniff)', async () => {
+      const res = await request(app)
+        .post('/api/admin/maps/desk/floor-plan')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Content-Type', 'image/svg+xml')
+        .send(TINY_PNG);
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('INVALID_IMAGE');
+    });
+
+    test('oversize SVG (> 2 MB) is rejected with 413 IMAGE_TOO_LARGE', async () => {
+      // Pad a safe SVG with a long comment to push it past the 2 MB cap.
+      const filler = '<!-- ' + 'x'.repeat(2 * 1024 * 1024 + 100) + ' -->';
+      const huge = `<svg xmlns="http://www.w3.org/2000/svg">${filler}<rect/></svg>`;
+      const res = await request(app)
+        .post('/api/admin/maps/desk/floor-plan')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Content-Type', 'image/svg+xml')
+        .send(Buffer.from(huge, 'utf8'));
+      expect(res.status).toBe(413);
+      expect(res.body.error.code).toBe('IMAGE_TOO_LARGE');
+    });
+
+    test('Content-Type image/png with SVG bytes is rejected (magic-byte sniff for the declared type)', async () => {
+      const res = await request(app)
+        .post('/api/admin/maps/desk/floor-plan')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Content-Type', 'image/png')
+        .send(SAFE_SVG);
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('INVALID_IMAGE');
     });
   });
 

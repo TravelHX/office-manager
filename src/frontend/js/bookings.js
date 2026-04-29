@@ -99,6 +99,11 @@ function displayBookings(bookings, reservations) {
     let html = '<h3>My Bookings</h3>';
     
     if (bookings.length > 0) {
+        // Phase 27c: small "Fob" badge on rows where the booking
+        // included a fob request. Rendered next to the desk number so
+        // the user can see at a glance which of their bookings carried
+        // a fob.
+        const fobBadge = '<span class="status-badge fob-badge" title="A key fob was requested with this booking">Fob</span>';
         html += `
             <h4>Desk Bookings</h4>
             <table>
@@ -115,7 +120,7 @@ function displayBookings(bookings, reservations) {
                 <tbody>
                     ${bookings.map(booking => `
                         <tr>
-                            <td><strong>Desk ${booking.deskNumber}</strong></td>
+                            <td><strong>Desk ${booking.deskNumber}</strong>${booking.fobRequested ? ' ' + fobBadge : ''}</td>
                             <td>${booking.location || 'N/A'}</td>
                             <td>${formatDate(booking.startDate)}</td>
                             <td>${formatDate(booking.endDate)}</td>

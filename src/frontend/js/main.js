@@ -358,7 +358,19 @@ async function mainApiRequest(endpoint, options = {}) {
                     window.location.href = `/pages/login.html?return=${encodeURIComponent(currentPath)}`;
                 }
             }
-            throw new Error(data?.error?.message || 'API request failed');
+            // Phase 27c: surface error metadata (code, offendingDates,
+            // status) on the thrown Error so callers like desk-booking
+            // can render FOB_UNAVAILABLE with the offending day(s)
+            // without scraping the message string.
+            const apiErr = new Error(data?.error?.message || 'API request failed');
+            apiErr.status = response.status;
+            if (data && data.error) {
+                if (data.error.code) apiErr.code = data.error.code;
+                if (Array.isArray(data.error.offendingDates)) {
+                    apiErr.offendingDates = data.error.offendingDates;
+                }
+            }
+            throw apiErr;
         }
         
         return data;

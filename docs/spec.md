@@ -545,6 +545,8 @@ This feature lets a delegated person manage day-to-day fob logistics and other-u
 
 ### 22. Key Fob Request and Allocation Subsystem
 
+**Status:** Implemented (Phase 27). End-to-end coverage of the Key Fob subsystem. Phase 27a delivered the storage layer (column + table, route accepts the flag, `FOB_REQUEST_GRANTED` audit). Phase 27b delivered the inventory service, booking-time enforcement (`FobUnavailableError` / `400 FOB_UNAVAILABLE` / `FOB_REQUEST_DENIED` audit), the six admin HTTP endpoints under `/api/admin/fob` (Office Administrator + Administrator), the calendar + history reports (with CSV export), and the four remaining audit event types. Phase 27c delivered the user-facing **Fob needed** checkbox + inline per-day availability hint on the desk booking page, the My Bookings **Fob** badge, the three admin pages (Fob Management / Fob Calendar / Fob History) wired into the Phase 26 sidebar variant for Office Administrators, the Playwright e2e (`tests/e2e/fob-request.spec.js`), and the documentation refresh (this section, the API Endpoints catalogue, `docs/usecases.md` use cases 17-20, root `README.md`).
+
 Allow a desk booking to optionally request a building **key fob**, and let Office Administrators (and Administrators) manage fob inventory and reporting.
 
 - **Per-booking fob request flag (22.1):** When a user creates a desk booking, the booking form includes a **"Fob needed"** checkbox. The flag is stored against the booking and applies to **every day** of a multi-day booking. The flag is also exposed in **My Bookings** so the user can see which of their bookings included a fob request.
@@ -568,6 +570,8 @@ Allow a desk booking to optionally request a building **key fob**, and let Offic
 
 ### 23. Select-as-Toggle and Uniform Booking Card Button Sizing
 
+**Status:** Implemented (Phase 28). The shared `.btn-card-action` CSS class is in `src/frontend/css/styles.css`; the toggle wiring (label, `aria-pressed`, `.is-selected` active style, hide-on-select interaction with the per-card Book/Reserve control) lives in `src/frontend/js/desk-booking.js` and `src/frontend/js/parking.js`. Frontend Jest coverage is in `src/frontend/tests/desk-booking.test.js` and `src/frontend/tests/parking-multiselect.test.js` (toggle, aria, label, shared sizing class, clearSelection reset). Real-browser bounding-box parity and the toggle/hide flow are exercised by the Playwright spec `tests/e2e/select-toggle.spec.js`.
+
 Refines section 19 with two specific corrections that are visible on the desk booking and parking reservation pages today.
 
 - **Select is a toggle:** The per-card **Select** button is a true toggle. The first click adds the desk or parking space to the multi-select list and the button changes to a clearly "selected" state (for example, an active visual style and a label such as **Selected** or a checkmark indicator). A second click on the same control removes that item from the multi-select list. This replaces patterns where a user can only undo a single-item selection by using **Clear Selection** (which still exists for "deselect all").
@@ -578,7 +582,9 @@ Refines section 19 with two specific corrections that are visible on the desk bo
 
 This feature ensures the booking pages have a consistent, predictable button layout and a single clear way to add or remove a single resource from the multi-select list.
 
-### 24. Loading Animation on Admin Save Configuration
+### 24. Loading Animation on Admin Save Configuration (Delivered in Phase 29)
+
+**Status:** Implemented (Phase 29). The CSS spinner is defined in `src/frontend/css/styles.css`; the inflight wiring lives in the `runWithButtonSpinner` helper in `src/frontend/js/admin.js` and is applied to the **Save Configuration** action that fires both desk and parking count requests in parallel. Frontend Jest coverage is in `src/frontend/tests/admin.test.js`; an opt-in Playwright spec is in `tests/e2e/admin-save-config.spec.js`.
 
 When an administrator clicks **Save Configuration** to create or update desks (and, by symmetry, parking spaces) in the admin **Resource Configuration** view, the UI provides immediate, animated feedback that the request is being processed.
 
@@ -591,6 +597,70 @@ When an administrator clicks **Save Configuration** to create or update desks (a
 - **Audit (per section 15):** No new audit events are introduced — the existing `ADMIN_CONFIG_UPDATED` (and related) events continue to capture the underlying mutation.
 
 This feature makes admin configuration changes feel responsive and prevents accidental double submissions during the brief server round-trip.
+
+### 25. Vertical Alignment of Form Controls and Action Buttons
+
+**Status:** Implemented (Phase 30). The shared `.form-row` CSS class lives in `src/frontend/css/styles.css` (`display: flex; align-items: flex-end; gap: 1rem;` plus a child rule that zeros `.form-group { margin-bottom }` inside the row, and a direct-child rule that pins `min-height: 2.75rem` on bare buttons / inputs). The class is applied to: the parking page booking row (`src/frontend/pages/parking.html`), the desk booking page row (`src/frontend/pages/desk-booking.html`), the My Bookings filter row (`src/frontend/pages/bookings.html`), the Booking Matrix filter row (`src/frontend/pages/matrix.html`), and the admin Audit search row plus the pre-existing Maps upload row (`src/frontend/pages/admin.html`). The Resource Configuration card uses a stacked layout with no side-by-side row, so `.form-row` is not applied there. Frontend Jest coverage is in `src/frontend/tests/form-row-alignment.test.js` (CSS contract + per-page structural assertions); real-pixel bottom-edge alignment within a 1px tolerance is exercised by `tests/e2e/form-row-alignment.spec.js`.
+
+Whenever a form row contains one or more inputs (date, time period, text, select) next to an immediate action button (e.g. **Check Availability**, **Search**, **Load Matrix**, **Book**, **Reserve**, **Save**), every control in the row must align on the **same Y axis** so the eye can scan the row without vertical drift.
+
+- **Affected views (initial scope, extends to any new row that follows the same pattern):**
+  - **Parking Reservation** page: date input, time period select, **Check Availability** button.
+  - **Desk Booking** page: start date, end date, **Check Availability** button.
+  - **My Bookings** filter row: search box, status filter, type filter (and any clear/apply control).
+  - **Booking Matrix** filter row: date range inputs, user / desk / parking filters, **Load Matrix** button (see also section 26).
+  - **Admin** filter and action rows: audit search box, resource configuration count input + **Save Configuration** button (see also section 24), Maps context picker, fob inventory inputs.
+- **Rule:**
+  - All inputs, selects, and adjacent primary action buttons in a single row render at the **same height** (e.g. `min-height: 2.5rem`).
+  - Controls share the **same vertical centerline**: the row uses `display: flex; align-items: center` (or `align-items: end` when labels stack above inputs) so adding a new control cannot reintroduce drift.
+  - **Labels stack above inputs** (or sit inline) but do not change the input's vertical position relative to the action button on the same row.
+- **Implementation hint:** Introduce a single shared `.form-row` (or equivalent) CSS class. Every affected row uses this class so future rows inherit alignment automatically.
+- **Accessibility:** Vertical alignment is purely visual; existing label / `aria-label` associations remain unchanged.
+
+This feature ensures the application's forms read as a single visual rule rather than a collection of independently styled rows.
+
+### 26. Booking Matrix Initial State Polish
+
+**Status:** Implemented (Phase 31). The bordered `.matrix-filter-card` wraps the existing `.form-row` filter group; `#matrix-region` swaps between four mutually-exclusive states (`data-state="empty|loading|loaded|error"`) driven by `setMatrixState()` in `src/frontend/js/matrix.js`. CSS for the four state placeholders, the larger centred spinner (reusing the Phase 29 `btn-spinner-rotate` keyframe and respecting `prefers-reduced-motion`), and narrow-viewport padding lives in `src/frontend/css/styles.css`. Frontend Jest coverage is in `src/frontend/tests/matrix.test.js` (10 new tests over `setMatrixState` + the four `loadMatrix` transitions including Retry); the lifecycle is exercised in a real browser by `tests/e2e/matrix-states.spec.js`.
+
+The **Booking Matrix** screen must look deliberate and polished **before** the user presses **Load Matrix**. Today the top filter and toolbar area sits above an empty content region, which reads as an unfinished page.
+
+- **Filter card:** Group the date range inputs, user filter, desk number / parking space number filters, and the **Load Matrix** action button into a single bordered card or panel with consistent spacing and the alignment rule from section 25.
+- **Empty state placeholder:** When the matrix has not yet been loaded, render a clear empty state in place of the (currently empty) matrix region: a centered icon or simple illustration, a one-line title (e.g. **Select a date range to view bookings**), and a short description reminding the user to choose filters and click **Load Matrix**.
+- **Loading state:** While the matrix is loading after **Load Matrix** is pressed, replace the empty state with a centered spinner consistent with section 24 (CSS animation, blue palette, respects `prefers-reduced-motion`).
+- **Loaded state:** Once data arrives, the empty state is replaced with the matrix grid as today.
+- **Error state:** If the load fails, show an error block in the same region (icon, message, and a **Retry** control that re-triggers Load Matrix with the current filters).
+- **Subsequent reloads:** After a successful load, changing filters and pressing **Load Matrix** again returns to the loading state, then to the new loaded state, without dropping back to the empty placeholder.
+- **Responsiveness:** The filter card and the empty / loading / error states render cleanly on narrow viewports without horizontal overflow.
+- **Admin-only access:** Visibility rules from section 5 are unchanged — this feature only refines the visual presentation of the existing admin matrix view.
+
+This feature ensures the matrix page reads as a polished workflow at every stage, not just after a successful load.
+
+### 27. SVG Floor Plan Upload Support (Delivered in Phase 32)
+
+**Status:** Implemented (Phase 32). The server-side sanitiser lives in `src/backend/utils/svg-sanitizer.js` and is wired into `MapService.replaceFloorPlan` (`src/backend/services/MapService.js`); `image/svg+xml` joins `image/png` and `image/jpeg` in `MapService.ACCEPTED_MIME_TYPES`. The admin upload control accepts SVG (`src/frontend/pages/admin.html`, `src/frontend/js/admin-maps.js`); the renderer continues to embed every floor plan via `<img src>` so SVG is browser-sandboxed identically to raster (`src/frontend/js/map-renderer.js`). Coverage: `tests/utils/svg-sanitizer.test.js`, `tests/integration/maps.test.js` (Phase 32 SVG suite), `src/frontend/tests/map-renderer.test.js` (Phase 32 SVG describe block), `tests/e2e/maps-svg.spec.js`.
+
+Extend the floor plan upload from section 17 to accept **SVG** images in addition to **PNG** and **JPG**, while keeping the upload safe.
+
+- **Accepted formats:** `image/png`, `image/jpeg`, and `image/svg+xml`. The admin **Maps** upload control updates its **accepted-types** hint and file picker filter so admins can pick `.svg` files.
+- **Server-side validation:** The existing magic-byte / mime sniff is extended for SVG. Because SVG is text:
+  - The first non-whitespace bytes (after an optional UTF-8 BOM) must begin with `<?xml`, `<!--`, or `<svg` (case-insensitive).
+  - The declared upload `Content-Type` must be `image/svg+xml`.
+  - File size is bounded by the same maximum used for raster uploads.
+- **SVG sanitisation:** Uploaded SVG files **must** be sanitised before storage. At minimum the sanitiser must:
+  - Strip every `<script>` element.
+  - Strip all `on*` event-handler attributes (e.g. `onload`, `onclick`).
+  - Strip `<foreignObject>` (and any other element that can host non-SVG content with active behaviour).
+  - Strip external entity declarations (`<!DOCTYPE ... [<!ENTITY ...>]>`) and any references to them.
+  - Sanitise `href` and `xlink:href` attributes: allow only same-origin relative URIs, fragment refs (`#id`), and fail-safe `data:` URIs (no `javascript:` or other dangerous schemes).
+  - Reject the file outright (rather than silently sanitising to nothing) if the SVG cannot be parsed, with a clear error message to the admin.
+- **Storage:** Sanitised SVGs are stored alongside existing PNG/JPG plans under the same per-context location and follow the same image-version bump rule from section 17. The original (unsanitised) bytes are not retained.
+- **Rendering:** The frontend map renderer accepts SVG. The map embeds the floor plan via `<img src=...>` (so the browser sandbox treats SVG identically to PNG/JPG and does not execute scripts inside the SVG) rather than inlining raw markup. The square viewport rule from section 17 still applies (`object-fit: contain`).
+- **Markers and landmarks:** Existing landmark and resource marker rendering on top of the floor plan is unaffected — markers continue to be positioned by normalised coordinates over whatever floor plan image (raster or vector) is configured for that context.
+- **Audit (per section 15):** No new event types are introduced. The existing `MAP_FLOOR_PLAN_UPLOADED` event continues to record the upload; its payload may include the **mime type** so admins reviewing the audit trail can distinguish raster vs SVG uploads.
+- **Backwards compatibility:** Existing PNG/JPG uploads continue to work unchanged.
+
+This feature lets admins use vector floor plans that scale crisply at any size while keeping the upload pipeline safe by default.
 
 ## API Endpoints
 
@@ -619,8 +689,8 @@ Authorization: Bearer admin_1
 - `GET /api/bookings/my-bookings` - Get current user's bookings
 - `GET /api/bookings/available` - Get available desks for date range (query params: startDate, endDate)
 - `GET /api/bookings/:id` - Get booking by ID
-- `POST /api/bookings` - Create a new booking (body: deskId, startDate, endDate)
-- `POST /api/bookings/bulk` - Create multiple bookings in one call (body: deskIds, startDate, endDate)
+- `POST /api/bookings` - Create a new booking (body: `deskId`, `startDate`, `endDate`, optional `fobRequested` boolean — Phase 27a/b: when `fobRequested=true` and inventory is configured, the request can be rejected with `400 FOB_UNAVAILABLE` and a payload `offendingDates: [...]`).
+- `POST /api/bookings/bulk` - Create multiple bookings in one call (body: `deskIds`, `startDate`, `endDate`, optional `fobRequested`). The fob flag applies uniformly to every desk; per-desk failures with `code: 'FOB_UNAVAILABLE'` land in `results.failed` rather than rejecting the whole call.
 - `DELETE /api/bookings/:id` - Cancel a booking (the response carries an `X-Undo-Window-Ms` header giving the number of milliseconds the user has to undo the cancellation)
 - `POST /api/bookings/:id/undo-cancel` - Phase 23c: restore a self-cancelled booking within the undo window if the desk is still available. Errors: `400 UNDO_EXPIRED`, `409 DESK_UNAVAILABLE`, `403 FORBIDDEN` (not owner or admin-initiated cancel), `400 NOT_CANCELLED`.
 
@@ -670,6 +740,17 @@ Admin-only mutating endpoints:
 - `DELETE /api/admin/parking-reservations/:id` - Cancel any reservation (admin only, body: reason)
 - `GET /api/admin/audit-events` - List and search the audit trail (admin only, query: `limit` default 50 / max 500, `offset` default 0, `search` substring match over action_type / actor_email / summary / payload). Response shape: `{ events: [...], limit, offset }` with events in newest-first order.
 - `PUT /api/auth/users/:id/role` - Phase 26: change a user's role (Administrator only). Body `{ role: 'user' | 'office_admin' | 'admin' }`. Errors: `400 INVALID_ROLE`, `400 CANNOT_DEMOTE_LAST_ADMIN`, `403 FORBIDDEN`, `404 USER_NOT_FOUND`. Emits `USER_ROLE_CHANGED` audit event.
+
+### Fob Inventory and Reports (Phase 27)
+
+All endpoints below are gated on `authorize(['admin', 'office_admin'])` (per spec section 22 — fob configuration is an Office Administrator capability).
+
+- `GET /api/admin/fob/inventory` - Returns `{ default: number | null, overrides: [{ date, count }] }`. `default = null` means no inventory has been configured.
+- `PUT /api/admin/fob/inventory/default` - Body `{ count }` (non-negative integer). Emits `FOB_INVENTORY_DEFAULT_UPDATED`.
+- `PUT /api/admin/fob/inventory/:date` - Body `{ count }`. Sets a per-date override that replaces the default for that date. Emits `FOB_INVENTORY_OVERRIDE_SET`.
+- `DELETE /api/admin/fob/inventory/:date` - Remove a per-date override (idempotent — `204 No Content` even if no override existed). Emits `FOB_INVENTORY_OVERRIDE_REMOVED`.
+- `GET /api/admin/fob/calendar?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD` - Returns `{ startDate, endDate, days: [{ date, configured, requested, available }] }`. `configured` is `null` for days with no inventory; `available` is `max(configured - requested, 0)` or `null` when `configured` is `null`.
+- `GET /api/admin/fob/history?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&format=csv?` - Past allocations (every booking with `fob_requested = 1` whose date range overlaps the window). JSON by default with `{ startDate, endDate, rows: [{ id, userEmail, userName, deskNumber, startDate, endDate, status, ... }] }`. With `format=csv`, the response is `text/csv; charset=utf-8` with `Content-Disposition: attachment; filename=fob-history-...csv` and a fixed header row `booking_id,user_email,user_name,desk_number,start_date,end_date,status`.
 
 ### Error Responses
 

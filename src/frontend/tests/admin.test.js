@@ -303,7 +303,7 @@ describe('Admin Functionality', () => {
     test('should have auto and legacy numbering mode options for desks', () => {
       const deskNumberingMode = document.getElementById('deskNumberingMode');
       const options = Array.from(deskNumberingMode.options).map(opt => opt.value);
-      
+
       expect(options).toContain('auto');
       expect(options).toContain('legacy');
     });
@@ -311,10 +311,172 @@ describe('Admin Functionality', () => {
     test('should have auto and legacy numbering mode options for parking', () => {
       const parkingNumberingMode = document.getElementById('parkingNumberingMode');
       const options = Array.from(parkingNumberingMode.options).map(opt => opt.value);
-      
+
       expect(options).toContain('auto');
       expect(options).toContain('legacy');
     });
+  });
+});
+
+/**
+ * Phase 29: Save Configuration loading animation, success/error states, and
+ * reentrancy guard. Drives the real admin.js helpers via require().
+ */
+describe('Phase 29: Save Configuration loading animation', () => {
+  let saveConfiguration;
+  let runWithButtonSpinner;
+
+  beforeAll(() => {
+    jest.resetModules();
+    ({ saveConfiguration, runWithButtonSpinner } = require('../js/admin.js'));
+  });
+
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <div>
+        <input type="number" id="deskCount" value="5" />
+        <select id="deskNumberingMode"><option value="auto" selected>Auto</option></select>
+        <input type="number" id="deskStartNumber" value="1" />
+        <input type="number" id="parkingCount" value="3" />
+        <select id="parkingNumberingMode"><option value="auto" selected>Auto</option></select>
+        <input type="number" id="parkingStartNumber" value="1" />
+        <button id="saveConfigurationBtn">Save Configuration</button>
+        <div id="configuration-message"></div>
+        <div id="all-desks-container"></div>
+        <div id="all-parking-spaces-container"></div>
+      </div>
+    `;
+    global.apiRequest = jest.fn();
+    window.apiRequest = global.apiRequest;
+    global.apiRequest.mockClear();
+    global.showNotification = jest.fn();
+    window.showNotification = global.showNotification;
+  });
+
+  test('runWithButtonSpinner sets aria-busy=true and disables the button while in flight', async () => {
+    const button = document.getElementById('saveConfigurationBtn');
+    let release;
+    const pending = new Promise((resolve) => { release = resolve; });
+
+    const promise = runWithButtonSpinner(button, () => pending, { successFlashMs: 0 });
+
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(button.querySelector('.btn-spinner')).not.toBeNull();
+
+    release();
+    await promise;
+  });
+
+  test('on success the button re-enables and aria-busy returns to false', async () => {
+    const button = document.getElementById('saveConfigurationBtn');
+
+    await runWithButtonSpinner(button, () => Promise.resolve('ok'), { successFlashMs: 0 });
+
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute('aria-busy')).toBe('false');
+    expect(button.querySelector('.btn-spinner')).toBeNull();
+    expect(button.querySelector('.btn-success-flash')).toBeNull();
+  });
+
+  test('on error the button re-enables, aria-busy returns to false, and the error rethrows', async () => {
+    const button = document.getElementById('saveConfigurationBtn');
+    const boom = new Error('boom');
+
+    await expect(runWithButtonSpinner(button, () => Promise.reject(boom), { successFlashMs: 0 }))
+      .rejects.toBe(boom);
+
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute('aria-busy')).toBe('false');
+    expect(button.querySelector('.btn-spinner')).toBeNull();
+  });
+
+  test('a second call while in flight is ignored (reentrancy guard)', async () => {
+    const button = document.getElementById('saveConfigurationBtn');
+    let release;
+    const pending = new Promise((resolve) => { release = resolve; });
+    const fn = jest.fn(() => pending);
+
+    const first = runWithButtonSpinner(button, fn, { successFlashMs: 0 });
+    const second = runWithButtonSpinner(button, fn, { successFlashMs: 0 });
+
+    expect(await second).toBeUndefined();
+    expect(fn).toHaveBeenCalledTimes(1);
+
+    release();
+    await first;
+  });
+
+  test('saveConfiguration disables the Save button and sets aria-busy=true while requests are in flight', async () => {
+    const button = document.getElementById('saveConfigurationBtn');
+    let release;
+    const pending = new Promise((resolve) => { release = resolve; });
+    global.apiRequest.mockReturnValue(pending);
+
+    const promise = saveConfiguration();
+
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(button.querySelector('.btn-spinner')).not.toBeNull();
+    expect(global.apiRequest).toHaveBeenCalledTimes(2);
+
+    release(undefined);
+    await promise;
+  });
+
+  test('saveConfiguration: successful response re-enables the button and clears aria-busy', async () => {
+    const button = document.getElementById('saveConfigurationBtn');
+    global.apiRequest.mockResolvedValue({});
+
+    await saveConfiguration();
+
+    // Wait for the success-flash interval to elapse (default 700 ms).
+    await new Promise((resolve) => setTimeout(resolve, 750));
+
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute('aria-busy')).toBe('false');
+    expect(button.querySelector('.btn-spinner')).toBeNull();
+    expect(global.showNotification).toHaveBeenCalledWith('Configuration saved successfully!', 'success');
+  }, 5000);
+
+  test('saveConfiguration: error response re-enables the button, clears aria-busy, and shows an error notification', async () => {
+    const button = document.getElementById('saveConfigurationBtn');
+    global.apiRequest.mockRejectedValue(new Error('Server exploded'));
+
+    await saveConfiguration();
+
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute('aria-busy')).toBe('false');
+    expect(button.querySelector('.btn-spinner')).toBeNull();
+    expect(global.showNotification).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to save configuration'),
+      'error'
+    );
+  });
+
+  test('saveConfiguration: a double-click while in flight does not produce a second pair of save requests', async () => {
+    let release;
+    const pending = new Promise((resolve) => { release = resolve; });
+    global.apiRequest.mockReturnValue(pending);
+
+    const first = saveConfiguration();
+    const second = saveConfiguration();
+
+    // The first invocation has fired its desk-count + parking-count calls;
+    // the second invocation must have hit the reentrancy guard and emitted
+    // no save requests of its own.
+    const saveCalls = () => global.apiRequest.mock.calls.filter(
+      ([url]) => url === '/api/admin/configuration/desk-count' || url === '/api/admin/configuration/parking-count'
+    );
+    expect(saveCalls()).toHaveLength(2);
+
+    release(undefined);
+    await Promise.all([first, second]);
+
+    // After the in-flight save completes, the post-success path may load
+    // the desk and parking-space lists, but no second pair of save calls
+    // ever fired.
+    expect(saveCalls()).toHaveLength(2);
   });
 });
 

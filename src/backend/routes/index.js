@@ -5,6 +5,7 @@ const bookingsRouter = require('./bookings');
 const parkingSpacesRouter = require('./parking-spaces');
 const parkingReservationsRouter = require('./parking-reservations');
 const adminRouter = require('./admin');
+const adminFobRouter = require('./admin-fob');
 const auditRouter = require('./audit');
 const authRouter = require('./auth');
 const matrixRouter = require('./matrix');
@@ -32,6 +33,10 @@ router.use('/api/desks', desksRouter);
 router.use('/api/bookings', bookingsRouter);
 router.use('/api/parking-spaces', parkingSpacesRouter);
 router.use('/api/parking-reservations', parkingReservationsRouter);
+// Phase 27b: fob admin endpoints. Mount BEFORE the catch-all admin
+// router so /api/admin/fob/* never falls through to admin.js's 404
+// handler chain.
+router.use('/api/admin/fob', adminFobRouter);
 router.use('/api/admin', adminRouter);
 router.use('/api/admin/audit-events', auditRouter);
 // Phase 23d: floor plan map APIs. Mount admin router BEFORE the public one

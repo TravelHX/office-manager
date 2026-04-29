@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 540" width="540" height="540" font-family="Arial, sans-serif">
+  <rect width="540" height="540" fill="#f9fafb"/>
+
+  <defs>
+    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#e5e7eb" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+
+  <!-- Title -->
+  <text x="270" y="20" font-size="13" font-weight="bold" text-anchor="middle" fill="#111827">
+    Sample L-Shape Floor Plan (rotated 90 deg anti-clockwise)
+  </text>
+
+  <!--
+    L-shape rotated 90 deg anti-clockwise:
+    horizontal bar across the top, with a stub extending down on the left.
+    Outer wall path traces the room clockwise from top-left.
+  -->
+  <path d="M 30 30 L 510 30 L 510 270 L 270 270 L 270 510 L 30 510 Z"
+        fill="url(#grid)" stroke="#1f2937" stroke-width="4" stroke-linejoin="miter"/>
+
+  <!-- Door on bottom wall of stub: opening + swing arc + door leaf -->
+  <rect x="80" y="506" width="60" height="8" fill="#f9fafb"/>
+  <path d="M 140 510 A 60 60 0 0 0 80 450" fill="none" stroke="#9ca3af" stroke-width="1.2" stroke-dasharray="3,2"/>
+  <line x1="80" y1="510" x2="80" y2="450" stroke="#9ca3af" stroke-width="1.5"/>
+  <text x="110" y="528" font-size="10" text-anchor="middle" fill="#6b7280">Entrance</text>
+
+  <!-- Desks in top bar (6 cols x 2 rows = 12) -->
+  <g fill="#dbeafe" stroke="#1e40af" stroke-width="1">
+    <rect x="50"  y="70" width="50" height="30"/>
+    <rect x="128" y="70" width="50" height="30"/>
+    <rect x="206" y="70" width="50" height="30"/>
+    <rect x="284" y="70" width="50" height="30"/>
+    <rect x="362" y="70" width="50" height="30"/>
+    <rect x="440" y="70" width="50" height="30"/>
+    <rect x="50"  y="200" width="50" height="30"/>
+    <rect x="128" y="200" width="50" height="30"/>
+    <rect x="206" y="200" width="50" height="30"/>
+    <rect x="284" y="200" width="50" height="30"/>
+    <rect x="362" y="200" width="50" height="30"/>
+    <rect x="440" y="200" width="50" height="30"/>
+  </g>
+  <g font-size="9" text-anchor="middle" fill="#1e40af">
+    <text x="75"  y="89">D01</text>
+    <text x="153" y="89">D02</text>
+    <text x="231" y="89">D03</text>
+    <text x="309" y="89">D04</text>
+    <text x="387" y="89">D05</text>
+    <text x="465" y="89">D06</text>
+    <text x="75"  y="219">D07</text>
+    <text x="153" y="219">D08</text>
+    <text x="231" y="219">D09</text>
+    <text x="309" y="219">D10</text>
+    <text x="387" y="219">D11</text>
+    <text x="465" y="219">D12</text>
+  </g>
+
+  <!-- Desks in left stub (3 cols x 2 rows = 6) -->
+  <g fill="#dbeafe" stroke="#1e40af" stroke-width="1">
+    <rect x="50"  y="310" width="50" height="30"/>
+    <rect x="128" y="310" width="50" height="30"/>
+    <rect x="206" y="310" width="50" height="30"/>
+    <rect x="50"  y="430" width="50" height="30"/>
+    <rect x="128" y="430" width="50" height="30"/>
+    <rect x="206" y="430" width="50" height="30"/>
+  </g>
+  <g font-size="9" text-anchor="middle" fill="#1e40af">
+    <text x="75"  y="329">D13</text>
+    <text x="153" y="329">D14</text>
+    <text x="231" y="329">D15</text>
+    <text x="75"  y="449">D16</text>
+    <text x="153" y="449">D17</text>
+    <text x="231" y="449">D18</text>
+  </g>
+
+  <!-- North arrow (top-right of bar) -->
+  <g transform="translate(485,55)">
+    <circle r="14" fill="white" stroke="#6b7280" stroke-width="1"/>
+    <path d="M 0 -10 L 5 8 L 0 4 L -5 8 Z" fill="#1f2937"/>
+    <text y="-16" font-size="9" text-anchor="middle" fill="#6b7280">N</text>
+  </g>
+</svg>

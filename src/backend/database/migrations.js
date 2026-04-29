@@ -365,6 +365,77 @@ async function _runMigrationsImpl() {
       }
     }
 
+    // Phase 27a: Key Fob Request and Allocation Subsystem (storage layer).
+    //
+    // Two idempotent steps:
+    //   1. ADD COLUMN bookings.fob_requested TINYINT(1) NOT NULL DEFAULT 0.
+    //      We probe information_schema first (no ADD COLUMN IF NOT EXISTS
+    //      on MySQL 5.7 / older Azure MySQL) so reruns are safe.
+    //   2. CREATE TABLE fob_inventory IF NOT EXISTS. The `date` column is
+    //      NULLable with a UNIQUE constraint: a single row with date=NULL
+    //      represents the default count, and per-date overrides are
+    //      additional rows with date set. The default-row uniqueness is
+    //      enforced separately by the application service (UNIQUE on a
+    //      NULL column doesn't behave the way callers expect on MySQL,
+    //      which treats multiple NULLs as distinct).
+    try {
+      const fobColCheck = await executeQuery(
+        `SELECT COUNT(*) AS count
+           FROM information_schema.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'bookings'
+            AND COLUMN_NAME = 'fob_requested'`
+      );
+      if ((fobColCheck[0] && fobColCheck[0].count) || 0) {
+        logger.info('Phase 27a: bookings.fob_requested column already present');
+      } else {
+        logger.info('Phase 27a: adding bookings.fob_requested column...');
+        await executeQuery(
+          'ALTER TABLE bookings ADD COLUMN fob_requested TINYINT(1) NOT NULL DEFAULT 0 AFTER status'
+        );
+        logger.info('Phase 27a: bookings.fob_requested column added');
+      }
+      // Index supports the per-day "fob_requested = 1 AND active overlap"
+      // aggregation that Phase 27b's inventory enforcement will run.
+      try {
+        await executeQuery(
+          'CREATE INDEX idx_fob_requested_active ON bookings(fob_requested, status)'
+        );
+        logger.info('Phase 27a: idx_fob_requested_active index created');
+      } catch (idxErr) {
+        if (idxErr.errno === 1061 || idxErr.message.includes('Duplicate key name')) {
+          logger.info('Phase 27a: idx_fob_requested_active already exists');
+        } else {
+          logger.warn(`Phase 27a: idx_fob_requested_active note: ${idxErr.message}`);
+        }
+      }
+    } catch (error) {
+      logger.warn(`Phase 27a: bookings.fob_requested migration skipped: ${error.message}`);
+    }
+
+    try {
+      await executeQuery('SELECT 1 FROM fob_inventory LIMIT 1');
+      logger.info('Phase 27a: fob_inventory table exists');
+    } catch (_) {
+      logger.info('Phase 27a: creating fob_inventory table...');
+      const fobInventorySQL = `
+        CREATE TABLE IF NOT EXISTS fob_inventory (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          date DATE NULL,
+          count INT NOT NULL,
+          updated_by INT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY uniq_fob_inventory_date (date),
+          INDEX idx_fob_inventory_date (date),
+          CONSTRAINT fk_fob_inventory_updated_by
+            FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `;
+      await executeQuery(fobInventorySQL);
+      logger.info('Phase 27a: fob_inventory table created');
+    }
+
     // Phase 26: third role 'office_admin'. The users table already has both
     // `is_admin BOOLEAN` and `role VARCHAR(50)`. Going forward, `role` is the
     // single source of truth with three valid values: 'user', 'office_admin',

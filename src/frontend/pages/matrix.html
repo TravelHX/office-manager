@@ -160,51 +160,75 @@
             <h2>Booking Matrix</h2>
             <p>Visual overview of all desk and parking bookings organized by user and date.</p>
 
-            <div class="filters-panel">
-                <div class="form-group">
-                    <label for="startDate">Start Date:</label>
-                    <input type="date" id="startDate" required>
-                </div>
-                <div class="form-group">
-                    <label for="endDate">End Date:</label>
-                    <input type="date" id="endDate" required>
-                </div>
-                <div class="form-group">
-                    <label for="viewType">View Type:</label>
-                    <select id="viewType">
-                        <option value="combined">Combined (Desks + Parking)</option>
-                        <option value="desks">Desks Only</option>
-                        <option value="parking">Parking Only</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="userFilter">Filter by User:</label>
-                    <select id="userFilter" multiple style="min-width: 200px;">
-                        <option value="">All Users</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="deskFilter">Filter by Desk:</label>
-                    <select id="deskFilter" multiple style="min-width: 150px;">
-                        <option value="">All Desks</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="parkingFilter">Filter by Parking Space:</label>
-                    <select id="parkingFilter" multiple style="min-width: 150px;">
-                        <option value="">All Spaces</option>
-                    </select>
-                </div>
-                <div class="form-group" style="display: block; margin-top: 0.5rem;">
+            <!-- Phase 31: filter card. Same .form-row alignment from
+                 Phase 30 plus a bordered card frame so the controls read as
+                 a deliberate group rather than an undecorated header. -->
+            <section class="matrix-filter-card" aria-label="Booking matrix filters">
+                <div class="filters-panel form-row">
+                    <div class="form-group">
+                        <label for="startDate">Start Date:</label>
+                        <input type="date" id="startDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">End Date:</label>
+                        <input type="date" id="endDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="viewType">View Type:</label>
+                        <select id="viewType">
+                            <option value="combined">Combined (Desks + Parking)</option>
+                            <option value="desks">Desks Only</option>
+                            <option value="parking">Parking Only</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="userFilter">Filter by User:</label>
+                        <select id="userFilter" multiple style="min-width: 200px;">
+                            <option value="">All Users</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="deskFilter">Filter by Desk:</label>
+                        <select id="deskFilter" multiple style="min-width: 150px;">
+                            <option value="">All Desks</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="parkingFilter">Filter by Parking Space:</label>
+                        <select id="parkingFilter" multiple style="min-width: 150px;">
+                            <option value="">All Spaces</option>
+                        </select>
+                    </div>
                     <button id="loadMatrixBtn" class="btn-primary">Load Matrix</button>
-                    <button id="exportMatrixBtn" class="btn-secondary" style="margin-left: 0.5rem;">Export CSV</button>
+                    <button id="exportMatrixBtn" class="btn-secondary">Export CSV</button>
                 </div>
-            </div>
+            </section>
 
+            <!-- Transient validation / export-success toasts. Independent
+                 of the matrix-region state below: a date-range validation
+                 error or a "Matrix exported" toast lives here while the
+                 lifecycle state (empty / loading / loaded / error) lives
+                 in #matrix-region. -->
             <div id="matrix-message" class="mt-2"></div>
 
-            <div id="matrix-container" class="matrix-container">
-                <p>Select a date range and click "Load Matrix" to view bookings.</p>
+            <!-- Phase 31: matrix region hosts one of four states - empty,
+                 loading, loaded, error. matrix.js owns the state transitions
+                 via setMatrixState(). When state is "loaded" this region
+                 contains the legacy #matrix-container that renderMatrix()
+                 writes into. -->
+            <div id="matrix-region" class="matrix-region" data-state="empty" aria-live="polite">
+                <div class="matrix-empty-state">
+                    <div class="matrix-state-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                            <line x1="3" y1="9" x2="21" y2="9"></line>
+                            <line x1="9" y1="4" x2="9" y2="20"></line>
+                            <line x1="15" y1="4" x2="15" y2="20"></line>
+                        </svg>
+                    </div>
+                    <h3 class="matrix-state-title">Select a date range to view bookings</h3>
+                    <p class="matrix-state-description">Pick a start and end date above, optionally narrow by user, desk, or parking space, then click <strong>Load Matrix</strong>.</p>
+                </div>
             </div>
                 </div>
             </main>

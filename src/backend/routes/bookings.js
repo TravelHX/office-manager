@@ -94,8 +94,8 @@ router.get('/:id', authenticate, requireCompleteProfile, async (req, res, next) 
 router.post('/', authenticate, async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { deskId, startDate, endDate } = req.body;
-    
+    const { deskId, startDate, endDate, fobRequested } = req.body;
+
     if (!deskId || !startDate || !endDate) {
       return res.status(400).json({
         error: {
@@ -109,7 +109,8 @@ router.post('/', authenticate, async (req, res, next) => {
       userId,
       parseInt(deskId),
       startDate,
-      endDate
+      endDate,
+      { fobRequested: !!fobRequested }
     );
 
     // Phase 21d (21.7): record the new booking. Payload carries the resource
@@ -124,11 +125,58 @@ router.post('/', authenticate, async (req, res, next) => {
         desk_id: booking.deskId,
         start_date: startDate,
         end_date: endDate,
+        fob_requested: booking.fobRequested,
       },
     });
 
+    // Phase 27a (27.8): emit a separate FOB_REQUEST_GRANTED row when the
+    // booking included a fob request. Phase 27b adds the matching
+    // FOB_REQUEST_DENIED emission when inventory enforcement rejects.
+    // For 27a there is no enforcement yet, so every fob-requested
+    // booking is treated as granted.
+    if (booking.fobRequested) {
+      await audit.emit(req, {
+        actionType: 'FOB_REQUEST_GRANTED',
+        targetType: 'booking',
+        targetId: booking.id,
+        summary: `Fob granted for desk ${booking.deskId} on ${startDate}`
+          + (startDate === endDate ? '' : ` to ${endDate}`),
+        payload: {
+          desk_id: booking.deskId,
+          start_date: startDate,
+          end_date: endDate,
+          fob_requested: true,
+        },
+      });
+    }
+
     res.status(201).json(booking.toJSON());
   } catch (error) {
+    // Phase 27b: inventory enforcement rejection. The service throws a
+    // FobUnavailableError carrying the offending dates so the API
+    // response can identify exactly which day(s) blocked the booking.
+    if (error && error.code === 'FOB_UNAVAILABLE') {
+      // Emit the audit row before responding; the helper swallows its
+      // own errors so it cannot break the user response.
+      await audit.emit(req, {
+        actionType: 'FOB_REQUEST_DENIED',
+        targetType: 'booking',
+        summary: `Fob denied for desk ${req.body && req.body.deskId} on ${(error.offendingDates || []).join(', ')}`,
+        payload: {
+          desk_id: req.body && req.body.deskId,
+          start_date: req.body && req.body.startDate,
+          end_date: req.body && req.body.endDate,
+          offending_dates: error.offendingDates || [],
+        },
+      });
+      return res.status(400).json({
+        error: {
+          message: error.message,
+          code: 'FOB_UNAVAILABLE',
+          offendingDates: error.offendingDates || [],
+        },
+      });
+    }
     // Log the error for debugging
     console.error('Booking creation error:', error);
     
@@ -168,8 +216,8 @@ router.post('/', authenticate, async (req, res, next) => {
 router.post('/bulk', authenticate, requireCompleteProfile, async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { deskIds, startDate, endDate } = req.body;
-    
+    const { deskIds, startDate, endDate, fobRequested } = req.body;
+
     if (!deskIds || !Array.isArray(deskIds) || deskIds.length === 0) {
       return res.status(400).json({
         error: {
@@ -189,11 +237,13 @@ router.post('/bulk', authenticate, requireCompleteProfile, async (req, res, next
     }
 
     const normalisedDeskIds = deskIds.map(id => parseInt(id));
+    const fobFlag = !!fobRequested;
     const results = await bookingService.createBulkBookings(
       userId,
       normalisedDeskIds,
       startDate,
-      endDate
+      endDate,
+      { fobRequested: fobFlag }
     );
 
     // Phase 21d (21.11): one aggregate audit row per bulk call (not per
@@ -210,8 +260,49 @@ router.post('/bulk', authenticate, requireCompleteProfile, async (req, res, next
         end_date: endDate,
         successful_count: successfulCount,
         failed_count: failedCount,
+        fob_requested: fobFlag,
       },
     });
+
+    // Phase 27a/b (27.8): one FOB_REQUEST_GRANTED row per successful
+    // bulk-booked desk; one FOB_REQUEST_DENIED row per failed-with-fob
+    // entry that came back tagged with `code: 'FOB_UNAVAILABLE'`. Other
+    // failure reasons (desk not active, double-booked, …) are not
+    // fob-specific and are not audited as fob events.
+    if (fobFlag && Array.isArray(results.successful)) {
+      for (const created of results.successful) {
+        await audit.emit(req, {
+          actionType: 'FOB_REQUEST_GRANTED',
+          targetType: 'booking',
+          targetId: created.id,
+          summary: `Fob granted for desk ${created.deskId} on ${startDate}`
+            + (startDate === endDate ? '' : ` to ${endDate}`),
+          payload: {
+            desk_id: created.deskId,
+            start_date: startDate,
+            end_date: endDate,
+            fob_requested: true,
+          },
+        });
+      }
+    }
+    if (fobFlag && Array.isArray(results.failed)) {
+      for (const failed of results.failed) {
+        if (failed && failed.code === 'FOB_UNAVAILABLE') {
+          await audit.emit(req, {
+            actionType: 'FOB_REQUEST_DENIED',
+            targetType: 'booking',
+            summary: `Fob denied for desk ${failed.deskId} on ${(failed.offendingDates || []).join(', ')}`,
+            payload: {
+              desk_id: failed.deskId,
+              start_date: startDate,
+              end_date: endDate,
+              offending_dates: failed.offendingDates || [],
+            },
+          });
+        }
+      }
+    }
 
     // Return 201 if all succeeded, 207 (Multi-Status) if partial success
     const statusCode = results.failed.length === 0 ? 201 : 207;

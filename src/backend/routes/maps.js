@@ -100,12 +100,29 @@ adminRouter.get('/:context', ...adminGuards, async (req, res, next) => {
   }
 });
 
-// Raw body upload: PNG / JPEG only, hard-capped at 2 MB. Client posts the
-// file bytes directly with Content-Type: image/png (or image/jpeg).
+// Phase 23/32: raw body upload accepts PNG, JPEG, and SVG (image/svg+xml),
+// hard-capped at MAX_IMAGE_BYTES. Client posts the file bytes directly
+// with the matching Content-Type header. SVG is sanitised inside
+// MapService before storage; raster uploads are checked for matching
+// magic bytes.
+//
+// The Express error-handling middleware that immediately follows
+// express.raw() catches body-parser's "entity.too.large" error so it
+// surfaces as the documented `413 IMAGE_TOO_LARGE` response shape rather
+// than falling through to the global handler which would respond with a
+// generic `code: 'ERROR'`.
 adminRouter.post(
   '/:context/floor-plan',
   ...adminGuards,
   express.raw({ type: ACCEPTED_MIME, limit: MapService.MAX_IMAGE_BYTES }),
+  (err, req, res, next) => {
+    if (err && (err.type === 'entity.too.large' || err.statusCode === 413 || err.status === 413)) {
+      return res.status(413).json({
+        error: { message: 'Floor plan image is too large', code: 'IMAGE_TOO_LARGE' },
+      });
+    }
+    return next(err);
+  },
   async (req, res, next) => {
     try {
       const mimeType = req.headers['content-type'] || '';

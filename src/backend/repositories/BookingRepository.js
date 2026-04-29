@@ -131,7 +131,7 @@ class BookingRepository extends BaseRepository {
 
   async findAll() {
     const query = `
-      SELECT b.*, d.desk_number, d.location, COALESCE(u.username, 'Unknown User') as username 
+      SELECT b.*, d.desk_number, d.location, COALESCE(u.username, 'Unknown User') as username
       FROM bookings b
       JOIN desks d ON b.desk_id = d.id
       LEFT JOIN users u ON b.user_id = u.id
@@ -143,6 +143,92 @@ class BookingRepository extends BaseRepository {
       deskNumber: row.desk_number,
       location: row.location,
       username: row.username,
+    }));
+  }
+
+  /**
+   * Phase 27b: count active bookings with `fob_requested = 1` that
+   * overlap a single calendar day. Drives the per-day fob enforcement
+   * in BookingService.createBooking and the availability hint shown
+   * to users when an inventory limit is configured.
+   */
+  async countActiveFobBookingsForDate(date, excludeBookingId = null) {
+    let query = `
+      SELECT COUNT(*) AS count
+      FROM bookings
+      WHERE fob_requested = 1
+        AND status = 'active'
+        AND start_date <= ?
+        AND end_date >= ?
+    `;
+    const params = [date, date];
+    if (excludeBookingId !== null) {
+      query += ' AND id <> ?';
+      params.push(excludeBookingId);
+    }
+    const rows = await this.executeRawQuery(query, params);
+    return rows.length > 0 ? parseInt(rows[0].count, 10) : 0;
+  }
+
+  /**
+   * Phase 27b: list every active fob-requested booking that overlaps
+   * the inclusive date range [startDate, endDate]. The service's
+   * `getAvailabilityForRange` aggregates these per-day in JS rather
+   * than running one COUNT(*) query per day in the range.
+   */
+  async findActiveFobBookingsOverlapping(startDate, endDate) {
+    const query = `
+      SELECT id, user_id, desk_id, start_date, end_date, status, fob_requested
+      FROM bookings
+      WHERE fob_requested = 1
+        AND status = 'active'
+        AND start_date <= ?
+        AND end_date >= ?
+      ORDER BY start_date ASC, id ASC
+    `;
+    const rows = await this.executeRawQuery(query, [endDate, startDate]);
+    return rows.map((row) => ({
+      ...new Booking(row).toJSON(),
+    }));
+  }
+
+  /**
+   * Phase 27b: history report. Every booking with `fob_requested = 1`
+   * whose date range overlaps [startDate, endDate], joined to user
+   * info so the report can show name + email of the person who took
+   * the fob. Cancelled rows are included so admins can see the
+   * full allocation history; the row's `status` distinguishes
+   * active vs cancelled fobs.
+   */
+  async findFobBookingsHistoryInRange(startDate, endDate) {
+    const query = `
+      SELECT b.id, b.user_id, b.desk_id, b.start_date, b.end_date, b.status,
+             b.fob_requested, b.cancelled_at, b.cancellation_reason,
+             d.desk_number, d.location,
+             u.username AS user_email,
+             u.first_name, u.last_name
+      FROM bookings b
+      JOIN desks d ON b.desk_id = d.id
+      LEFT JOIN users u ON b.user_id = u.id
+      WHERE b.fob_requested = 1
+        AND b.start_date <= ?
+        AND b.end_date >= ?
+      ORDER BY b.start_date ASC, b.id ASC
+    `;
+    const rows = await this.executeRawQuery(query, [endDate, startDate]);
+    return rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      userEmail: row.user_email || null,
+      userName: [row.first_name, row.last_name].filter(Boolean).join(' ') || null,
+      deskId: row.desk_id,
+      deskNumber: row.desk_number,
+      location: row.location,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      status: row.status,
+      cancelledAt: row.cancelled_at,
+      cancellationReason: row.cancellation_reason,
     }));
   }
 }

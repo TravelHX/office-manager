@@ -297,11 +297,11 @@ The previous Use Case 7 covered combined desk, parking, and overtime actions. Ov
 **Steps (desks):**
 1. User signs in and opens **Desk Booking**
 2. User chooses start and end dates and runs **Check Availability**; the page shows available desks with a **Select** and a **Book** button on each card
-3. User clicks **Select** on each desk they want; the card shows a **Selected** indicator and the **Book Selected** control appears with a running count (e.g. "3 desks selected")
+3. User clicks **Select** on each desk they want; the **Select** button is a **toggle** — its label changes to **Selected** with an active style, `aria-pressed` flips to `true`, the per-card **Book** control on that card is hidden, and the **Book Selected** control appears with a running count (e.g. "3 desks selected"). Clicking the same Select button again removes the desk from the selection and restores its **Book** button.
 4. User scrolls the list to continue selecting; previously selected cards stay marked
 5. User clicks **Book Selected**; the application issues one `POST /api/bookings/bulk` request for all selected desks and the chosen date range
 6. On success the user is redirected to **My Bookings** with a success toast; the selection is cleared
-7. If only a single desk is required, the user instead clicks the per-card **Book** button, which posts to `POST /api/bookings` without touching the multi-select selection
+7. If only a single desk is required, the user instead clicks the per-card **Book** button, which posts to `POST /api/bookings` without touching the multi-select selection. **Select** and **Book** render at the same width and height (shared `.btn-card-action` CSS class).
 
 **Steps (parking):** Identical, using **Parking**, **Select** / **Reserve Selected**, and `POST /api/parking-reservations/bulk`. A per-card **Reserve** button continues to post to `POST /api/parking-reservations` when the user wants only one space.
 
@@ -310,11 +310,12 @@ The previous Use Case 7 covered combined desk, parking, and overtime actions. Ov
 **Manual Testing Path:**
 1. Configure at least three desks and at least three parking spaces as an admin
 2. As a regular user, open **Desk Booking**, pick a date range, and run **Check Availability**
-3. Click **Select** on three desks in succession; confirm the **Book Selected** control shows "3 desks selected" and each card shows a **Selected** indicator
-4. Scroll the desks list; confirm the selected state on each card is unchanged
-5. Click **Book Selected**; confirm a single call to `POST /api/bookings/bulk` is made and you are redirected to **My Bookings** with three new bookings
-6. Return to **Desk Booking**, run availability again, and click a per-card **Book** button on one desk; confirm a single call to `POST /api/bookings` is made and the multi-select selection controls remain hidden
-7. Repeat steps 2-6 on the **Parking** page using **Reserve Selected** and `POST /api/parking-reservations/bulk` / `POST /api/parking-reservations`
+3. Click **Select** on three desks in succession; confirm each Select button changes to **Selected** with an active style and `aria-pressed="true"`, the per-card **Book** button on each selected card is hidden, and the **Book Selected** control shows "3 desks selected"
+4. On one of the selected desks, click **Selected** again; confirm the desk leaves the selection (count drops to 2), the button reverts to **Select** with `aria-pressed="false"`, and the per-card **Book** button reappears
+5. Reselect that desk so the count is 3 again. Scroll the desks list; confirm the selected state on each card is unchanged
+6. Click **Book Selected**; confirm a single call to `POST /api/bookings/bulk` is made and you are redirected to **My Bookings** with three new bookings
+7. Return to **Desk Booking**, run availability again, and visually verify that **Select** and **Book** on a single card render at the same width and height; click a per-card **Book** button on one desk and confirm a single call to `POST /api/bookings` is made and the multi-select selection controls remain hidden
+8. Repeat steps 2-7 on the **Parking** page using **Reserve Selected** and `POST /api/parking-reservations/bulk` / `POST /api/parking-reservations`
 
 ---
 
@@ -384,7 +385,7 @@ The previous Use Case 7 covered combined desk, parking, and overtime actions. Ov
 1. Admin signs in and opens the **Admin** page
 2. Admin clicks the **Maps** sidebar item (visible to admins only)
 3. Admin chooses the context (**Desk map** or **Parking map**) from the toolbar
-4. Admin selects a PNG or JPEG file (≤2 MB) and clicks **Upload floor plan**. The server validates the MIME, size, and file magic bytes and rejects spoofed `Content-Type` headers (`400 INVALID_IMAGE`). On success the floor plan appears in the editor.
+4. Admin selects a PNG, JPEG, or **SVG** file (≤2 MB) and clicks **Upload floor plan**. The server validates the MIME, size, and file magic bytes and rejects spoofed `Content-Type` headers (`400 INVALID_IMAGE`). For SVG, the server runs a sanitiser before storage that strips `<script>`, `on*` event-handler attributes, `<foreignObject>`, and DOCTYPE-with-ENTITY declarations; only the sanitised bytes are kept. On success the floor plan appears in the editor.
 5. Admin sets **Click action** to **Place landmark**, picks a landmark **type** (and optional label), and clicks on the map to drop landmarks. Each click POSTs to `/api/admin/maps/:context/landmarks` and emits `MAP_LANDMARK_CREATED`.
 6. Admin switches **Click action** to **Place resource**. The list of active desks or parking spaces appears below the map; the first unplaced one is auto-selected.
 7. Admin clicks on the map at the desk's intended location. The client PUTs to `/api/admin/maps/:context/resources/:id/coordinates`, the marker appears, and the editor auto-advances to the next unplaced resource. Each placement emits `MAP_RESOURCE_COORDINATES_SET`.
@@ -401,7 +402,7 @@ The previous Use Case 7 covered combined desk, parking, and overtime actions. Ov
 6. Sign in as a regular user, open **Desk Booking**, choose a future date range, and click **Check Availability**; confirm the same map is rendered above the desks list, with markers only for desks that are available for the selected dates
 7. Click a desk marker on the map; confirm the matching desk card in the list flips to **Selected**
 
-**Automated coverage:** `tests/services/MapService.test.js` (validation rules — context, mime, size, magic bytes, normalised coords, resource existence); `tests/integration/maps.test.js` (HTTP shape, auth, audit emission); `src/frontend/tests/map-renderer.test.js` (renderer DOM, escaping, marker click event, fallback when no floor plan); `tests/e2e/maps.spec.js` (Playwright — user sees floor plan + markers + landmark; admin opens the Maps tab and switches contexts).
+**Automated coverage:** `tests/services/MapService.test.js` (validation rules — context, mime, size, magic bytes, normalised coords, resource existence); `tests/integration/maps.test.js` (HTTP shape, auth, audit emission, SVG upload + sanitisation per Phase 32); `tests/utils/svg-sanitizer.test.js` (per Phase 32 — `<script>` removal, `on*` attribute removal, `<foreignObject>` removal, DOCTYPE-ENTITY rejection, dangerous href schemes); `src/frontend/tests/map-renderer.test.js` (renderer DOM, escaping, marker click event, fallback when no floor plan, SVG renders identically to PNG); `tests/e2e/maps.spec.js` and `tests/e2e/maps-svg.spec.js` (Playwright — user sees floor plan + markers + landmark; admin opens the Maps tab and switches contexts; SVG upload sandbox).
 
 ---
 
@@ -475,5 +476,102 @@ The previous Use Case 7 covered combined desk, parking, and overtime actions. Ov
 4. Same for `POST /api/auth/users` and `PUT /api/auth/users/:id/role` — both must return `403`
 
 **Automated coverage:** `tests/integration/office-admin-role.test.js` (OA receives 403 on POST/DELETE/PUT user-management endpoints); `src/frontend/tests/admin-role-ui.test.js` (`applyRoleSidebarVariant` keeps User Management / Audit / Maps hidden for `office_admin`); `tests/e2e/office-admin-role.spec.js` (sidebar visibility + API 403 probe).
+
+---
+
+## Use Case 17: User Books a Desk With a Fob Request Within Inventory
+
+**Description:** A user books a desk for a date when the office has fob inventory configured (default or per-date override). The booking succeeds, the fob is allocated, and the booking row in **My Bookings** carries a small **Fob** badge so the user can confirm the request was honoured.
+
+**Steps:**
+1. User signs in and opens **Desk Booking**
+2. User selects a date range and clicks **Check Availability**. The page renders the available desks AND an inline **fob availability hint** below the action: one row per day showing `N of M fob(s) remaining`. Days where the inventory has been exhausted are highlighted.
+3. User ticks **Fob needed** and clicks **Book** on a desk
+4. The browser POSTs to `/api/bookings` with `fobRequested: true`. The server validates desk availability AND fob availability for every day in the range; both pass.
+5. The server creates the booking, emits `DESK_BOOKING_CREATED` and `FOB_REQUEST_GRANTED` audit rows, and returns `201 Created` with `fobRequested: true` on the booking.
+6. The user is redirected to **My Bookings** where the new row shows `Desk N` with a **Fob** badge alongside the desk number.
+
+**Expected Result:** The booking is created with `fob_requested = 1`. The fob count is reflected in the **Fob Calendar** report for that day (configured / requested / available).
+
+**Manual Testing Path:**
+1. As an Office Administrator, set a default count of 5 in **Admin → Fob Management**
+2. Sign out, sign in as a regular user, open **Desk Booking**
+3. Pick a future date and click **Check Availability**; confirm the per-day hint shows `5 of 5 fob(s) remaining`
+4. Tick **Fob needed**, click **Book** on any desk; confirm the success message reads "Desk booked successfully (with fob)."
+5. Open **My Bookings**; confirm the new row has the **Fob** badge
+
+**Automated coverage:** `tests/integration/fob-request-phase27a.test.js` (round-trip + GRANTED audit); `tests/integration/fob-enforcement-phase27b.test.js` (within-inventory success + audit); `src/frontend/tests/desk-booking-fob.test.js` (checkbox flag flows into POST body); `tests/e2e/fob-request.spec.js` (full Playwright loop).
+
+---
+
+## Use Case 18: User Attempts to Book With a Fob Request When Inventory Is Exhausted
+
+**Description:** A user ticks **Fob needed** for a date where the configured fob inventory has already been consumed by other bookings. The server rejects the request with a clear, date-aware error and the user can retry without the fob, pick different dates, or wait for someone to cancel.
+
+**Steps:**
+1. Office Administrator has set a per-date override of 1 fob for a specific date
+2. User A has already booked that date with **Fob needed** and is holding the only fob
+3. User B opens **Desk Booking**, picks the same date, ticks **Fob needed**, and clicks **Book**
+4. The browser POSTs to `/api/bookings` with `fobRequested: true`
+5. The server runs the per-day inventory check, finds `available = 0` for that date, and responds `400` with `{ error: { code: 'FOB_UNAVAILABLE', offendingDates: [date], message: '...' } }`. The server emits a `FOB_REQUEST_DENIED` audit row (not `FOB_REQUEST_GRANTED`).
+6. The desk booking page shows: **"Fob unavailable on `date`. Try unchecking 'Fob needed' or pick different dates."** and refreshes the inline availability hint to reflect the exhausted day.
+
+**Expected Result:** No booking is created. The user keeps their place on the page and can either uncheck **Fob needed** and book without a fob, or pick a different date.
+
+**Manual Testing Path:**
+1. As an Office Administrator, in **Admin → Fob Management** set a per-date override of 1 for tomorrow's date
+2. As User A, book a desk for tomorrow with **Fob needed**
+3. Sign out, sign in as User B, open **Desk Booking**
+4. Pick tomorrow's date and click **Check Availability**; confirm the inline hint shows `0 of 1 fob(s) remaining` on that row
+5. Tick **Fob needed**, click **Book** on a different desk; confirm the error message names tomorrow's date and the booking is NOT created
+
+**Automated coverage:** `tests/integration/fob-enforcement-phase27b.test.js` (denied + DENIED audit); `tests/services/BookingService.test.js` (FobUnavailableError with offendingDates); `src/frontend/tests/desk-booking-fob.test.js` (FOB_UNAVAILABLE error rendering); `tests/e2e/fob-request.spec.js` (full denial + cancellation + retry loop).
+
+---
+
+## Use Case 19: Office Administrator Configures Fob Inventory
+
+**Description:** An Office Administrator sets the daily default fob count and per-date overrides in **Admin → Fob Management**. The defaults apply to every day unless an override replaces them; both are optional. When no inventory is configured, fob requests are tracked but never blocked.
+
+**Steps:**
+1. Office Administrator signs in and opens the **Admin** page. The slimmed sidebar (Phase 26) reveals **Fob Management**, **Fob Calendar**, and **Fob History** alongside All Bookings and All Parking Reservations.
+2. Office Administrator opens **Fob Management** and types a number into the **Default count** field, then clicks **Save default**. The page PUTs to `/api/admin/fob/inventory/default`. The server emits `FOB_INVENTORY_DEFAULT_UPDATED` with the previous and new counts.
+3. To set a per-date override (e.g. on a day a contractor is on-site and a third of the fobs are off the table), the Office Administrator picks a **Date**, types a **Count**, and clicks **Save override**. The page PUTs to `/api/admin/fob/inventory/:date`. The server emits `FOB_INVENTORY_OVERRIDE_SET`. The override appears in the per-date list with a **Remove** button.
+4. To delete an override (e.g. the contractor visit was cancelled), the Office Administrator clicks **Remove** on the row. After confirming, the page DELETEs to `/api/admin/fob/inventory/:date`. The server emits `FOB_INVENTORY_OVERRIDE_REMOVED`.
+
+**Expected Result:** The `/api/admin/fob/inventory` GET reflects the new default and override list. The booking-time enforcement runs against the new values from the next request onwards.
+
+**Manual Testing Path:**
+1. Sign in as Office Administrator and open **Admin → Fob Management**
+2. Type `5` into the default count, click **Save default**; confirm the success message
+3. Pick a date in the **Per-date overrides** form, type `1`, click **Save override**; confirm the row appears in the list
+4. Click **Remove** on the override row; confirm the dialog and the success message
+5. Open **Admin → Audit** and search for `FOB_INVENTORY`; confirm three rows are present with `actor_role: 'office_admin'`
+
+**Automated coverage:** `tests/integration/fob-enforcement-phase27b.test.js` (default + override audit emission); `src/frontend/tests/admin-fob.test.js` (Fob Management UI: load + save default + save override + remove override + negative-count validation); `tests/e2e/fob-request.spec.js` (Office Administrator-driven setup).
+
+---
+
+## Use Case 20: Office Administrator Reviews Fob Calendar and History
+
+**Description:** An Office Administrator wants to see how fob requests are tracking against inventory across a date range, and to retrieve a historical record of who has held a fob for compliance / audit purposes.
+
+**Steps:**
+1. Office Administrator opens **Admin → Fob Calendar**. The page defaults the start / end inputs to the current month.
+2. Office Administrator clicks **Load calendar**. The browser GETs `/api/admin/fob/calendar?startDate=...&endDate=...`. The server returns one row per day with `{ configured, requested, available }`.
+3. The page renders a table with `Date`, `Configured`, `Requested`, `Available`. Days where `available = 0` are tinted red so exhaustion stands out.
+4. Office Administrator opens **Admin → Fob History**. The defaults are the last 30 days through today. Office Administrator clicks **Load history**.
+5. The page renders a table with one row per fob-requested booking that overlaps the range, showing booking id, person name + email, desk number, dates, and status (`active` vs `cancelled`).
+6. Office Administrator clicks **Export CSV**. The browser fetches `/api/admin/fob/history?...&format=csv` with the `Accept: text/csv` header and the JWT, and downloads `fob-history-START-to-END.csv`.
+
+**Expected Result:** The calendar view and history view correctly reflect the bookings, inventory, and per-day exhaustion. The CSV export contains the same rows with a fixed header `booking_id,user_email,user_name,desk_number,start_date,end_date,status`.
+
+**Manual Testing Path:**
+1. Sign in as Office Administrator and open **Admin → Fob Calendar**
+2. Pick a range that includes a day with active fob bookings; click **Load calendar**; confirm `Configured`, `Requested`, `Available` are correct and exhausted days are tinted
+3. Open **Admin → Fob History** and pick a range; click **Load history**; confirm the rows include name + email of the person who took the fob and the booking status
+4. Click **Export CSV**; confirm the download appears, the file extension is `.csv`, and the header row matches the expected columns
+
+**Automated coverage:** `tests/integration/fob-enforcement-phase27b.test.js` (calendar + history endpoint contracts including CSV `text/csv` content type); `src/frontend/tests/admin-fob.test.js` (calendar render with exhausted-day flag, history render, CSV export Blob download); `tests/e2e/fob-request.spec.js` (Office Administrator opens both pages after the booking loop).
 
 ---

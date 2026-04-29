@@ -11,6 +11,13 @@ class Booking {
     this.cancellationReason = data.cancellation_reason;
     this.createdAt = data.created_at;
     this.updatedAt = data.updated_at;
+    // Phase 27a: optional Key Fob request flag stored against the
+    // booking. The DB column is `fob_requested TINYINT(1)` so values
+    // round-trip as 0/1; the model exposes a strict boolean. When the
+    // input lacks the column entirely (e.g. fixtures from older tests),
+    // we default to false rather than undefined so consumers can rely
+    // on the field always being present in toJSON().
+    this.fobRequested = Boolean(data.fob_requested);
   }
 
   toJSON() {
@@ -26,6 +33,7 @@ class Booking {
       cancellationReason: this.cancellationReason,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
+      fobRequested: this.fobRequested,
     };
   }
 
@@ -36,8 +44,12 @@ class Booking {
       start_date: this.startDate,
       end_date: this.endDate,
       status: this.status,
+      // Always serialise as 0/1 so the column never receives JS booleans
+      // (which the mysql2 driver would coerce, but we'd rather be
+      // explicit and consistent with the existing schema convention).
+      fob_requested: this.fobRequested ? 1 : 0,
     };
-    
+
     // Only include optional fields if they have values
     if (this.cancelledAt) {
       data.cancelled_at = this.cancelledAt;
@@ -48,7 +60,7 @@ class Booking {
     if (this.cancellationReason) {
       data.cancellation_reason = this.cancellationReason;
     }
-    
+
     return data;
   }
 }

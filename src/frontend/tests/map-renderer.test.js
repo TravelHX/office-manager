@@ -206,3 +206,85 @@ describe('MapRenderer.load', () => {
     expect(config).toBe(expected);
   });
 });
+
+// Phase 32: SVG floor plans are embedded via <img src> exactly the same way
+// raster floor plans are. The browser sandboxes SVG embedded as an <img>
+// (no script execution, no foreignObject activation), so the renderer does
+// not need a separate code path for SVG. These tests pin that contract:
+// the rendered DOM is structurally identical for SVG and raster MIMEs, the
+// src points at the floor-plan endpoint, and overlay markers continue to
+// render on top of the image.
+
+describe('MapRenderer.render — Phase 32 SVG floor plan', () => {
+  function buildConfig(mime) {
+    return {
+      context: 'desk',
+      floorPlan: {
+        url: '/api/maps/desk/floor-plan/image?v=7',
+        mime,
+        version: 7,
+        uploadedAt: '2026-04-29T08:00:00Z',
+      },
+      landmarks: [
+        { id: 11, context: 'desk', type: 'lift', label: 'Main lift', x: 0.2, y: 0.3 },
+      ],
+      resources: [
+        { id: 42, number: 'A12', x: 0.5, y: 0.5 },
+      ],
+    };
+  }
+
+  test('an SVG floor plan still renders as an <img> tag with the floor-plan endpoint URL', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    globalThis.MapRenderer.render(container, buildConfig('image/svg+xml'));
+
+    const img = container.querySelector('img.map-floor-plan');
+    expect(img).not.toBeNull();
+    expect(img.getAttribute('src')).toBe('/api/maps/desk/floor-plan/image?v=7');
+    // Renderer should NOT inline SVG markup into the DOM — it must stay
+    // sandboxed via <img>.
+    expect(container.querySelector('svg')).toBeNull();
+  });
+
+  test('the square viewport class survives an SVG floor plan', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    globalThis.MapRenderer.render(container, buildConfig('image/svg+xml'));
+
+    expect(container.querySelector('.map-viewport')).not.toBeNull();
+    // The renderer relies on the styles.css `.map-viewport { aspect-ratio: 1/1 }`
+    // and `.map-floor-plan { object-fit: contain }` rules. We can only
+    // assert the class names here; the visual rules are covered by the
+    // Playwright e2e and the existing map-states tests.
+    expect(container.querySelector('.map-floor-plan')).not.toBeNull();
+  });
+
+  test('landmark and resource markers overlay an SVG floor plan at their normalised coordinates', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    globalThis.MapRenderer.render(container, buildConfig('image/svg+xml'));
+
+    const landmark = container.querySelector('.map-landmark');
+    expect(landmark).not.toBeNull();
+    expect(landmark.getAttribute('style')).toContain('left: 20%');
+    expect(landmark.getAttribute('style')).toContain('top: 30%');
+
+    const resource = container.querySelector('.map-resource-marker');
+    expect(resource).not.toBeNull();
+    expect(resource.getAttribute('style')).toContain('left: 50%');
+    expect(resource.getAttribute('style')).toContain('top: 50%');
+    expect(resource.getAttribute('data-resource-id')).toBe('42');
+  });
+
+  test('SVG and PNG render the same DOM shape (regression: no SVG-specific branch)', () => {
+    const a = document.createElement('div');
+    const b = document.createElement('div');
+    document.body.appendChild(a);
+    document.body.appendChild(b);
+    globalThis.MapRenderer.render(a, buildConfig('image/svg+xml'));
+    globalThis.MapRenderer.render(b, buildConfig('image/png'));
+    // Identical structural HTML — only the (unrendered) MIME differs.
+    expect(a.innerHTML).toBe(b.innerHTML);
+  });
+});

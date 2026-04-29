@@ -32,21 +32,34 @@
             <h2>Desk Booking</h2>
             <p>Select a date range and book an available desk.</p>
             
-            <div class="booking-form">
+            <div class="booking-form form-row">
                 <div class="form-group">
                     <label for="startDate">Start Date:</label>
                     <input type="date" id="startDate" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="endDate">End Date:</label>
                     <input type="date" id="endDate" required>
                 </div>
-                
+
+                <!-- Phase 27c: optional Key Fob request. Stored against the
+                     booking and applied to every day of a multi-day booking.
+                     When an inventory limit is configured, an inline hint
+                     below shows availability per day. When inventory is
+                     not configured, the flag is tracked but never blocked. -->
+                <div class="form-group">
+                    <label for="fobRequested" class="checkbox-inline">
+                        <input type="checkbox" id="fobRequested">
+                        Fob needed
+                    </label>
+                </div>
+
                 <button id="checkAvailabilityBtn" class="btn-primary">Check Availability</button>
             </div>
 
             <div id="availability-message" class="mt-2"></div>
+            <div id="fob-availability-hint" class="mt-2" aria-live="polite"></div>
 
             <!-- Phase 23e: square map panel. Renders only when an admin has
                  uploaded a floor plan; otherwise the renderer shows a hint

@@ -10,6 +10,93 @@ const apiRequest = (endpoint, options) => {
 
 let currentMatrixData = null;
 
+// Phase 31: matrix-region state. The region cycles between four states:
+//   empty   — initial render before any Load Matrix click.
+//   loading — after Load Matrix is pressed, while the request is in flight.
+//   loaded  — successful response; #matrix-container is populated by
+//             renderMatrix().
+//   error   — failed response; the error block exposes a Retry button that
+//             re-fires loadMatrix() with the current filters.
+// After a successful load, subsequent reloads transition loading -> loaded
+// or loading -> error and never return to the empty placeholder.
+const MATRIX_EMPTY_HTML = `
+    <div class="matrix-empty-state">
+        <div class="matrix-state-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="4" x2="9" y2="20"></line>
+                <line x1="15" y1="4" x2="15" y2="20"></line>
+            </svg>
+        </div>
+        <h3 class="matrix-state-title">Select a date range to view bookings</h3>
+        <p class="matrix-state-description">Pick a start and end date above, optionally narrow by user, desk, or parking space, then click <strong>Load Matrix</strong>.</p>
+    </div>
+`;
+
+const MATRIX_LOADING_HTML = `
+    <div class="matrix-loading-state" role="status" aria-live="polite">
+        <div class="matrix-spinner" aria-hidden="true"></div>
+        <h3 class="matrix-state-title">Loading matrix…</h3>
+        <p class="matrix-state-description">Fetching bookings for the selected range.</p>
+    </div>
+`;
+
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function buildMatrixErrorHtml(message) {
+    return `
+        <div class="matrix-error-state" role="alert">
+            <div class="matrix-state-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+            </div>
+            <h3 class="matrix-state-title">Could not load the matrix</h3>
+            <p class="matrix-error-message">${escapeHtml(message || 'Unknown error')}</p>
+            <button id="matrix-retry-btn" class="btn-primary matrix-retry-btn" type="button">Retry</button>
+        </div>
+    `;
+}
+
+/**
+ * Swap #matrix-region between the four lifecycle states. The "loaded"
+ * state injects an empty #matrix-container that renderMatrix() then
+ * fills in; this preserves backward compatibility with the grid renderer
+ * which writes by id.
+ *
+ * @param {'empty'|'loading'|'loaded'|'error'} state
+ * @param {{ message?: string }} [options]
+ */
+function setMatrixState(state, options = {}) {
+    const region = document.getElementById('matrix-region');
+    if (!region) return;
+    region.setAttribute('data-state', state);
+    if (state === 'empty') {
+        region.innerHTML = MATRIX_EMPTY_HTML;
+    } else if (state === 'loading') {
+        region.innerHTML = MATRIX_LOADING_HTML;
+    } else if (state === 'loaded') {
+        region.innerHTML = '<div id="matrix-container" class="matrix-container"></div>';
+    } else if (state === 'error') {
+        region.innerHTML = buildMatrixErrorHtml(options.message);
+        const retryBtn = document.getElementById('matrix-retry-btn');
+        if (retryBtn) {
+            retryBtn.addEventListener('click', () => loadMatrix());
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Check authentication - matrix is admin only
     if (typeof requireAuth !== 'undefined' && !requireAuth()) {
@@ -110,12 +197,21 @@ async function loadMatrix() {
     const parkingFilter = document.getElementById('parkingFilter');
 
     if (!startDate || !endDate) {
+        // Date validation lives in the transient #matrix-message surface,
+        // not the lifecycle state, so the empty / loaded state below is
+        // unaffected when the user clicks Load with missing dates.
         showError('Please select both start and end dates');
         return;
     }
 
     const messageDiv = document.getElementById('matrix-message');
-    messageDiv.innerHTML = '<p>Loading matrix data...</p>';
+    if (messageDiv) {
+        messageDiv.innerHTML = '';
+    }
+    // Phase 31: flip to loading state before the network call. Subsequent
+    // reloads pass through loading -> loaded/error without dropping back
+    // to the empty placeholder.
+    setMatrixState('loading');
 
     try {
         // Build query parameters
@@ -148,13 +244,16 @@ async function loadMatrix() {
 
         const matrixData = await apiRequest(`/api/matrix/bookings?${params.toString()}`);
         currentMatrixData = matrixData;
-        
+
+        // Phase 31: transition to loaded; setMatrixState injects a fresh
+        // #matrix-container that renderMatrix() then populates.
+        setMatrixState('loaded');
         renderMatrix(matrixData);
-        messageDiv.innerHTML = '<div class="success">Matrix loaded successfully</div>';
     } catch (error) {
         console.error('Failed to load matrix:', error);
-        showError('Failed to load matrix: ' + error.message);
-        messageDiv.innerHTML = '';
+        // Phase 31: transition to the error state. The Retry button inside
+        // re-fires loadMatrix() with the current filter values.
+        setMatrixState('error', { message: error && error.message ? error.message : 'Unknown error' });
     }
 }
 
@@ -340,5 +439,14 @@ function showError(message) {
 function showSuccess(message) {
     const messageDiv = document.getElementById('matrix-message');
     messageDiv.innerHTML = `<div class="success">${message}</div>`;
+}
+
+// Phase 31: expose state surface on window for test harnesses (mirroring
+// the desk-booking.js / parking.js pattern). Production code does not
+// rely on these globals; they're test-only entry points.
+if (typeof window !== 'undefined') {
+    window.setMatrixState = setMatrixState;
+    window.loadMatrix = loadMatrix;
+    window.renderMatrix = renderMatrix;
 }
 

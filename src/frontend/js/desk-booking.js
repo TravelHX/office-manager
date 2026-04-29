@@ -115,6 +115,12 @@ async function checkAvailability() {
         showError('Failed to check availability: ' + error.message);
         desksContainer.innerHTML = '';
     }
+
+    // Phase 27c: refresh the per-day fob availability hint after each
+    // Check Availability click. Awaiting here would block the desk
+    // list render; we let it run in the background and silently absorb
+    // any error (the hint is informational only).
+    updateFobAvailabilityHint(startDate, endDate).catch(() => {});
 }
 
 function displayDesks(desks, startDate, endDate) {
@@ -151,10 +157,10 @@ function displayDesks(desks, startDate, endDate) {
                     ${desk.location ? `<p><strong>Location:</strong> ${desk.location}</p>` : ''}
                     ${desk.description ? `<p>${desk.description}</p>` : ''}
                     <div class="desk-card-buttons">
-                        <button class="btn-secondary select-desk-btn" data-desk-id="${desk.id}" data-desk-number="${desk.deskNumber}">
-                            ${isSelected ? 'Deselect' : 'Select'}
+                        <button type="button" class="btn-secondary btn-card-action select-desk-btn${isSelected ? ' is-selected' : ''}" aria-pressed="${isSelected ? 'true' : 'false'}" data-desk-id="${desk.id}" data-desk-number="${desk.deskNumber}">
+                            ${isSelected ? 'Selected' : 'Select'}
                         </button>
-                        <button class="btn-primary book-desk-btn"${isSelected ? ' hidden' : ''} data-desk-id="${desk.id}" data-desk-number="${desk.deskNumber}">Book</button>
+                        <button type="button" class="btn-primary btn-card-action book-desk-btn"${isSelected ? ' hidden' : ''} data-desk-id="${desk.id}" data-desk-number="${desk.deskNumber}">Book</button>
                     </div>
                 </div>
             `;
@@ -223,7 +229,14 @@ function toggleDeskSelection(deskId, startDate, endDate) {
                 indicator.textContent = '✓ Selected';
                 deskCard.insertBefore(indicator, deskCard.querySelector('h4'));
             }
-            if (selectBtn) selectBtn.textContent = 'Deselect';
+            // Phase 28: Select button is a true toggle. When selected, label
+            // reads "Selected", aria-pressed is true, and the .is-selected
+            // class flips it to the active style.
+            if (selectBtn) {
+                selectBtn.textContent = 'Selected';
+                selectBtn.setAttribute('aria-pressed', 'true');
+                selectBtn.classList.add('is-selected');
+            }
             // Phase 23.12 / spec section 19: hide the per-card Book button when
             // the desk is in the multi-select selection; Book Selected takes
             // its place for selected items.
@@ -233,7 +246,11 @@ function toggleDeskSelection(deskId, startDate, endDate) {
             deskCard.classList.remove('selected');
             const indicator = deskCard.querySelector('.selection-indicator');
             if (indicator) indicator.remove();
-            if (selectBtn) selectBtn.textContent = 'Select';
+            if (selectBtn) {
+                selectBtn.textContent = 'Select';
+                selectBtn.setAttribute('aria-pressed', 'false');
+                selectBtn.classList.remove('is-selected');
+            }
             if (bookBtn) bookBtn.hidden = false;
         }
     }
@@ -251,7 +268,13 @@ function clearSelection() {
         const indicator = card.querySelector('.selection-indicator');
         if (indicator) indicator.remove();
         const selectBtn = card.querySelector('.select-desk-btn');
-        if (selectBtn) selectBtn.textContent = 'Select';
+        if (selectBtn) {
+            // Phase 28: keep the Select toggle in sync — label, aria-pressed,
+            // and the .is-selected active style.
+            selectBtn.textContent = 'Select';
+            selectBtn.setAttribute('aria-pressed', 'false');
+            selectBtn.classList.remove('is-selected');
+        }
         // Phase 23.12: un-hide the per-card Book button when selection is cleared.
         const bookBtn = card.querySelector('.book-desk-btn');
         if (bookBtn) bookBtn.hidden = false;
@@ -286,9 +309,10 @@ async function bookSelectedDesks(startDate, endDate) {
         showError('Please select at least one desk to book');
         return;
     }
-    
+
     const deskIds = Array.from(selectedDeskIds).map(id => parseInt(id));
-    
+    const fobRequested = readFobRequestedFlag();
+
     try {
         const response = await apiRequest('/api/bookings/bulk', {
             method: 'POST',
@@ -296,6 +320,7 @@ async function bookSelectedDesks(startDate, endDate) {
                 deskIds: deskIds,
                 startDate: startDate,
                 endDate: endDate,
+                fobRequested,
             },
         });
         
@@ -329,7 +354,18 @@ async function bookSelectedDesks(startDate, endDate) {
     }
 }
 
+/**
+ * Phase 27c: read the "Fob needed" checkbox state from the booking
+ * form. Defaults to false when the checkbox is missing (e.g. tests
+ * that mount only part of the form).
+ */
+function readFobRequestedFlag() {
+    const cb = document.getElementById('fobRequested');
+    return !!(cb && cb.checked);
+}
+
 async function bookDesk(deskId, deskNumber, startDate, endDate) {
+    const fobRequested = readFobRequestedFlag();
     try {
         const response = await apiRequest('/api/bookings', {
             method: 'POST',
@@ -337,15 +373,33 @@ async function bookDesk(deskId, deskNumber, startDate, endDate) {
                 deskId: parseInt(deskId),
                 startDate: startDate,
                 endDate: endDate,
+                fobRequested,
             },
         });
-        
-        showSuccess('Desk booked successfully!');
-        
+
+        showSuccess(fobRequested
+            ? 'Desk booked successfully (with fob).'
+            : 'Desk booked successfully!');
+
         setTimeout(() => {
             window.location.href = '/pages/bookings.html';
         }, 1500);
     } catch (error) {
+        // Phase 27c: fob inventory rejection. The server returns
+        // `error.code === 'FOB_UNAVAILABLE'` and `offendingDates`. The
+        // apiRequest helper surfaces those on the thrown error so we
+        // can render a date-aware message and refresh the inline hint
+        // without forcing the user to click Check Availability again.
+        if (error && (error.code === 'FOB_UNAVAILABLE' || /FOB_UNAVAILABLE/.test(error.message || ''))) {
+            const dates = (error.offendingDates && error.offendingDates.length)
+                ? error.offendingDates.join(', ')
+                : 'one or more days in the selected range';
+            showError(`Fob unavailable on ${dates}. Try unchecking "Fob needed" or pick different dates.`);
+            // Reload the per-day availability hint so the user sees the
+            // exhausted day(s) immediately.
+            updateFobAvailabilityHint(startDate, endDate).catch(() => {});
+            return;
+        }
         if (error.message.includes('already have a desk booking') || error.message.includes('overlap')) {
             showError(error.message || 'You already have a desk booking for overlapping dates. You cannot book multiple desks for overlapping periods.');
         } else if (error.message.includes('already booked by another user')) {
@@ -360,12 +414,83 @@ async function bookDesk(deskId, deskNumber, startDate, endDate) {
     }
 }
 
+/**
+ * Phase 27c: render an inline per-day fob availability hint below the
+ * "Check Availability" button. We DON'T pre-flight an inventory call
+ * for unauthenticated visitors or before a date range has been chosen
+ * — only after Check Availability so the call is on-demand.
+ *
+ * The endpoint we use here, `/api/admin/fob/calendar`, is admin-only
+ * (Office Administrator + Administrator). Regular users get a 403 and
+ * the hint is suppressed silently — they still see the booking-time
+ * rejection if the fob is exhausted.
+ */
+async function updateFobAvailabilityHint(startDate, endDate) {
+    const hint = document.getElementById('fob-availability-hint');
+    if (!hint) return;
+    if (!startDate || !endDate) {
+        hint.innerHTML = '';
+        return;
+    }
+    try {
+        const data = await apiRequest(
+            `/api/admin/fob/calendar?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
+        );
+        const days = (data && Array.isArray(data.days)) ? data.days : [];
+        if (!days.length) {
+            hint.innerHTML = '';
+            return;
+        }
+        const allUnconfigured = days.every((d) => d.configured === null || d.configured === undefined);
+        if (allUnconfigured) {
+            hint.innerHTML = '<p class="help-text">Fob inventory is not configured for this range — fob requests will be tracked but not blocked.</p>';
+            return;
+        }
+        const exhausted = days.filter((d) => d.configured !== null && d.available === 0).map((d) => d.date);
+        const lines = days.map((d) => {
+            if (d.configured === null || d.configured === undefined) {
+                return `<li>${escapeHtml(d.date)}: <span class="text-muted">no inventory configured</span></li>`;
+            }
+            const cls = d.available === 0 ? 'fob-day-exhausted' : '';
+            return `<li class="${cls}">${escapeHtml(d.date)}: ${escapeHtml(String(d.available))} of ${escapeHtml(String(d.configured))} fob(s) remaining</li>`;
+        }).join('');
+        const exhaustedNote = exhausted.length
+            ? `<p class="help-text fob-availability-exhausted">No fobs remaining on ${escapeHtml(exhausted.join(', '))}.</p>`
+            : '';
+        hint.innerHTML = `
+            <div class="fob-availability-hint card">
+                <strong>Fob availability for the selected range:</strong>
+                <ul>${lines}</ul>
+                ${exhaustedNote}
+            </div>
+        `;
+    } catch (error) {
+        // 403 for non-admin callers is expected — clear the hint so the
+        // page doesn't show a stale value. Other errors are silenced
+        // because the inline hint is informational only.
+        hint.innerHTML = '';
+    }
+}
+
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 if (typeof window !== 'undefined') {
     window.checkAvailability = checkAvailability;
     window.bookDesk = bookDesk;
     window.displayDesks = displayDesks;
     window.bookSelectedDesks = bookSelectedDesks;
     window.selectedDeskIds = selectedDeskIds;
+    // Phase 27c surface for tests.
+    window.readFobRequestedFlag = readFobRequestedFlag;
+    window.updateFobAvailabilityHint = updateFobAvailabilityHint;
 }
 
 function showError(message) {

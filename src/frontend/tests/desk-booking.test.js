@@ -92,6 +92,9 @@ describe('Desk Booking', () => {
           deskId: 1,
           startDate: '2025-12-15',
           endDate: '2025-12-16',
+          // Phase 27c: every booking carries the fob flag, defaulting
+          // to false when the checkbox is absent / unchecked.
+          fobRequested: false,
         },
       });
     });
@@ -123,6 +126,8 @@ describe('Desk Booking', () => {
           deskIds: [1, 2],
           startDate: '2025-12-15',
           endDate: '2025-12-16',
+          // Phase 27c: bulk path mirrors the single-create body shape.
+          fobRequested: false,
         },
       });
     });
@@ -185,6 +190,74 @@ describe('Desk Booking', () => {
       expect(bookBtn.hasAttribute('hidden')).toBe(true);
     });
 
+    test('Select toggles selection on then off; aria-pressed flips with it (28.5, 28.6)', () => {
+      const container = document.getElementById('desks-container');
+      window.selectedDeskIds.clear();
+      window.displayDesks(
+        [{ id: 1, deskNumber: 'D001', location: 'Floor 1' }],
+        '2025-12-15',
+        '2025-12-16'
+      );
+
+      const selectBtn = container.querySelector('.select-desk-btn');
+      // Initial: not selected, label "Select", aria-pressed="false".
+      expect(window.selectedDeskIds.size).toBe(0);
+      expect(selectBtn.textContent.trim()).toBe('Select');
+      expect(selectBtn.getAttribute('aria-pressed')).toBe('false');
+      expect(selectBtn.classList.contains('is-selected')).toBe(false);
+
+      // First click: select. Label "Selected", aria-pressed="true",
+      // .is-selected class for the active visual style.
+      selectBtn.click();
+      expect(window.selectedDeskIds.has('1')).toBe(true);
+      expect(selectBtn.textContent.trim()).toBe('Selected');
+      expect(selectBtn.getAttribute('aria-pressed')).toBe('true');
+      expect(selectBtn.classList.contains('is-selected')).toBe(true);
+
+      // Second click on the same Select button: deselect. Back to initial.
+      selectBtn.click();
+      expect(window.selectedDeskIds.has('1')).toBe(false);
+      expect(selectBtn.textContent.trim()).toBe('Select');
+      expect(selectBtn.getAttribute('aria-pressed')).toBe('false');
+      expect(selectBtn.classList.contains('is-selected')).toBe(false);
+    });
+
+    test('Select and Book share the .btn-card-action sizing class (28.2, 28.8)', () => {
+      const container = document.getElementById('desks-container');
+      window.selectedDeskIds.clear();
+      window.displayDesks(
+        [{ id: 1, deskNumber: 'D001', location: 'Floor 1' }],
+        '2025-12-15',
+        '2025-12-16'
+      );
+
+      const selectBtn = container.querySelector('.select-desk-btn');
+      const bookBtn = container.querySelector('.book-desk-btn');
+
+      // Both card-action buttons must carry the shared sizing class so they
+      // pick up identical min-width / min-height / padding / font-size from
+      // CSS and render at matching dimensions.
+      expect(selectBtn.classList.contains('btn-card-action')).toBe(true);
+      expect(bookBtn.classList.contains('btn-card-action')).toBe(true);
+    });
+
+    test('Select renders pre-pressed when the desk is in the selection at render time (28.3)', () => {
+      window.selectedDeskIds.clear();
+      window.selectedDeskIds.add('7');
+      window.displayDesks(
+        [{ id: 7, deskNumber: 'D007' }],
+        '2025-12-15',
+        '2025-12-16'
+      );
+
+      const selectBtn = document.querySelector('.select-desk-btn');
+      // Initial paint must reflect the existing selection so the toggle
+      // does not flicker between Select → Selected on first interaction.
+      expect(selectBtn.getAttribute('aria-pressed')).toBe('true');
+      expect(selectBtn.textContent.trim()).toBe('Selected');
+      expect(selectBtn.classList.contains('is-selected')).toBe(true);
+    });
+
     test('clearSelection un-hides every per-card Book button (23.12)', () => {
       const container = document.getElementById('desks-container');
       window.selectedDeskIds.clear();
@@ -208,6 +281,33 @@ describe('Desk Booking', () => {
 
       container.querySelectorAll('.book-desk-btn').forEach((btn) => {
         expect(btn.hidden).toBe(false);
+      });
+    });
+
+    test('clearSelection resets every Select toggle to its unpressed state (28.5)', () => {
+      const container = document.getElementById('desks-container');
+      window.selectedDeskIds.clear();
+      window.displayDesks(
+        [
+          { id: 1, deskNumber: 'D001' },
+          { id: 2, deskNumber: 'D002' },
+        ],
+        '2025-12-15',
+        '2025-12-16'
+      );
+
+      // Select both.
+      container.querySelectorAll('.select-desk-btn').forEach((btn) => btn.click());
+      container.querySelectorAll('.select-desk-btn').forEach((btn) => {
+        expect(btn.getAttribute('aria-pressed')).toBe('true');
+      });
+
+      document.getElementById('clear-selection-btn').click();
+
+      container.querySelectorAll('.select-desk-btn').forEach((btn) => {
+        expect(btn.textContent.trim()).toBe('Select');
+        expect(btn.getAttribute('aria-pressed')).toBe('false');
+        expect(btn.classList.contains('is-selected')).toBe(false);
       });
     });
 

@@ -76,6 +76,14 @@ Audit rows record the actor's role in the payload (`actor_role`) so administrati
 - Booking proceeds directly without confirmation modal (streamlined flow)
 - Booking validation: one desk per person per period, one person per desk per day
 - Clear error messages for booking conflicts and overlapping date ranges
+- **Optional Key Fob request (Phase 27)** — tick **Fob needed** in the booking form to request a building key fob alongside the desk. When an inventory limit has been configured by an Office Administrator, an inline per-day availability hint shows how many fobs remain for the selected dates; the booking is rejected with a date-aware **"Fob unavailable"** message if any day in the range is exhausted. Bookings on **My Bookings** that included a fob request show a small **Fob** badge.
+
+### Key Fob Management (Office Administrator + Administrator)
+
+- **Fob Management** admin page sets the daily default fob count and per-date overrides. Both are optional — if no inventory is configured, fob requests on bookings are tracked but never blocked.
+- **Fob Calendar** shows configured / requested / available counts for every day in a chosen range; days where the inventory has been exhausted are tinted red.
+- **Fob History** lists every fob-requested booking that overlaps the chosen range (active and cancelled), including the person who took the fob (name + email), the desk number, and the dates. **Export CSV** downloads the same rows in a `text/csv` file.
+- All four fob audit events (`FOB_REQUEST_GRANTED`, `FOB_REQUEST_DENIED`, `FOB_INVENTORY_DEFAULT_UPDATED`, `FOB_INVENTORY_OVERRIDE_SET`, `FOB_INVENTORY_OVERRIDE_REMOVED`) are recorded in the audit log alongside the actor's role, so admin-vs-OA actions are distinguishable.
 
 ### Parking Space Reservation
 
@@ -91,7 +99,8 @@ Audit rows record the actor's role in the payload (`actor_role`) so administrati
 ### Floor Plan Maps
 
 - Square map panel above the desk and parking lists, rendered when an admin has uploaded a floor plan for that area.
-- Admin Maps tab: upload PNG/JPEG floor plans (≤2 MB), click on the map to place landmarks (lift, stairs, exit, kitchen, reception, meeting room, first aid, custom) and resource markers, switch contexts between desk and parking.
+- Admin Maps tab: upload **PNG, JPEG, or SVG** floor plans (≤2 MB), click on the map to place landmarks (lift, stairs, exit, kitchen, reception, meeting room, first aid, custom) and resource markers, switch contexts between desk and parking.
+- SVG uploads are sanitised on the server before storage: `<script>` elements, `on*` event-handler attributes, `<foreignObject>` blocks, and DOCTYPE-with-ENTITY declarations are removed; only the sanitised bytes are kept. The renderer always embeds the floor plan via `<img src>`, so the browser sandbox treats SVG identically to a raster image and never executes scripts in it.
 - Landmarks are orientation-only and do not block clicks on resource markers.
 - Desk / parking-space markers are clickable and toggle the same Select state used by the existing list, so booking flows stay consistent whether the user clicks the list or the map.
 - Coordinates are stored as fractions of the floor plan image so markers stay aligned at any viewport size.
@@ -99,11 +108,14 @@ Audit rows record the actor's role in the payload (`actor_role`) so administrati
 ### Multi-Select Desk and Parking Booking
 
 - Select multiple desks or parking spaces before booking
-- Dual button system: "Select" (adds to selection list) and "Book" (books immediately)
+- Dual button system: **Select** (adds to selection list, true toggle) and **Book** / **Reserve** (books immediately)
+- **Select acts as a toggle:** click once to add the desk or parking space to the selection (the button label changes to **Selected** and an active style is applied); click the same button again to remove it. Assistive tech sees the state via `aria-pressed`. **Clear Selection** still wipes the entire selection in one action.
+- **Uniform card button sizing:** Select and Book on a desk card (and Select and Reserve on a parking card) share a single CSS class so they always render at the same width and height. Future styling changes apply to all three buttons together.
 - Visual selection indicators for selected items
 - "Book Selected" button books all selected items for the same date range in one operation
 - Selection persists when scrolling; "Clear Selection" to deselect all
-- Existing single "Book" button functionality maintained
+- When an item is selected the per-card Book / Reserve control is hidden (Book Selected / Reserve Selected takes its place); toggling Select off restores it
+- Existing single "Book" / "Reserve" button functionality maintained
 
 ### Enhanced Admin Resource Configuration
 
@@ -114,7 +126,7 @@ Audit rows record the actor's role in the payload (`actor_role`) so administrati
 
 ### Admin Dashboard
 
-- Configure number of desks and parking spaces (with flexible numbering)
+- Configure number of desks and parking spaces (with flexible numbering); the **Save Configuration** button shows an inline loading indicator while the request is in flight and is disabled to prevent duplicate submissions
 - View all bookings and reservations
 - Cancel any user's bookings or reservations with reason
 - Manage office resources
@@ -139,6 +151,7 @@ Audit rows record the actor's role in the payload (`actor_role`) so administrati
 - Separate and combined views for desks and parking
 - Export functionality (CSV)
 - Admin-only access
+- **Polished initial state (Phase 31):** filters live in a bordered **filter card** with the blue accent from the global theme; the content region below cycles through four explicit states — an **empty** placeholder ("Select a date range to view bookings…") on first open, a centred **loading** spinner while the request is in flight, the **loaded** matrix grid on success, and a recoverable **error** block with a **Retry** button that re-fires the same request. Subsequent reloads pass through loading → loaded/error and never drop back to the empty placeholder.
 
 ### Global Application Shell and Blue Theme
 
@@ -182,10 +195,13 @@ Welcome to Office Manager. The sections below describe how to use desk bookings 
 
 1. Click **Desk Booking** in the navigation menu
 2. Select your start date and end date
-3. Click **Check Availability** to see available desks
-4. Review the list of available desks
-5. Click **Book This Desk** on your preferred desk
-6. Confirm your booking
+3. (Optional) Tick **Fob needed** if you need a building key fob alongside the desk. If your office has configured a fob inventory limit, an inline hint below shows how many fobs remain for each day in the range.
+4. Click **Check Availability** to see available desks
+5. Review the list of available desks
+6. Click **Book This Desk** on your preferred desk
+7. Confirm your booking
+
+If you ticked **Fob needed** and no fob is available on any day in the range, the system rejects the booking with a message naming the offending date(s). Either uncheck **Fob needed** to book without a fob, or pick different dates.
 
 #### Viewing Your Bookings
 
@@ -325,7 +341,7 @@ If you have admin privileges:
 1. Open the **Admin** page
 2. Open the **Resource Configuration** tab
 3. Update desk count or parking count
-4. Click **Save Configuration**
+4. Click **Save Configuration**. While the change is being saved, the button shows an inline spinner and is disabled to prevent duplicate submissions; on success it briefly shows a checkmark before returning to the idle state.
 
 **Note:** You cannot reduce counts below the number of active bookings or reservations.
 
@@ -410,3 +426,8 @@ All features listed in "Currently Implemented Features" above are fully function
 - **Phase 23d/e:** Floor plan maps — admin uploads a square PNG/JPEG floor plan per context (desk / parking), places landmarks (lift, stairs, exit, …) and resource markers; desk booking and parking pages render a square map panel above the list with clickable resource markers synced to the existing Select / Book state. Backend in 23d (`/api/maps/:context`, `/api/admin/maps/...`); frontend editor + per-page panels in 23e
 - **Phase 24:** Natural numeric ordering — desk and parking space numbers now appear in human order (`1, 2, 3, …, 10, 11`) instead of alphabetic order (`1, 10, 11, 2, …, 9`). Implementation lives in `src/backend/utils/natural-sort.js` (and a matching frontend mirror in `src/frontend/js/natural-sort.js`); applied at the `DeskRepository.findAll{,Active}` and `ParkingSpaceRepository.findAll{,Active}` boundary so every API response is sorted, with corresponding integration / unit / Playwright coverage
 - **Phase 26:** Office Administrator role — new third role between regular User and Administrator. OAs can cancel **any** user's desk booking or parking reservation but cannot create / delete users, change roles, edit resource configuration, view the audit log, or upload floor plans. Backend: idempotent migration aligning `users.role` and `users.is_admin`; `User` model derives `isAdmin` from `role === 'admin'`; `requireAdmin` and `requireOfficeAdminOrAdmin` middleware wrappers; `UserService.changeUserRole` enforces the last-admin invariant; `PUT /api/auth/users/:id/role` (admin-only) for role assignment; `DELETE /api/admin/bookings/:id` and `DELETE /api/admin/parking-reservations/:id` widened to `office_admin OR admin`; audit emission auto-injects `actor_role` from `req.user.role`. Frontend: per-row role `<select>` + Save button in **Admin → User Management** (admin-only); slimmed admin sidebar variant for Office Administrators (Bookings + Parking Reservations + Change Password only — no Resource Configuration / User Management / Audit / Maps).
+- **Phase 27:** Key Fob Request and Allocation Subsystem — desk bookings carry an optional `fob_requested` flag, with configurable inventory and per-day enforcement. Phase 27a: schema (`bookings.fob_requested`, `fob_inventory` table), `Booking` model exposes `fobRequested`, `POST /api/bookings(/bulk)` accepts the flag, `FOB_REQUEST_GRANTED` audit. Phase 27b: `FobInventoryService` (default + per-date overrides + range availability), booking-time enforcement (`FobUnavailableError` -> `400 FOB_UNAVAILABLE`), six admin endpoints under `/api/admin/fob` for inventory + calendar + history (CSV), and four new audit event types (`FOB_REQUEST_DENIED`, `FOB_INVENTORY_DEFAULT_UPDATED`, `FOB_INVENTORY_OVERRIDE_SET`, `FOB_INVENTORY_OVERRIDE_REMOVED`). Phase 27c: **Fob needed** checkbox + inline per-day availability hint on the desk booking page; **Fob** badge on My Bookings rows; three admin pages (Fob Management / Fob Calendar / Fob History) plumbed into the Phase 26 sidebar variant for Office Administrators; full Playwright e2e covering the OA-sets-1, A-books, B-denied, A-cancels, B-retries loop plus the OA-views-calendar-and-history finish.
+- **Phase 28:** Select-as-toggle on desk and parking cards (click adds, click again removes; label flips to **Selected** with `aria-pressed`); shared `.btn-card-action` CSS class so Select / Book / Reserve render at identical width and height (corrects a Phase 23.12 regression where Book sat 1.5rem above Select on the desk page).
+- **Phase 29:** Inline loading animation on the admin **Save Configuration** button — CSS-only spinner via `runWithButtonSpinner` in `src/frontend/js/admin.js`, `aria-busy` flips to `true` during the parallel desk + parking count requests.
+- **Phase 30:** Consistent vertical alignment of form controls and adjacent action buttons via a single shared `.form-row` class. Applied to the booking, filter, and admin search rows on the parking, desk-booking, My Bookings, Booking Matrix, and Admin pages; the rule zeros `.form-group { margin-bottom }` inside the row so labelled inputs and unlabelled buttons share the same baseline. Frontend Jest covers the structural contract (`src/frontend/tests/form-row-alignment.test.js`); Playwright (`tests/e2e/form-row-alignment.spec.js`) asserts real-pixel bottom-edge alignment within a 1px tolerance.
+- **Phase 31:** Booking Matrix initial-state polish. The filter inputs sit in a bordered `.matrix-filter-card` (blue accent + the Phase 30 `.form-row`); `#matrix-region` cycles between four mutually-exclusive states (`empty | loading | loaded | error`) driven by `setMatrixState()` in `src/frontend/js/matrix.js`. The error state exposes a Retry button that re-fires the same request. Subsequent reloads go loading → loaded/error and never drop back to empty. Frontend Jest covers the four transitions including Retry (`src/frontend/tests/matrix.test.js`); a Playwright spec exercises the full lifecycle in a real browser, forcing the failure path with `page.route` (`tests/e2e/matrix-states.spec.js`).

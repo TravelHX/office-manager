@@ -19,12 +19,18 @@ const ResourceMapCoordinateRepository = require('../repositories/ResourceMapCoor
 const DeskRepository = require('../repositories/DeskRepository');
 const ParkingSpaceRepository = require('../repositories/ParkingSpaceRepository');
 const MapLandmark = require('../models/MapLandmark');
+const { sanitizeSvg, looksLikeSvg } = require('../utils/svg-sanitizer');
 
 const VALID_CONTEXTS = Object.freeze(['desk', 'parking']);
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB hard cap, mirrors route limit
+// Phase 32: accept SVG alongside the original raster types. The value is the
+// on-disk extension. Note that SVG goes through the server-side sanitiser
+// (utils/svg-sanitizer.js) before it ever lands on disk; raster uploads are
+// only sniffed for matching magic bytes.
 const ACCEPTED_MIME_TYPES = Object.freeze({
   'image/png': 'png',
   'image/jpeg': 'jpg',
+  'image/svg+xml': 'svg',
 });
 
 // `data/maps/` resolved relative to repo root so it works in dev (host bind
@@ -109,6 +115,10 @@ class MapService {
   /**
    * Replace the floor plan image for a context. Validates mime + size,
    * writes to disk, and bumps image_version. Returns the persisted row.
+   *
+   * Phase 32: when the upload is `image/svg+xml` the buffer is run through
+   * `utils/svg-sanitizer` before it lands on disk. The unsanitised bytes
+   * are never persisted. The magic-byte sniff covers PNG, JPEG, and SVG.
    */
   async replaceFloorPlan(context, imageBuffer, mimeType, uploadedBy) {
     MapService.assertContext(context);
@@ -122,10 +132,35 @@ class MapService {
     if (!ext) {
       throw new Error(`Unsupported image type '${mimeType}'. Allowed: ${Object.keys(ACCEPTED_MIME_TYPES).join(', ')}`);
     }
-    // Defensive: PNG / JPEG magic-byte signature check so a rogue caller
-    // can't claim image/png while sending HTML or something else.
+    // Defensive: magic-byte sniff. Catches a caller spoofing the
+    // Content-Type header by sending HTML / a different image type / etc.
+    // For SVG the "magic" is structural — see looksLikeSvg() in the
+    // sanitiser module.
     if (!hasImageMagicBytes(imageBuffer, mimeType)) {
       throw new Error('Image content does not match declared MIME type');
+    }
+
+    let bytesToWrite = imageBuffer;
+    if (mimeType === 'image/svg+xml') {
+      // sanitizeSvg throws "Invalid SVG: ..." for unparseable / malicious
+      // input. Wrap to surface the existing INVALID_IMAGE response code.
+      let sanitisedSource;
+      try {
+        sanitisedSource = sanitizeSvg(imageBuffer);
+      } catch (err) {
+        // Re-throw with the same prefix the route handler matches on so
+        // the error path stays consistent across raster and SVG uploads.
+        throw new Error(err.message.startsWith('Invalid SVG')
+          ? `Image content does not match declared MIME type (${err.message})`
+          : err.message);
+      }
+      bytesToWrite = Buffer.from(sanitisedSource, 'utf8');
+      // The sanitiser may shrink (script removal) or grow (no-op) the
+      // payload. Re-check the size cap so a pathological case where
+      // sanitisation expands the document past the limit is rejected.
+      if (bytesToWrite.length > MAX_IMAGE_BYTES) {
+        throw new Error(`Image exceeds ${MAX_IMAGE_BYTES} byte limit`);
+      }
     }
 
     await fs.promises.mkdir(DATA_MAPS_ABS, { recursive: true });
@@ -141,7 +176,7 @@ class MapService {
     const relPath = `${DATA_MAPS_REL_PREFIX}/${fileName}`;
     const absPath = path.join(DATA_MAPS_ABS, fileName);
 
-    await fs.promises.writeFile(absPath, imageBuffer);
+    await fs.promises.writeFile(absPath, bytesToWrite);
 
     const persisted = await this.floorPlanRepository.upsert({
       context,
@@ -281,6 +316,10 @@ class MapService {
  * of image its MIME type claims. Defends against a caller spoofing the
  * Content-Type header. We deliberately do not use a parsing library — the
  * goal is to reject obvious non-images, not validate every PNG/JPEG variant.
+ *
+ * Phase 32: for `image/svg+xml` we delegate to looksLikeSvg, which checks
+ * that the first non-whitespace token after an optional UTF-8 BOM is one of
+ * `<?xml`, `<!--`, `<!DOCTYPE`, or `<svg` (case-insensitive).
  */
 function hasImageMagicBytes(buffer, mimeType) {
   if (!buffer || buffer.length < 4) return false;
@@ -296,6 +335,9 @@ function hasImageMagicBytes(buffer, mimeType) {
   if (mimeType === 'image/jpeg') {
     // FF D8 FF
     return buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+  }
+  if (mimeType === 'image/svg+xml') {
+    return looksLikeSvg(buffer);
   }
   return false;
 }

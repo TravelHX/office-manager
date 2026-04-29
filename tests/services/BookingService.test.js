@@ -14,6 +14,7 @@ describe('BookingService', () => {
   let mockBookingRepository;
   let mockDeskRepository;
   let mockDeskService;
+  let mockFobInventoryService;
 
   beforeEach(() => {
     mockBookingRepository = new BookingRepository();
@@ -23,6 +24,14 @@ describe('BookingService', () => {
     bookingService.bookingRepository = mockBookingRepository;
     bookingService.deskRepository = mockDeskRepository;
     bookingService.deskService = mockDeskService;
+    // Phase 27b: inventory enforcement is delegated to FobInventoryService.
+    // The default mock simulates "no inventory configured" so existing
+    // tests stay unaffected; individual tests override as needed.
+    mockFobInventoryService = {
+      getEffectiveCountForDate: jest.fn().mockResolvedValue(null),
+      countActiveFobBookingsForDate: jest.fn().mockResolvedValue(0),
+    };
+    bookingService.fobInventoryService = mockFobInventoryService;
   });
 
   describe('createBooking', () => {
@@ -153,6 +162,158 @@ describe('BookingService', () => {
       await expect(
         bookingService.createBooking(userId, deskId, startDate, endDate)
       ).rejects.toThrow('already have a desk booking');
+    });
+
+    // Phase 27a: createBooking forwards the optional `fobRequested` flag
+    // through to the Booking model, where it lands as `fob_requested` in
+    // the database row. No inventory enforcement happens at this layer
+    // yet (Phase 27b adds that); this test only pins the storage path.
+    test('forwards fobRequested = true into the new Booking row', async () => {
+      const userId = 1;
+      const deskId = 1;
+      const startDate = '2099-09-09';
+      const endDate = '2099-09-09';
+      const mockDesk = new Desk({ id: deskId, desk_number: 'D001', is_active: 1 });
+      const mockBooking = new Booking({
+        id: 42,
+        user_id: userId,
+        desk_id: deskId,
+        start_date: startDate,
+        end_date: endDate,
+        status: 'active',
+        fob_requested: 1,
+      });
+
+      mockDeskRepository.findById = jest.fn().mockResolvedValue(mockDesk);
+      mockBookingRepository.findOverlappingUserBookings = jest.fn().mockResolvedValue([]);
+      mockDeskService.checkDeskAvailability = jest.fn().mockResolvedValue({ available: true });
+      mockBookingRepository.create = jest.fn().mockResolvedValue(mockBooking);
+
+      const result = await bookingService.createBooking(userId, deskId, startDate, endDate, {
+        fobRequested: true,
+      });
+
+      expect(result.fobRequested).toBe(true);
+      // The Booking instance handed to the repository must carry the flag.
+      const passed = mockBookingRepository.create.mock.calls[0][0];
+      expect(passed.fobRequested).toBe(true);
+    });
+
+    test('defaults fobRequested to false when the option is omitted', async () => {
+      const userId = 1;
+      const deskId = 1;
+      const startDate = '2099-09-09';
+      const endDate = '2099-09-09';
+      const mockDesk = new Desk({ id: deskId, desk_number: 'D001', is_active: 1 });
+      const mockBooking = new Booking({
+        id: 43,
+        user_id: userId,
+        desk_id: deskId,
+        start_date: startDate,
+        end_date: endDate,
+        status: 'active',
+      });
+
+      mockDeskRepository.findById = jest.fn().mockResolvedValue(mockDesk);
+      mockBookingRepository.findOverlappingUserBookings = jest.fn().mockResolvedValue([]);
+      mockDeskService.checkDeskAvailability = jest.fn().mockResolvedValue({ available: true });
+      mockBookingRepository.create = jest.fn().mockResolvedValue(mockBooking);
+
+      await bookingService.createBooking(userId, deskId, startDate, endDate);
+
+      const passed = mockBookingRepository.create.mock.calls[0][0];
+      expect(passed.fobRequested).toBe(false);
+    });
+
+    // Phase 27b enforcement tests. The service consults
+    // FobInventoryService for every day in the requested range when
+    // fobRequested === true; if any day's available count is <= 0 the
+    // call rejects with `FOB_UNAVAILABLE` and the offending date is
+    // identifiable from the error.
+    test('rejects with FOB_UNAVAILABLE when any day has no remaining inventory', async () => {
+      const userId = 1;
+      const deskId = 1;
+      const startDate = '2099-09-09';
+      const endDate = '2099-09-10';
+      const mockDesk = new Desk({ id: deskId, desk_number: 'D001', is_active: 1 });
+
+      mockDeskRepository.findById = jest.fn().mockResolvedValue(mockDesk);
+      mockBookingRepository.findOverlappingUserBookings = jest.fn().mockResolvedValue([]);
+      mockDeskService.checkDeskAvailability = jest.fn().mockResolvedValue({ available: true });
+      // Day 1 has 1 fob configured, 0 used (1 available); day 2 has 1
+      // fob configured, 1 already used (0 available). The booking spans
+      // both days so it should reject on day 2.
+      mockFobInventoryService.getEffectiveCountForDate = jest.fn(async (date) => 1);
+      mockFobInventoryService.countActiveFobBookingsForDate = jest.fn(async (date) =>
+        date === '2099-09-10' ? 1 : 0
+      );
+
+      await expect(
+        bookingService.createBooking(userId, deskId, startDate, endDate, { fobRequested: true })
+      ).rejects.toThrow(/FOB_UNAVAILABLE/);
+    });
+
+    test('allows the booking when no inventory is configured (effective count null)', async () => {
+      const userId = 1;
+      const deskId = 1;
+      const startDate = '2099-09-09';
+      const endDate = '2099-09-09';
+      const mockDesk = new Desk({ id: deskId, desk_number: 'D001', is_active: 1 });
+      const mockBooking = new Booking({
+        id: 80,
+        user_id: userId,
+        desk_id: deskId,
+        start_date: startDate,
+        end_date: endDate,
+        status: 'active',
+        fob_requested: 1,
+      });
+
+      mockDeskRepository.findById = jest.fn().mockResolvedValue(mockDesk);
+      mockBookingRepository.findOverlappingUserBookings = jest.fn().mockResolvedValue([]);
+      mockDeskService.checkDeskAvailability = jest.fn().mockResolvedValue({ available: true });
+      mockBookingRepository.create = jest.fn().mockResolvedValue(mockBooking);
+      // null === inventory not configured for that day; spec says fob
+      // requests are TRACKED but never blocked when no inventory is set.
+      mockFobInventoryService.getEffectiveCountForDate = jest.fn().mockResolvedValue(null);
+
+      const result = await bookingService.createBooking(userId, deskId, startDate, endDate, {
+        fobRequested: true,
+      });
+
+      expect(result.fobRequested).toBe(true);
+      expect(mockBookingRepository.create).toHaveBeenCalled();
+      // countActiveFobBookingsForDate should not even be queried when
+      // configured is null — there's nothing to enforce against.
+      expect(mockFobInventoryService.countActiveFobBookingsForDate).not.toHaveBeenCalled();
+    });
+
+    test('exposes offending date(s) on FOB_UNAVAILABLE error', async () => {
+      const userId = 1;
+      const deskId = 1;
+      const mockDesk = new Desk({ id: deskId, desk_number: 'D001', is_active: 1 });
+
+      mockDeskRepository.findById = jest.fn().mockResolvedValue(mockDesk);
+      mockBookingRepository.findOverlappingUserBookings = jest.fn().mockResolvedValue([]);
+      mockDeskService.checkDeskAvailability = jest.fn().mockResolvedValue({ available: true });
+      mockFobInventoryService.getEffectiveCountForDate = jest.fn().mockResolvedValue(1);
+      mockFobInventoryService.countActiveFobBookingsForDate = jest.fn(async (date) =>
+        date === '2099-09-09' ? 1 : 0
+      );
+
+      let thrown;
+      try {
+        await bookingService.createBooking(userId, deskId, '2099-09-08', '2099-09-10', {
+          fobRequested: true,
+        });
+      } catch (err) {
+        thrown = err;
+      }
+      expect(thrown).toBeDefined();
+      expect(thrown.code).toBe('FOB_UNAVAILABLE');
+      // The error carries an offendingDates array (sorted ascending) so
+      // route handlers can include it in the API response.
+      expect(thrown.offendingDates).toEqual(['2099-09-09']);
     });
   });
 
